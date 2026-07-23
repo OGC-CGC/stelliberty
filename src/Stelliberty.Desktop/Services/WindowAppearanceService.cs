@@ -10,6 +10,7 @@ internal sealed class WindowAppearanceService : IDisposable
 {
     private MainWindow? _window;
     private SettingsThemeViewModel? _theme;
+    private bool _isWindowActive;
 
     public void Attach(MainWindow window, SettingsThemeViewModel theme)
     {
@@ -22,13 +23,18 @@ internal sealed class WindowAppearanceService : IDisposable
         if (_window is not null)
         {
             _window.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+            _window.Activated -= OnWindowActivated;
+            _window.Deactivated -= OnWindowDeactivated;
         }
 
         _window = window;
         _theme = theme;
+        _isWindowActive = window.IsActive;
         _theme.ThemeChanged += OnThemeChanged;
         _theme.WindowEffectChanged += OnWindowEffectChanged;
         _window.ActualThemeVariantChanged += OnActualThemeVariantChanged;
+        _window.Activated += OnWindowActivated;
+        _window.Deactivated += OnWindowDeactivated;
         ApplyTheme(theme.SelectedOption.Value);
         ApplyWindowEffect(theme.SelectedWindowEffect);
     }
@@ -55,10 +61,13 @@ internal sealed class WindowAppearanceService : IDisposable
         if (_window is not null)
         {
             _window.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+            _window.Activated -= OnWindowActivated;
+            _window.Deactivated -= OnWindowDeactivated;
         }
 
         _theme = null;
         _window = null;
+        _isWindowActive = false;
     }
 
     private void OnThemeChanged(object? sender, AppTheme theme)
@@ -69,6 +78,18 @@ internal sealed class WindowAppearanceService : IDisposable
     private void OnWindowEffectChanged(object? sender, WindowEffect effect)
     {
         ApplyWindowEffect(effect);
+    }
+
+    private void OnWindowActivated(object? sender, EventArgs args)
+    {
+        _isWindowActive = true;
+        UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
+    }
+
+    private void OnWindowDeactivated(object? sender, EventArgs args)
+    {
+        _isWindowActive = false;
+        UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs args)
@@ -143,10 +164,16 @@ internal sealed class WindowAppearanceService : IDisposable
 
         var effect = _theme.SelectedWindowEffect;
         var surfaceBrush = new SolidColorBrush(isLightTheme ? ThemeSurfaceColors.Light : ThemeSurfaceColors.Dark);
+        var useInactiveMacOSBlurBrush = OperatingSystem.IsMacOS()
+            && effect == WindowEffect.Blur
+            && !_isWindowActive;
         var rootSurfaceBrush = effect switch
         {
             WindowEffect.None => surfaceBrush,
-            WindowEffect.Acrylic or WindowEffect.Blur => new SolidColorBrush(Color.Parse(isLightTheme ? "#B3FFFFFF" : "#B3212121")),
+            WindowEffect.Acrylic or WindowEffect.Blur => new SolidColorBrush(Color.Parse(
+                isLightTheme
+                    ? useInactiveMacOSBlurBrush ? "#50FFFFFF" : "#A0FFFFFF"
+                    : useInactiveMacOSBlurBrush ? "#90000000" : "#A0000000")),
             _ => (IBrush)Brushes.Transparent
         };
         // 这里只处理窗口效果背景；其余样式归 Theme.axaml。
