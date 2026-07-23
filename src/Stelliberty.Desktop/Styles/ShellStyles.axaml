@@ -130,7 +130,6 @@
   </Style>
   <Style Selector="Button.nav-item.selected /template/ Border#NavRoot">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource AppNavItemSelectedShadow}" />
   </Style>
   <Style Selector="Button.nav-item.selected:pointerover /template/ Border#NavRoot">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
