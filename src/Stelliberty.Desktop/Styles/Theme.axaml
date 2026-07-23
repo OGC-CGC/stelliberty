@@ -56,8 +56,8 @@
       <SolidColorBrush x:Key="AppPopupSurfaceBrush" Color="#212121" />
       <SolidColorBrush x:Key="ComboBoxPopupBackground" Color="#212121" />
 
-      <SolidColorBrush x:Key="AppSurfaceBrush" Color="#CC000000" />
-      <SolidColorBrush x:Key="AppCardBrush" Color="#CC000000" />
+      <SolidColorBrush x:Key="AppSurfaceBrush" Color="#44000000" />
+      <SolidColorBrush x:Key="AppCardBrush" Color="#44000000" />
       <SolidColorBrush x:Key="AppSettingsGroupBrush" Color="#CC000000" />
 
       <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#F4F4F5" />
