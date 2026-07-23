@@ -1,6 +1,8 @@
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Stelliberty.Application.Settings;
 using Stelliberty.Presentation.ViewModels;
 
@@ -84,12 +86,14 @@ internal sealed class WindowAppearanceService : IDisposable
     {
         _isWindowActive = true;
         UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
+        KeepMacOSBlurActive();
     }
 
     private void OnWindowDeactivated(object? sender, EventArgs args)
     {
         _isWindowActive = false;
         UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
+        KeepMacOSBlurActive();
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs args)
@@ -137,6 +141,7 @@ internal sealed class WindowAppearanceService : IDisposable
         };
 
         UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
+        KeepMacOSBlurActive();
     }
 
     private bool IsCurrentLightTheme()
@@ -173,7 +178,7 @@ internal sealed class WindowAppearanceService : IDisposable
             WindowEffect.Acrylic or WindowEffect.Blur => new SolidColorBrush(Color.Parse(
                 isLightTheme
                     ? useInactiveMacOSBlurBrush ? "#50FFFFFF" : "#A0FFFFFF"
-                    : useInactiveMacOSBlurBrush ? "#90000000" : "#A0000000")),
+                    : useInactiveMacOSBlurBrush ? "#97000000" : "#A0000000")),
             _ => (IBrush)Brushes.Transparent
         };
         // 这里只处理窗口效果背景；其余样式归 Theme.axaml。
@@ -189,4 +194,93 @@ internal sealed class WindowAppearanceService : IDisposable
                 ? "14 0 34 -16 #3A000000, 3 0 10 -4 #24000000"
                 : "14 0 34 -16 #38FFFFFF, 3 0 10 -4 #28FFFFFF");
     }
+
+    private void KeepMacOSBlurActive()
+    {
+        if (!OperatingSystem.IsMacOS()
+            || _window is null
+            || _theme?.SelectedWindowEffect != WindowEffect.Blur)
+        {
+            return;
+        }
+
+        ActivateMacOSVisualEffectViews(_window);
+        var attachedWindow = _window;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (ReferenceEquals(_window, attachedWindow)
+                    && _theme?.SelectedWindowEffect == WindowEffect.Blur)
+                {
+                    ActivateMacOSVisualEffectViews(attachedWindow);
+                }
+            },
+            DispatcherPriority.Background);
+    }
+
+    private static void ActivateMacOSVisualEffectViews(Window window)
+    {
+        var windowHandle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (windowHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var contentView = SendIntPtr(windowHandle, RegisterSelector("contentView"));
+        var visualEffectViewClass = GetObjectiveCClass("NSVisualEffectView");
+        if (contentView == IntPtr.Zero || visualEffectViewClass == IntPtr.Zero)
+        {
+            return;
+        }
+
+        ActivateMacOSVisualEffectViews(contentView, visualEffectViewClass);
+    }
+
+    private static void ActivateMacOSVisualEffectViews(IntPtr view, IntPtr visualEffectViewClass)
+    {
+        if (SendByteIntPtr(view, RegisterSelector("isKindOfClass:"), visualEffectViewClass) != 0)
+        {
+            SendVoidNInt(view, RegisterSelector("setState:"), 1);
+        }
+
+        var subviews = SendIntPtr(view, RegisterSelector("subviews"));
+        if (subviews == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var count = SendNUInt(subviews, RegisterSelector("count"));
+        var objectAtIndexSelector = RegisterSelector("objectAtIndex:");
+        for (nuint index = 0; index < count; index++)
+        {
+            var subview = SendIntPtrNUInt(subviews, objectAtIndexSelector, index);
+            if (subview != IntPtr.Zero)
+            {
+                ActivateMacOSVisualEffectViews(subview, visualEffectViewClass);
+            }
+        }
+    }
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_getClass")]
+    private static extern IntPtr GetObjectiveCClass(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string className);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "sel_registerName")]
+    private static extern IntPtr RegisterSelector(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string selectorName);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr SendIntPtr(IntPtr receiver, IntPtr selector);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr SendIntPtrNUInt(IntPtr receiver, IntPtr selector, nuint value);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern nuint SendNUInt(IntPtr receiver, IntPtr selector);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern byte SendByteIntPtr(IntPtr receiver, IntPtr selector, IntPtr value);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void SendVoidNInt(IntPtr receiver, IntPtr selector, nint value);
 }
