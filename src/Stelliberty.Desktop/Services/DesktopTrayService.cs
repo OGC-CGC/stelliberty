@@ -276,6 +276,7 @@ internal sealed class DesktopTrayService : IDisposable
         {
             return;
         }
+        MacOSDockVisibilityService.SetVisible(true);
 #if DEBUG
         var startedAt = Stopwatch.GetTimestamp();
         AppLogger.Info($"[StartupTrace] Tray window show started visible={_window.IsVisible} state={_window.WindowState}");

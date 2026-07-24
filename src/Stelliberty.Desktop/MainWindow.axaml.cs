@@ -1027,6 +1027,7 @@ public sealed partial class MainWindow : Window
     private void HideToTrayOnSecondFrame(TimeSpan _)
     {
         Hide();
+        MacOSDockVisibilityService.SetVisible(false);
     }
 
     private void OnCustomAccentRequested(object? sender, EventArgs args)
