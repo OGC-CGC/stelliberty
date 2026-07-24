@@ -43,6 +43,7 @@ namespace Stelliberty.Desktop;
 public sealed partial class App : Avalonia.Application
 {
     private readonly DesktopTrayService _trayService = new();
+    private readonly MacOSApplicationMenuService _macOSApplicationMenuService = new();
     private SessionEndCleanupService? _sessionEndCleanup;
     private DispatcherTimer? _appUpdateAutoCheckTimer;
     private DispatcherTimer? _subscriptionAutoDelayTimer;
@@ -57,6 +58,7 @@ public sealed partial class App : Avalonia.Application
     {
         AppLogger.Debug("Loading Avalonia XAML");
         AvaloniaXamlLoader.Load(this);
+        _macOSApplicationMenuService.Initialize(this);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -381,6 +383,7 @@ public sealed partial class App : Avalonia.Application
             {
                 StopBackgroundServices();
                 viewModel.HomePage.DisableSystemProxyOnShutdown();
+                _macOSApplicationMenuService.Dispose();
                 _trayService.Dispose();
                 globalHotkeyService.Dispose();
                 _sessionEndCleanup?.Dispose();
@@ -393,6 +396,23 @@ public sealed partial class App : Avalonia.Application
             _sessionEndCleanup = new SessionEndCleanupService(viewModel.HomePage.DisableSystemProxyOnShutdown);
             _sessionEndCleanup.Start();
             _trayService.Attach(desktop, mainWindow, viewModel, localization);
+            _macOSApplicationMenuService.Attach(
+                localization,
+                () =>
+                {
+                    _trayService.ShowMainWindow();
+                    if (viewModel.CurrentPage != Stelliberty.Presentation.ViewModels.NavigationPage.Settings)
+                    {
+                        viewModel.ShowSettingsCommand.Execute(null);
+                    }
+                    viewModel.Settings.ShowAboutCommand.Execute(null);
+                },
+                () =>
+                {
+                    _trayService.ShowMainWindow();
+                    viewModel.ShowSettingsCommand.Execute(null);
+                },
+                _trayService.RequestExit);
             foreach (var (action, gesture) in new[]
             {
                 (GlobalHotkeyAction.ToggleWindow, settings.WindowToggleHotkey),

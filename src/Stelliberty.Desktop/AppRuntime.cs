@@ -46,6 +46,14 @@ internal static class AppRuntime
             .With(CreateFontManagerOptions())
             .LogToTrace();
 
+        if (OperatingSystem.IsMacOS())
+        {
+            builder = builder.With(new MacOSPlatformOptions
+            {
+                DisableDefaultApplicationMenuItems = true,
+            });
+        }
+
         if (OperatingSystem.IsLinux())
         {
 #pragma warning disable AVALONIA_X11_CSD

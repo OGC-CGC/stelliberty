@@ -270,7 +270,7 @@ internal sealed class DesktopTrayService : IDisposable
         ShowMainWindow();
     }
 
-    private void ShowMainWindow()
+    public void ShowMainWindow()
     {
         if (_window is null)
         {
@@ -353,6 +353,11 @@ internal sealed class DesktopTrayService : IDisposable
     }
 
     private void OnExitClicked(object? sender, EventArgs args)
+    {
+        RequestExit();
+    }
+
+    public void RequestExit()
     {
         _window?.RequestShutdown();
         _desktop?.TryShutdown(0);
