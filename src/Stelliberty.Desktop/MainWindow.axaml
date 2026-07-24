@@ -158,7 +158,7 @@
             <TextBlock AutomationProperties.AutomationId="Sidebar.BrandText"
                        Text="{Binding Title}"
                        Margin="10,0,0,0"
-                       FontSize="20"
+                       FontSize="16"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource AppAccentBrush}" />

@@ -4,8 +4,8 @@ namespace Stelliberty.Desktop.Services;
 
 internal static class AccentColorPaletteGenerator
 {
-    private static readonly Color White = Colors.White;
-    private static readonly Color Black = Colors.Black;
+    private static readonly Color White = Color.FromArgb(0xFF, 0xFC, 0xFC, 0xFC);
+    private static readonly Color Black = Color.FromArgb(0xFF, 0x37, 0x37, 0x37);
 
     public static AccentColorPalette Generate(Color source, bool isLightTheme)
     {
