@@ -12,7 +12,7 @@
 
 ## Checklist
 
-- [ ] Wrapped new or changed business logic in `src/Stelliberty.Desktop/Debug`
+- [ ] Wrapped new or changed business logic in `src/SBproxy.Desktop/Debug`
 - [ ] Added `AutomationId` for new interactive controls
 - [ ] Wrote pre-tests or simulation tests
 - [ ] Passed `python scripts/test.py --all`

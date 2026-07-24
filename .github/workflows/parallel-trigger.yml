@@ -12,7 +12,7 @@ on:
       - '.github/scripts/**'
       - '.github/workflows/stability-verification.yml'
       - 'Directory.Build.props'
-      - 'Stelliberty.slnx'
+      - 'SBproxy.slnx'
       - '**/Cargo.toml'
       - 'Cargo.lock'
       - 'global.json'
@@ -119,7 +119,7 @@ jobs:
             case "${path}" in
               Directory.Build.props)
                 ;;
-              *.cs|*.rs|*.axaml|*.csproj|Cargo.toml|*/Cargo.toml|Cargo.lock|Directory.Packages.props|Stelliberty.slnx|global.json)
+              *.cs|*.rs|*.axaml|*.csproj|Cargo.toml|*/Cargo.toml|Cargo.lock|Directory.Packages.props|SBproxy.slnx|global.json)
                 should_build=true
                 break
                 ;;

@@ -1,0 +1,276 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:SBproxy.Desktop.Controls"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:views="clr-namespace:SBproxy.Desktop.Views"
+        xmlns:vm="using:SBproxy.Presentation.ViewModels"
+        x:Class="SBproxy.Desktop.MainWindow"
+        x:CompileBindings="True"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1280"
+        Height="840"
+        MinWidth="1040"
+        MinHeight="680"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="Full"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="36"
+        TransparencyLevelHint="None"
+        Background="{DynamicResource AppRootSurfaceBrush}"
+        UseLayoutRounding="True"
+        Title="{Binding Title}">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://sbproxy/Styles/Theme.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+      <views:PageToViewConverter x:Key="PageToView" />
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <Window.Styles>
+    <StyleInclude Source="avares://sbproxy/Styles/ShellStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/PrimitivesStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/ScrollStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/ListPageStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/HomeStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/ProxyStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/ComboBoxStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/MenuStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/SwitchStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/DialogStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/ToastStyles.axaml" />
+    <StyleInclude Source="avares://sbproxy/Styles/SettingsStyles.axaml" />
+  </Window.Styles>
+
+  <Grid RowDefinitions="36,*">
+    <Border x:Name="TitleBarSurface"
+            AutomationProperties.AutomationId="TitleBar.Root"
+            Background="Transparent"
+            PointerPressed="OnTitleBarPointerPressed">
+      <Grid x:Name="TitleBarLayout" ColumnDefinitions="*,Auto,Auto">
+        <Border Width="1"
+                Margin="219,0,0,0"
+                HorizontalAlignment="Left"
+                Background="{DynamicResource AppBorderBrush}"
+                IsHitTestVisible="False" />
+        <controls:FpsCounter Grid.Column="1"
+                             AutomationProperties.AutomationId="TitleBar.FpsCounter"
+                             IsVisible="{Binding AppBehavior.IsTitleBarFpsVisible}"
+                             IsHitTestVisible="False"
+                             VerticalAlignment="Center"
+                             Margin="0,0,10,0"
+                             FontFamily="Consolas"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource AppTextSecondaryBrush}" />
+        <StackPanel x:Name="CaptionButtons"
+                    Grid.Column="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Stretch">
+          <Button Classes="titlebar-button"
+                  AutomationProperties.AutomationId="TitleBar.MinimizeButton"
+                  Click="OnMinimizeClicked">
+            <Path Width="13" Height="13"
+                  Data="M 2 6 L 10 6"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                  StrokeThickness="1.4"
+                  StrokeLineCap="Square" />
+          </Button>
+          <Button Classes="titlebar-button"
+                  AutomationProperties.AutomationId="TitleBar.MaximizeButton"
+                  Click="OnMaximizeClicked">
+            <Grid Width="13" Height="13">
+              <Rectangle x:Name="MaximizeIcon" Width="9" Height="9"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                         StrokeThickness="1.25" />
+              <Path x:Name="RestoreIcon" IsVisible="False"
+                    Data="M 4 2.5 H 9.5 V 8 M 2.5 4 H 8 V 9.5 H 2.5 Z"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                    StrokeThickness="1.25" />
+            </Grid>
+          </Button>
+          <Button Classes="titlebar-button close"
+                  AutomationProperties.AutomationId="TitleBar.CloseButton"
+                  Click="OnCloseClicked">
+            <Path Width="13" Height="13"
+                  Data="M 3 3 L 9 9 M 9 3 L 3 9"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                  StrokeThickness="1.45"
+                  StrokeLineCap="Round" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="220,*" ClipToBounds="True">
+      <Border Width="1"
+              HorizontalAlignment="Right"
+              Background="{DynamicResource AppBorderBrush}"
+              IsHitTestVisible="False" />
+      <Border AutomationProperties.AutomationId="Sidebar.Root"
+              Padding="12,24,12,20"
+              Background="Transparent">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <StackPanel Margin="13,4,0,28"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      HorizontalAlignment="Left">
+            <Border Width="24"
+                    Height="24"
+                    CornerRadius="6"
+                    ClipToBounds="True"
+                    Background="{DynamicResource AppAccentBrush}">
+              <Viewbox Stretch="Uniform">
+                <Canvas Width="1024" Height="1024">
+                  <Ellipse Canvas.Left="775.180"
+                           Canvas.Top="246.441"
+                           Width="52.436"
+                           Height="52.436"
+                           Fill="{DynamicResource AppOnAccentBrush}" />
+                  <Ellipse Canvas.Left="235.430"
+                           Canvas.Top="538.634"
+                           Width="228.614"
+                           Height="228.614"
+                           Fill="{DynamicResource AppOnAccentBrush}" />
+                  <Path Data="M602.728,535.05 C601.02,525.04 600.129,514.754 600.129,504.261 C600.129,403.835 681.662,322.302 782.088,322.302 C882.513,322.302 964.046,403.835 964.046,504.261 C964.046,604.686 882.513,686.219 782.088,686.219 C742.418,686.219 705.696,673.497 675.783,651.913 C673.728,601.383 644.702,557.753 602.728,535.05 Z"
+                        Fill="{DynamicResource AppOnAccentBrush}">
+                    <Path.RenderTransform>
+                      <TranslateTransform X="-186.866" Y="-4.761" />
+                    </Path.RenderTransform>
+                  </Path>
+                  <Ellipse Canvas.Left="196.384"
+                           Canvas.Top="440.038"
+                           Width="46.282"
+                           Height="46.282"
+                           Fill="{DynamicResource AppOnAccentBrush}" />
+                  <Path Data="M316.609,196.581 C322.252,196.581 334.596,227.98 346.942,240.327 C359.289,252.673 390.688,264.673 390.688,270.659 C390.688,276.645 359.289,288.646 346.942,300.992 C334.596,313.339 322.595,344.738 316.609,344.738 C310.623,344.738 298.623,313.339 286.276,300.992 C273.93,288.646 242.531,276.645 242.531,270.659 C242.531,264.673 273.93,252.673 286.276,240.327 C298.623,227.98 310.623,196.581 316.609,196.581 Z"
+                        Fill="{DynamicResource AppOnAccentBrush}">
+                    <Path.RenderTransform>
+                      <TranslateTransform X="5.634" />
+                    </Path.RenderTransform>
+                  </Path>
+                </Canvas>
+              </Viewbox>
+            </Border>
+            <TextBlock AutomationProperties.AutomationId="Sidebar.BrandText"
+                       Text="{Binding Title}"
+                       Margin="10,0,0,0"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource AppAccentBrush}" />
+          </StackPanel>
+
+          <StackPanel Grid.Row="1" Spacing="6">
+            <Button Classes="nav-item"
+                    Classes.selected="{Binding IsHomeSelected}"
+                    AutomationProperties.AutomationId="Navigation.HomeButton"
+                    Command="{Binding ShowHomeCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-home" /></Border><TextBlock Text="{Binding HomeNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav-item"
+                    Classes.selected="{Binding IsProxySelected}"
+                    AutomationProperties.AutomationId="Navigation.ProxyButton"
+                    Command="{Binding ShowProxyCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-proxy" /></Border><TextBlock Text="{Binding ProxyNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav-item"
+                    Classes.selected="{Binding IsConnectionsSelected}"
+                    AutomationProperties.AutomationId="Navigation.ConnectionsButton"
+                    Command="{Binding ShowConnectionsCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-connections" /></Border><TextBlock Text="{Binding ConnectionsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav-item"
+                    Classes.selected="{Binding IsCoreLogsSelected}"
+                    AutomationProperties.AutomationId="Navigation.CoreLogsButton"
+                    Command="{Binding ShowCoreLogsCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-log" /></Border><TextBlock Text="{Binding CoreLogsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav-item"
+                    Classes.selected="{Binding IsRulesSelected}"
+                    AutomationProperties.AutomationId="Navigation.RulesButton"
+                    Command="{Binding ShowRulesCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-rules" /></Border><TextBlock Text="{Binding RulesNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav-item"
+                    Classes.selected="{Binding IsSubscriptionsSelected}"
+                    AutomationProperties.AutomationId="Navigation.SubscriptionsButton"
+                    Command="{Binding ShowSubscriptionsCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-subscription" /></Border><TextBlock Text="{Binding SubscriptionsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </StackPanel>
+            </Button>
+            <Button Classes="nav-item"
+                    Classes.selected="{Binding IsOverridesSelected}"
+                    AutomationProperties.AutomationId="Navigation.OverridesButton"
+                    Command="{Binding ShowOverridesCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-overrides" /></Border><TextBlock Text="{Binding OverridesNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <Button Grid.Row="2"
+                  Classes="nav-item"
+                  Classes.selected="{Binding IsSettingsSelected}"
+                  AutomationProperties.AutomationId="Navigation.SettingsButton"
+                  Command="{Binding ShowSettingsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-settings" /></Border><TextBlock Text="{Binding SettingsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1"
+              Classes="content-host"
+              Classes.settings="{Binding IsSettingsSelected}"
+              Background="Transparent">
+          <Grid>
+            <ContentControl x:Name="HomePageHost" Classes="page-host" />
+            <ContentControl x:Name="ProxyPageHost" Classes="page-host" />
+            <ContentControl x:Name="ConnectionsPageHost" Classes="page-host" />
+            <ContentControl x:Name="CoreLogsPageHost" Classes="page-host" />
+            <ContentControl x:Name="RulesPageHost" Classes="page-host" />
+            <ContentControl x:Name="SubscriptionsPageHost" Classes="page-host" />
+            <ContentControl x:Name="OverridesPageHost" Classes="page-host" />
+            <ContentControl x:Name="SettingsPageHost" Classes="page-host" />
+            <!-- 加载层只拦截内容区，导航仍可切换页面。 -->
+            <Border x:Name="PageLoadingOverlay"
+                    ZIndex="50"
+                    Opacity="0"
+                    IsHitTestVisible="False"
+                    Background="Transparent"
+                    AutomationProperties.AutomationId="Shell.PageLoadingOverlay">
+              <controls:PageLoadingIndicator x:Name="PageLoadingIndicator"
+                                             HorizontalAlignment="Stretch"
+                                             VerticalAlignment="Center"
+                                             Height="140"
+                                             AutomationProperties.AutomationId="Shell.PageLoadingIndicator" />
+            </Border>
+          </Grid>
+      </Border>
+    </Grid>
+
+    <controls:OverlayDialogHost x:Name="DialogHost"
+                                Grid.RowSpan="2" />
+
+    <controls:ToastNotification Grid.RowSpan="2"
+                                IsOpen="{Binding IsToastVisible}"
+                                Type="{Binding ToastType}"
+                                Message="{Binding ToastMessage}" />
+  </Grid>
+</Window>

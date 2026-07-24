@@ -15,7 +15,7 @@ def main() -> None:
     if not args.app_output.is_dir():
         raise FileNotFoundError(f"Built app output does not exist: {args.app_output}")
 
-    with tempfile.TemporaryDirectory(prefix="stelliberty-installation-") as temporary_directory:
+    with tempfile.TemporaryDirectory(prefix="sbproxy-installation-") as temporary_directory:
         root = Path(temporary_directory)
         if args.os_family == "macos":
             verify_macos_layout_policy()
@@ -27,29 +27,29 @@ def main() -> None:
 
 
 def verify_macos_layout_policy() -> None:
-    resolver = read_repository_file("src/Stelliberty.Application/Platform/PortableDataDirectoryResolver.cs")
+    resolver = read_repository_file("src/SBproxy.Application/Platform/PortableDataDirectoryResolver.cs")
     require_fragments(resolver, ["ResolveMacOS", '".app"', '}.data'])
 
 
 def verify_linux_installer_policy() -> None:
     launcher = read_repository_file("scripts/installer/linux/launcher.in")
     appimage = read_repository_file("scripts/installer/linux/appimage.AppRun.in")
-    require_fragments(launcher, ["PORTABLE_APP_DATA_DIR", "/opt/@APP_PACKAGE@.data"])
-    require_fragments(appimage, ["PORTABLE_APP_DATA_DIR", "APPIMAGE_DIR", "@APP_PACKAGE@.data"])
+    require_fragments(launcher, ["PORTABLE_APP_DATA_DIR", "/opt/stelliberty.data"])
+    require_fragments(appimage, ["PORTABLE_APP_DATA_DIR", "APPIMAGE_DIR", "stelliberty.data"])
 
     for relative_path in [
         "scripts/installer/linux/postinst.in",
         "scripts/installer/linux/arch.INSTALL.in",
         "scripts/installer/linux/rpm.spec.in",
     ]:
-        require_fragments(read_repository_file(relative_path), ["mkdir -p /opt/@APP_PACKAGE@.data"])
+        require_fragments(read_repository_file(relative_path), ["mkdir -p /opt/stelliberty.data"])
 
 
 def simulate_macos_replacement(root: Path, app_output: Path) -> None:
     print("Simulating macOS app bundle replacement")
     applications_directory = root / "Applications"
-    app_directory = applications_directory / "Stelliberty.app"
-    data_directory = applications_directory / "Stelliberty.data"
+    app_directory = applications_directory / "SBproxy.app"
+    data_directory = applications_directory / "SBproxy.data"
 
     install_version(app_output, app_directory / "Contents" / "MacOS", "1")
     save_user_state(data_directory)
@@ -59,7 +59,7 @@ def simulate_macos_replacement(root: Path, app_output: Path) -> None:
 
 def simulate_linux_package_replacement(root: Path, app_output: Path) -> None:
     print("Simulating Linux package replacement")
-    install_directory = root / "opt" / "stelliberty"
+    install_directory = root / "opt" / "sbproxy"
     data_directory = root / "opt" / "stelliberty.data"
 
     install_version(app_output, install_directory, "1")
@@ -70,7 +70,7 @@ def simulate_linux_package_replacement(root: Path, app_output: Path) -> None:
 
 def simulate_appimage_replacement(root: Path, app_output: Path) -> None:
     print("Simulating AppImage version replacement")
-    extraction_root = root / "home" / "runner" / ".local" / "share" / "stelliberty" / "appimage"
+    extraction_root = root / "home" / "runner" / ".local" / "share" / "sbproxy" / "appimage"
     first_installation = extraction_root / "1"
     second_installation = extraction_root / "2"
     data_directory = root / "downloads" / "stelliberty.data"

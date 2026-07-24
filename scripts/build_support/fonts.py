@@ -5,7 +5,7 @@ from pathlib import Path
 
 from build_support.paths import ROOT
 
-FONT_DIR = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "fonts"
+FONT_DIR = ROOT / "src" / "SBproxy.Desktop" / "Assets" / "fonts"
 GOOGLE_FONT_CSS = "https://fonts.googleapis.com/css2?family=Google+Sans"
 GOOGLE_SANS = "GoogleSans-Regular.ttf"
 NOTO_SANS_SC = "NotoSansSC-VF.ttf"

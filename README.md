@@ -1,6 +1,6 @@
 <div align="center">
 
-# Stelliberty Remake
+# SBproxy Remake
 
 [![English](https://img.shields.io/badge/English-red?style=flat-square)](README.md)
 &nbsp;
@@ -26,7 +26,7 @@
 |---|---|
 | ![Settings light](.github/images/settings-light.png) | ![Settings dark](.github/images/settings-dark.png) |
 
-Stelliberty is a cross-platform desktop proxy client for Windows, Linux, and macOS.
+SBproxy is a cross-platform desktop proxy client for Windows, Linux, and macOS.
 
 Import Clash-standard and Base64 subscriptions. It starts quickly and uses little resources. On Windows and macOS, platform-level frosted window effects are available, with a simple native look.
 
@@ -103,11 +103,11 @@ Config format is fully compatible with Clash Meta — see the [mihomo documentat
 
 ### Installing .NET 11 Runtime
 
-Before running Stelliberty, make sure the [.NET 11 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) is installed.
+Before running SBproxy, make sure the [.NET 11 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) is installed.
 
 ### UWP Loopback & Administrator Privileges
 
-UWP apps on Windows (e.g. Microsoft Store apps) are blocked from accessing the local proxy loopback address by default. Stelliberty provides a **UWP loopback exemption** toggle to remove this restriction.
+UWP apps on Windows (e.g. Microsoft Store apps) are blocked from accessing the local proxy loopback address by default. SBproxy provides a **UWP loopback exemption** toggle to remove this restriction.
 
 Notes:
 
@@ -142,12 +142,12 @@ Notes:
 Modular monolith + Clean Architecture + MVVM.
 
 ```
-src/Stelliberty.Desktop         Avalonia host, windows, platform services
-src/Stelliberty.Presentation    ViewModels, UI state, command bindings
-src/Stelliberty.Application     Use cases, service & capability interfaces
-src/Stelliberty.Domain          Entities, value objects, domain rules
-src/Stelliberty.Infrastructure  File system, persistence, external services
-src/Stelliberty.Native          C# wrappers over the native FFI layer
+src/SBproxy.Desktop         Avalonia host, windows, platform services
+src/SBproxy.Presentation    ViewModels, UI state, command bindings
+src/SBproxy.Application     Use cases, service & capability interfaces
+src/SBproxy.Domain          Entities, value objects, domain rules
+src/SBproxy.Infrastructure  File system, persistence, external services
+src/SBproxy.Native          C# wrappers over the native FFI layer
 native/hub                      Native library: config override, parsing, capabilities
 native/service                  Service mode
 scripts/                        build.py · prebuild.py · test.py
@@ -331,14 +331,14 @@ Pull Requests must target `beta`. Direct Pull Requests to `stable` are prohibite
 
 | Check | Description |
 |---|---|
-| Debug commands | New or modified business logic must be wrapped as debug commands under `src/Stelliberty.Desktop/Debug` |
+| Debug commands | New or modified business logic must be wrapped as debug commands under `src/SBproxy.Desktop/Debug` |
 | Control IDs | New interactive controls must have `AutomationProperties.AutomationId` set |
 | Pre-merge tests | Must include pre-tests or simulation tests to ensure independent verification before merge |
 | Formatting | C#: `dotnet format`, Rust: `cargo fmt` |
 
 ### Debug Command Requirements
 
-Debug commands are wrapped under `src/Stelliberty.Desktop/Debug` and invoked through the debug control port. When business logic changes, add or update the corresponding `Debug/Commands/*.cs` implementation.
+Debug commands are wrapped under `src/SBproxy.Desktop/Debug` and invoked through the debug control port. When business logic changes, add or update the corresponding `Debug/Commands/*.cs` implementation.
 
 ### Control ID Requirements
 
@@ -359,7 +359,7 @@ Naming rule: `PageOrArea.SemanticName` — stable, unique, independent of visual
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-Stelliberty is built with help from open-source projects such as Avalonia and mihomo.
+SBproxy is built with help from open-source projects such as Avalonia and mihomo.
 
 For complete third-party license and copyright information, see [License](#-license).
 
@@ -371,7 +371,7 @@ For complete third-party license and copyright information, see [License](#-lice
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-Third-party open-source projects used by Stelliberty retain their original licenses and copyright notices.
+Third-party open-source projects used by SBproxy retain their original licenses and copyright notices.
 
 <br>
 

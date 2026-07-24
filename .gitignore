@@ -53,7 +53,7 @@
 **/bin/
 **/obj/
 /Cargo.lock
-/src/Stelliberty.Native/Generated/
+/src/SBproxy.Native/Generated/
 **/__pycache__/
 **/*.user
 **/*.suo

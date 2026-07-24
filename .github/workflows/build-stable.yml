@@ -321,7 +321,7 @@ jobs:
       - name: Upload release artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: stelliberty-release-${{ matrix.platform }}
+          name: sbproxy-release-${{ matrix.platform }}
           path: |
             build/*.zip
             build/packages/*
@@ -352,7 +352,7 @@ jobs:
           printf '%s' '${{ needs.prepare.outputs.release_notes }}' | base64 --decode > release_notes.md
           cat release_notes.md
 
-      - name: Publish to stelliberty
+      - name: Publish to sbproxy
         uses: softprops/action-gh-release@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

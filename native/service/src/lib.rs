@@ -104,7 +104,7 @@ fn print_help() {
 }
 
 pub(crate) fn service_version() -> &'static str {
-    option_env!("STELLIBERTY_APP_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))
+    option_env!("SBPROXY_APP_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))
 }
 
 fn parse_log_lines(value: Option<&String>) -> Result<Option<usize>> {

@@ -1,5 +1,5 @@
 [package]
-name = "stelliberty_xtask"
+name = "sbproxy_xtask"
 edition = "2024"
 publish = false
 

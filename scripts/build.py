@@ -77,7 +77,7 @@ def get_tool_version(command: list[str]) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build the Stelliberty desktop app",
+        description="Build the SBproxy desktop app",
         formatter_class=MultilineHelpFormatter,
     )
     configuration = parser.add_mutually_exclusive_group()

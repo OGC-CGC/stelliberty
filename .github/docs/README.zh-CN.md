@@ -1,6 +1,6 @@
 <div align="center">
 
-# Stelliberty 重制版
+# SBproxy 重制版
 
 [![English](https://img.shields.io/badge/English-red?style=flat-square)](../../README.md)
 &nbsp;
@@ -26,7 +26,7 @@
 |---|---|
 | ![设置浅色](../../.github/images/settings-light.png) | ![设置深色](../../.github/images/settings-dark.png) |
 
-Stelliberty 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS。
+SBproxy 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS。
 
 支持 Clash 标准订阅和 Base64 订阅导入，启动快、占用低。Windows 和 macOS 上还做了平台级的模糊窗口效果，界面偏简约原生风格。
 
@@ -103,11 +103,11 @@ Stelliberty 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS
 
 ### 安装 .NET 11 运行时
 
-运行 Stelliberty 前，确保你已安装 [.NET 11 桌面运行时](https://dotnet.microsoft.com/download/dotnet/11.0)。
+运行 SBproxy 前，确保你已安装 [.NET 11 桌面运行时](https://dotnet.microsoft.com/download/dotnet/11.0)。
 
 ### UWP 回环与管理员权限
 
-Windows 上的 UWP 应用（如微软商店应用）默认禁止访问本地代理回环地址。Stelliberty 提供了 **UWP 回环豁免** 功能来解除此限制。
+Windows 上的 UWP 应用（如微软商店应用）默认禁止访问本地代理回环地址。SBproxy 提供了 **UWP 回环豁免** 功能来解除此限制。
 
 注意事项：
 
@@ -142,12 +142,12 @@ Windows 上的 UWP 应用（如微软商店应用）默认禁止访问本地代�
 采用模块化单体 + Clean Architecture + MVVM。
 
 ```
-src/Stelliberty.Desktop         Avalonia 宿主、窗口、平台服务
-src/Stelliberty.Presentation    ViewModel、UI 状态、命令绑定
-src/Stelliberty.Application     用例、服务与平台能力接口
-src/Stelliberty.Domain          实体、值对象、领域规则
-src/Stelliberty.Infrastructure  文件系统、持久化、外部服务
-src/Stelliberty.Native          C# 到原生 FFI 层的包装
+src/SBproxy.Desktop         Avalonia 宿主、窗口、平台服务
+src/SBproxy.Presentation    ViewModel、UI 状态、命令绑定
+src/SBproxy.Application     用例、服务与平台能力接口
+src/SBproxy.Domain          实体、值对象、领域规则
+src/SBproxy.Infrastructure  文件系统、持久化、外部服务
+src/SBproxy.Native          C# 到原生 FFI 层的包装
 native/hub                      原生库：配置覆写、解析、能力模块
 native/service                  服务模式
 scripts/                        build.py · prebuild.py · test.py
@@ -337,14 +337,14 @@ Pull Request 必须以 `beta` 为目标分支，禁止直接向 `stable` 发起�
 
 | 检查项 | 说明 |
 |---|---|
-| 调试指令 | 新增或修改业务逻辑时，必须在 `src/Stelliberty.Desktop/Debug` 封装对应的调试指令 |
+| 调试指令 | 新增或修改业务逻辑时，必须在 `src/SBproxy.Desktop/Debug` 封装对应的调试指令 |
 | 控件 ID | 引入新的可交互控件时，必须设置 `AutomationProperties.AutomationId` |
 | 事前测试 | 必须编写事前测试或模拟测试，确保功能在合并前可独立验证 |
 | 格式化 | C# 运行 `dotnet format`，Rust 运行 `cargo fmt` |
 
 ### 调试指令要求
 
-调试指令封装在 `src/Stelliberty.Desktop/Debug`，通过调试控制端口调用；新增或修改业务逻辑时，应在对应的 `Debug/Commands/*.cs` 中实现。
+调试指令封装在 `src/SBproxy.Desktop/Debug`，通过调试控制端口调用；新增或修改业务逻辑时，应在对应的 `Debug/Commands/*.cs` 中实现。
 
 ### 控件 ID 要求
 
@@ -365,7 +365,7 @@ Pull Request 必须以 `beta` 为目标分支，禁止直接向 `stable` 发起�
 
 <sub>[↑ 回到导航](#导航)</sub>
 
-Stelliberty 的开发受益于 Avalonia、mihomo 等开源项目。
+SBproxy 的开发受益于 Avalonia、mihomo 等开源项目。
 
 完整第三方开源协议与版权信息请查看 [许可证](#-许可证)。
 
@@ -377,7 +377,7 @@ Stelliberty 的开发受益于 Avalonia、mihomo 等开源项目。
 
 <sub>[↑ 回到导航](#导航)</sub>
 
-Stelliberty 使用的第三方开源项目保留其原始许可证与版权声明。
+SBproxy 使用的第三方开源项目保留其原始许可证与版权声明。
 
 <br>
 

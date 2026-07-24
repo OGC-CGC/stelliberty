@@ -237,7 +237,7 @@ var
   Script: String;
 begin
   ProcessPath := ExpandConstant('{app}\data\core\{#MyCoreExeName}');
-  ScriptPath := ExpandConstant('{tmp}\stop-stelliberty-core.ps1');
+  ScriptPath := ExpandConstant('{tmp}\stop-sbproxy-core.ps1');
   Script :=
     '$processPath = "' + ProcessPath + '"' + #13#10 +
     'Get-CimInstance Win32_Process -Filter "Name = ''{#MyCoreExeName}''" |' + #13#10 +
@@ -255,7 +255,7 @@ var
   Script: String;
 begin
   ProcessPath := ExpandConstant('{app}\{#MyAppExeName}');
-  ScriptPath := ExpandConstant('{tmp}\stop-stelliberty-app.ps1');
+  ScriptPath := ExpandConstant('{tmp}\stop-sbproxy-app.ps1');
   Script :=
     '$processPath = "' + ProcessPath + '"' + #13#10 +
     'Get-CimInstance Win32_Process -Filter "Name = ''{#MyAppExeName}''" |' + #13#10 +

@@ -9,10 +9,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <AppName>stelliberty</AppName>
-    <AppDisplayName>Stelliberty Rev</AppDisplayName>
+    <AppName>sbproxy</AppName>
+    <AppDisplayName>SBproxy Rev</AppDisplayName>
     <AppVersion>2.0.13-beta1</AppVersion>
-    <AppPipePrefix>stelliberty</AppPipePrefix>
+    <AppPipePrefix>sbproxy</AppPipePrefix>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

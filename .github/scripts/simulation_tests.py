@@ -44,11 +44,11 @@ class SimulationTests:
         self.env = os.environ.copy()
         self.env["PYTHONUTF8"] = "1"
         self.env["PYTHONDONTWRITEBYTECODE"] = "1"
-        self.env.setdefault("STELLIBERTY_DEBUG_SERVICE_CI", "1")
+        self.env.setdefault("SBPROXY_DEBUG_SERVICE_CI", "1")
         self.log_dir = Path(self.env.get("RUNNER_TEMP", ROOT / "build" / "simulation-tests"))
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.app_log_path = self.log_dir / "stelliberty-simulation-app.log"
-        self.xvfb_log_path = self.log_dir / "stelliberty-simulation-xvfb.log"
+        self.app_log_path = self.log_dir / "sbproxy-simulation-app.log"
+        self.xvfb_log_path = self.log_dir / "sbproxy-simulation-xvfb.log"
         self.app_running_log_path = self.app_output / "data" / "applogs" / "running.logs"
         self.app_process: subprocess.Popen | None = None
         self.xvfb_process: subprocess.Popen | None = None

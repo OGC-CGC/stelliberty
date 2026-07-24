@@ -1,3 +1,3 @@
 fn main() -> anyhow::Result<()> {
-    stelliberty_service::run()
+    sbproxy_service::run()
 }

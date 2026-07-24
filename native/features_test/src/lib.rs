@@ -241,9 +241,9 @@ fn local_ipc_endpoint(test_dir: &Path, endpoint_type: &str, uuid: uuid::Uuid) ->
     #[cfg(windows)]
     {
         if endpoint_type == "mihomo" {
-            format!(r"\\.\pipe\stelliberty.features_test.{endpoint_type}.{uuid}")
+            format!(r"\\.\pipe\sbproxy.features_test.{endpoint_type}.{uuid}")
         } else {
-            format!("stelliberty.features_test.{endpoint_type}.{uuid}")
+            format!("sbproxy.features_test.{endpoint_type}.{uuid}")
         }
     }
 }

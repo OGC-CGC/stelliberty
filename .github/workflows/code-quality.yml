@@ -66,11 +66,11 @@ jobs:
 
       - name: Restore .NET projects
         shell: bash
-        run: dotnet restore Stelliberty.slnx
+        run: dotnet restore SBproxy.slnx
 
       - name: Check .NET formatting
         shell: bash
-        run: dotnet format Stelliberty.slnx --verify-no-changes
+        run: dotnet format SBproxy.slnx --verify-no-changes
 
       - name: Check Rust formatting
         shell: bash

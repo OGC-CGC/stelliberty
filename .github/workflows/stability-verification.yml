@@ -196,7 +196,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $env:STELLIBERTY_DEBUG_SERVICE_CI = "1"
+          $env:SBPROXY_DEBUG_SERVICE_CI = "1"
           python .github/scripts/retry_command.py --attempts 3 -- python .github/scripts/simulation_tests.py --os-family windows --app-exec "$env:APP_EXEC" --app-output "$env:APP_OUTPUT"
 
       - name: Run Unix post-build simulation tests
@@ -204,4 +204,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          STELLIBERTY_DEBUG_SERVICE_CI=1 python .github/scripts/retry_command.py --attempts 3 -- python .github/scripts/simulation_tests.py --os-family ${{ matrix.os_family }} --app-exec "$APP_EXEC" --app-output "$APP_OUTPUT"
+          SBPROXY_DEBUG_SERVICE_CI=1 python .github/scripts/retry_command.py --attempts 3 -- python .github/scripts/simulation_tests.py --os-family ${{ matrix.os_family }} --app-exec "$APP_EXEC" --app-output "$APP_OUTPUT"

@@ -23,19 +23,19 @@ from build_support.help import MultilineHelpFormatter
 ROOT = Path(__file__).resolve().parents[1]
 RUST_WORKSPACE = ROOT / "Cargo.toml"
 CSHARP_TESTS: list[tuple[str, Path, str]] = [
-    ("infrastructure", ROOT / "tests" / "Stelliberty.Infrastructure.Tests" / "Stelliberty.Infrastructure.Tests.csproj", "Infrastructure integrations: core REST responses, remote downloads, and platform behavior"),
-    ("proxy-selection", ROOT / "tests" / "Stelliberty.ProxySelection.Tests" / "Stelliberty.ProxySelection.Tests.csproj", "Proxy selection semantics: default nodes, fixed groups, local persistence, external sync, and outbound mode"),
-    ("proxy-page", ROOT / "tests" / "Stelliberty.ProxyPage.Tests" / "Stelliberty.ProxyPage.Tests.csproj", "Proxy page interactions: visible groups, node switching, search, sorting, delay tests, and controller sync"),
-    ("home-state", ROOT / "tests" / "Stelliberty.Home.Tests" / "Stelliberty.Home.Tests.csproj", "Home state: system proxy, TUN permissions, outbound mode, runtime refresh, and service mode"),
-    ("shell-navigation", ROOT / "tests" / "Stelliberty.Shell.Tests" / "Stelliberty.Shell.Tests.csproj", "Window shell: page visibility, settings back navigation, and localization refresh"),
-    ("runtime-config", ROOT / "tests" / "Stelliberty.RuntimeConfig.Tests" / "Stelliberty.RuntimeConfig.Tests.csproj", "Runtime config: ports, DNS overrides, TUN, LAN, external controller, and final transforms"),
-    ("core-ipc-contract", ROOT / "tests" / "Stelliberty.IpcContract.Tests" / "Stelliberty.IpcContract.Tests.csproj", "IPC contract: C# wrapper methods, parameters, response parsing, and error-code propagation"),
-    ("chain-proxy", ROOT / "tests" / "Stelliberty.ChainProxy.Tests" / "Stelliberty.ChainProxy.Tests.csproj", "Chain proxy: built-in detection, disabling, custom chain generation, naming conflicts, and invalid YAML fallback"),
-    ("monitoring-pages", ROOT / "tests" / "Stelliberty.Monitoring.Tests" / "Stelliberty.Monitoring.Tests.csproj", "Monitoring pages: connection, log, and rule parsing, pause, filtering, closing, and refresh behavior"),
-    ("subscription-page", ROOT / "tests" / "Stelliberty.Subscription.Tests" / "Stelliberty.Subscription.Tests.csproj", "Subscription page behavior: add, edit, override selection, chain proxy, update failures, and scheduling"),
-    ("override-page", ROOT / "tests" / "Stelliberty.Override.Tests" / "Stelliberty.Override.Tests.csproj", "Override page behavior: add validation, import, save, reference cleanup, ordering, metadata, and update skips"),
-    ("settings-page", ROOT / "tests" / "Stelliberty.Settings.Tests" / "Stelliberty.Settings.Tests.csproj", "Settings page behavior: core config, permission correction, data management, language, updates, system proxy, and theme"),
-    ("webdav", ROOT / "tests" / "Stelliberty.WebDav.Tests" / "Stelliberty.WebDav.Tests.csproj", "WebDAV behavior: connection validation, folder creation, upload, list, download, and delete"),
+    ("infrastructure", ROOT / "tests" / "SBproxy.Infrastructure.Tests" / "SBproxy.Infrastructure.Tests.csproj", "Infrastructure integrations: core REST responses, remote downloads, and platform behavior"),
+    ("proxy-selection", ROOT / "tests" / "SBproxy.ProxySelection.Tests" / "SBproxy.ProxySelection.Tests.csproj", "Proxy selection semantics: default nodes, fixed groups, local persistence, external sync, and outbound mode"),
+    ("proxy-page", ROOT / "tests" / "SBproxy.ProxyPage.Tests" / "SBproxy.ProxyPage.Tests.csproj", "Proxy page interactions: visible groups, node switching, search, sorting, delay tests, and controller sync"),
+    ("home-state", ROOT / "tests" / "SBproxy.Home.Tests" / "SBproxy.Home.Tests.csproj", "Home state: system proxy, TUN permissions, outbound mode, runtime refresh, and service mode"),
+    ("shell-navigation", ROOT / "tests" / "SBproxy.Shell.Tests" / "SBproxy.Shell.Tests.csproj", "Window shell: page visibility, settings back navigation, and localization refresh"),
+    ("runtime-config", ROOT / "tests" / "SBproxy.RuntimeConfig.Tests" / "SBproxy.RuntimeConfig.Tests.csproj", "Runtime config: ports, DNS overrides, TUN, LAN, external controller, and final transforms"),
+    ("core-ipc-contract", ROOT / "tests" / "SBproxy.IpcContract.Tests" / "SBproxy.IpcContract.Tests.csproj", "IPC contract: C# wrapper methods, parameters, response parsing, and error-code propagation"),
+    ("chain-proxy", ROOT / "tests" / "SBproxy.ChainProxy.Tests" / "SBproxy.ChainProxy.Tests.csproj", "Chain proxy: built-in detection, disabling, custom chain generation, naming conflicts, and invalid YAML fallback"),
+    ("monitoring-pages", ROOT / "tests" / "SBproxy.Monitoring.Tests" / "SBproxy.Monitoring.Tests.csproj", "Monitoring pages: connection, log, and rule parsing, pause, filtering, closing, and refresh behavior"),
+    ("subscription-page", ROOT / "tests" / "SBproxy.Subscription.Tests" / "SBproxy.Subscription.Tests.csproj", "Subscription page behavior: add, edit, override selection, chain proxy, update failures, and scheduling"),
+    ("override-page", ROOT / "tests" / "SBproxy.Override.Tests" / "SBproxy.Override.Tests.csproj", "Override page behavior: add validation, import, save, reference cleanup, ordering, metadata, and update skips"),
+    ("settings-page", ROOT / "tests" / "SBproxy.Settings.Tests" / "SBproxy.Settings.Tests.csproj", "Settings page behavior: core config, permission correction, data management, language, updates, system proxy, and theme"),
+    ("webdav", ROOT / "tests" / "SBproxy.WebDav.Tests" / "SBproxy.WebDav.Tests.csproj", "WebDAV behavior: connection validation, folder creation, upload, list, download, and delete"),
 ]
 CSHARP_TEST_ATTRIBUTE_PREFIXES = ("[Fact", "[Theory")
 CSHARP_TEST_DISPLAY_NAME_PATTERN = re.compile(r'DisplayName\s*=\s*"([^"]+)"')

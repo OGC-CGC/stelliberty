@@ -1,0 +1,20 @@
+<Solution>
+  <Project Path="src/SBproxy.Application/SBproxy.Application.csproj" />
+  <Project Path="src/SBproxy.Domain/SBproxy.Domain.csproj" />
+  <Project Path="src/SBproxy.Infrastructure/SBproxy.Infrastructure.csproj" />
+  <Project Path="src/SBproxy.Native/SBproxy.Native.csproj" />
+  <Project Path="src/SBproxy.Presentation/SBproxy.Presentation.csproj" />
+  <Project Path="src/SBproxy.Desktop/SBproxy.Desktop.csproj" />
+  <Project Path="tests/SBproxy.ProxySelection.Tests/SBproxy.ProxySelection.Tests.csproj" />
+  <Project Path="tests/SBproxy.ProxyPage.Tests/SBproxy.ProxyPage.Tests.csproj" />
+  <Project Path="tests/SBproxy.Home.Tests/SBproxy.Home.Tests.csproj" />
+  <Project Path="tests/SBproxy.Shell.Tests/SBproxy.Shell.Tests.csproj" />
+  <Project Path="tests/SBproxy.RuntimeConfig.Tests/SBproxy.RuntimeConfig.Tests.csproj" />
+  <Project Path="tests/SBproxy.ChainProxy.Tests/SBproxy.ChainProxy.Tests.csproj" />
+  <Project Path="tests/SBproxy.Monitoring.Tests/SBproxy.Monitoring.Tests.csproj" />
+  <Project Path="tests/SBproxy.Subscription.Tests/SBproxy.Subscription.Tests.csproj" />
+  <Project Path="tests/SBproxy.Override.Tests/SBproxy.Override.Tests.csproj" />
+  <Project Path="tests/SBproxy.Settings.Tests/SBproxy.Settings.Tests.csproj" />
+  <Project Path="tests/SBproxy.Infrastructure.Tests/SBproxy.Infrastructure.Tests.csproj" />
+  <Project Path="tests/SBproxy.WebDav.Tests/SBproxy.WebDav.Tests.csproj" />
+</Solution>

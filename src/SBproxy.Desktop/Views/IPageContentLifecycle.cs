@@ -1,0 +1,10 @@
+namespace SBproxy.Desktop.Views;
+
+internal interface IPageContentLifecycle
+{
+    void ActivatePageContent();
+
+    void DeactivatePageContent();
+
+    void ReleasePageContent();
+}

@@ -271,7 +271,7 @@ def build_linux_package_root(
 
     replacements = linux_replacements(metadata, configuration, target, package_root, linux_arch(platform_name))
     write_rendered_template("launcher.in", bin_dir / app_package, replacements, executable=True)
-    write_rendered_template("stelliberty.desktop.in", applications_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": f"/opt/{app_package}/{metadata.app_name}"})
+    write_rendered_template("sbproxy.desktop.in", applications_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": f"/opt/{app_package}/{metadata.app_name}"})
     copy_linux_icon(icons_dir / f"{app_package}.png", configuration)
     set_linux_payload_permissions(install_dir, metadata, target)
     return package_root
@@ -404,8 +404,8 @@ def pack_appimage(
 
         replacements = linux_replacements(metadata, configuration, target, app_dir, linux_arch(platform_name))
         write_rendered_template("appimage.AppRun.in", app_dir / "AppRun", replacements, executable=True)
-        write_rendered_template("stelliberty.desktop.in", app_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": metadata.app_name})
-        write_rendered_template("stelliberty.desktop.in", applications_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": metadata.app_name})
+        write_rendered_template("sbproxy.desktop.in", app_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": metadata.app_name})
+        write_rendered_template("sbproxy.desktop.in", applications_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": metadata.app_name})
         copy_linux_icon(app_dir / f"{app_package}.png", configuration)
         copy_linux_icon(icons_dir / f"{app_package}.png", configuration)
         set_linux_payload_permissions(app_payload_dir, metadata, target)
@@ -602,7 +602,7 @@ def app_id(configuration: str) -> str:
 
 def service_name(metadata: AppMetadata, configuration: str) -> str:
     suffix = "Dev" if configuration == "dev" else ""
-    return f"{pascal_identifier(metadata.app_name)}Service{suffix}"
+    return f"{pascal_identifier('stelliberty')}Service{suffix}"
 
 
 def pascal_identifier(value: str) -> str:
@@ -659,7 +659,7 @@ def macos_package_base_name(metadata: AppMetadata, platform_name: str, configura
 
 
 def linux_app_package(metadata: AppMetadata) -> str:
-    return re.sub(r"[^a-z0-9+.-]+", "-", metadata.app_name.lower()).strip("-") or "stelliberty"
+    return re.sub(r"[^a-z0-9+.-]+", "-", metadata.app_name.lower()).strip("-") or "sbproxy"
 
 
 def linux_arch(platform_name: str) -> str:
@@ -763,7 +763,7 @@ def render_template(template_path: Path, replacements: dict[str, str]) -> str:
 
 def copy_linux_icon(target_path: Path, configuration: str) -> None:
     icon_name = "app_icon.png"
-    source = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "linux" / icon_name
+    source = ROOT / "src" / "SBproxy.Desktop" / "Assets" / "linux" / icon_name
     if not source.exists():
         raise FileNotFoundError(f"Linux icon does not exist: {source}")
     target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -771,7 +771,7 @@ def copy_linux_icon(target_path: Path, configuration: str) -> None:
 
 
 def build_macos_app_icon(resources_dir: Path, info_plist_path: Path, platform_name: str) -> None:
-    icon_path = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "macos" / "AppIcon.icon"
+    icon_path = ROOT / "src" / "SBproxy.Desktop" / "Assets" / "macos" / "AppIcon.icon"
     if not icon_path.is_dir():
         raise FileNotFoundError(f"Icon Composer icon does not exist: {icon_path}")
 

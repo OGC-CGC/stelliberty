@@ -1,5 +1,5 @@
 [package]
-name = "stelliberty_service"
+name = "sbproxy_service"
 version = "1.0.0"
 edition = "2024"
 publish = false
@@ -9,7 +9,7 @@ name = "stelliberty_service"
 path = "src/main.rs"
 
 [lib]
-name = "stelliberty_service"
+name = "sbproxy_service"
 path = "src/lib.rs"
 
 [dependencies]

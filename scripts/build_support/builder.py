@@ -90,7 +90,7 @@ def generate_bindings() -> None:
         "--manifest-path",
         str(RUST_WORKSPACE),
         "-p",
-        "stelliberty_xtask",
+        "sbproxy_xtask",
         "--target",
         host_rust_target(),
         "--",
@@ -121,14 +121,14 @@ def build_rust(metadata: AppMetadata, configuration: str, target: PlatformTarget
         "-p",
         "hub",
         "-p",
-        "stelliberty_service",
+        "sbproxy_service",
         "--target",
         target.rust_target,
     ]
     if configuration == "release":
         command.append("--release")
 
-    env = {"STELLIBERTY_APP_NAME": metadata.app_name, "STELLIBERTY_APP_VERSION": metadata.version}
+    env = {"SBPROXY_APP_NAME": "stelliberty", "SBPROXY_APP_VERSION": metadata.version}
     if configuration == "release":
         env.update(release_path_remap_env())
 

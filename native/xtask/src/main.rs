@@ -19,14 +19,14 @@ fn generate_bindings() -> Result<(), Box<dyn Error>> {
         .join("..")
         .join("..")
         .join("src")
-        .join("Stelliberty.Native")
+        .join("SBproxy.Native")
         .join("Generated");
 
     std::fs::create_dir_all(&output_dir)?;
 
     let output = RustLibrary::builder(hub::ffi::inventory())
         .dll_name("hub")
-        .dispatch(Dispatch::single_file("Stelliberty.Native.Generated"))
+        .dispatch(Dispatch::single_file("SBproxy.Native.Generated"))
         .build()
         .process()?;
 
@@ -75,7 +75,7 @@ fn patch_unit_default(output_dir: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// 原始 FFI 入口是内部细节，业务程序集不能绕过 Stelliberty.Native。
+// 原始 FFI 入口是内部细节，业务程序集不能绕过 SBproxy.Native。
 fn patch_visibility(output_dir: &Path) -> Result<(), Box<dyn Error>> {
     let path = output_dir.join("Interop.cs");
     let content = std::fs::read_to_string(&path)?;

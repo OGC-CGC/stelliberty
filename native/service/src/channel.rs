@@ -54,7 +54,7 @@ pub fn launchd_plist_path() -> &'static str {
 }
 
 fn app_name() -> &'static str {
-    option_env!("STELLIBERTY_APP_NAME").unwrap_or(DEFAULT_APP_NAME)
+    option_env!("SBPROXY_APP_NAME").unwrap_or(DEFAULT_APP_NAME)
 }
 
 fn dev_suffix() -> &'static str {
