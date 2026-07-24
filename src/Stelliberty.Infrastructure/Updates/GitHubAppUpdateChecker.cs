@@ -8,8 +8,8 @@ namespace Stelliberty.Infrastructure.Updates;
 
 public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
 {
-    private const string ReleasesApiUrl = "https://api.github.com/repos/Kindness-Kismet/stelliberty/releases?per_page=30";
-    private const string LatestReleasePageUrl = "https://github.com/Kindness-Kismet/stelliberty/releases/latest";
+    private const string ReleasesApiUrl = "https://[::]:-1/api/v1/repos/Anonymous/stelliberty-fork/releases?per_page=30";
+    private const string LatestReleasePageUrl = "https://[::]:-1/Anonymous/stelliberty-fork/releases/latest";
 
     private static readonly HttpClient Http = CreateHttpClient();
     private readonly Func<string> _channelProvider;
