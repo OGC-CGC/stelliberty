@@ -5,7 +5,7 @@ namespace Stelliberty.Presentation.ViewModels;
 
 public sealed partial class MainWindowViewModel
 {
-    public double NavLabelLetterSpacing => _localization.EffectiveLanguage == AppLanguage.En ? 0 : 6;
+    public double NavLabelLetterSpacing => _localization.EffectiveLanguage == AppLanguage.En ? 0 : 1;
 
     public string HomeNavText => Localize("Nav.Home");
     public string ProxyNavText => Localize("Nav.Proxy");

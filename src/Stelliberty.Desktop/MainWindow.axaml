@@ -114,13 +114,55 @@
               Padding="12,24,12,20"
               Background="Transparent">
         <Grid RowDefinitions="Auto,*,Auto">
-          <TextBlock AutomationProperties.AutomationId="Sidebar.BrandText"
-                     Margin="0,4,0,28"
-                     Text="{Binding Title}"
-                     FontSize="20"
-                     FontWeight="SemiBold"
-                     HorizontalAlignment="Center"
-                     Foreground="{DynamicResource AppAccentBrush}" />
+          <StackPanel Margin="13,4,0,28"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      HorizontalAlignment="Left">
+            <Border Width="24"
+                    Height="24"
+                    CornerRadius="6"
+                    ClipToBounds="True"
+                    Background="{DynamicResource AppAccentBrush}">
+              <Viewbox Stretch="Uniform">
+                <Canvas Width="1024" Height="1024">
+                  <Ellipse Canvas.Left="775.180"
+                           Canvas.Top="246.441"
+                           Width="52.436"
+                           Height="52.436"
+                           Fill="{DynamicResource AppOnAccentBrush}" />
+                  <Ellipse Canvas.Left="235.430"
+                           Canvas.Top="538.634"
+                           Width="228.614"
+                           Height="228.614"
+                           Fill="{DynamicResource AppOnAccentBrush}" />
+                  <Path Data="M602.728,535.05 C601.02,525.04 600.129,514.754 600.129,504.261 C600.129,403.835 681.662,322.302 782.088,322.302 C882.513,322.302 964.046,403.835 964.046,504.261 C964.046,604.686 882.513,686.219 782.088,686.219 C742.418,686.219 705.696,673.497 675.783,651.913 C673.728,601.383 644.702,557.753 602.728,535.05 Z"
+                        Fill="{DynamicResource AppOnAccentBrush}">
+                    <Path.RenderTransform>
+                      <TranslateTransform X="-186.866" Y="-4.761" />
+                    </Path.RenderTransform>
+                  </Path>
+                  <Ellipse Canvas.Left="196.384"
+                           Canvas.Top="440.038"
+                           Width="46.282"
+                           Height="46.282"
+                           Fill="{DynamicResource AppOnAccentBrush}" />
+                  <Path Data="M316.609,196.581 C322.252,196.581 334.596,227.98 346.942,240.327 C359.289,252.673 390.688,264.673 390.688,270.659 C390.688,276.645 359.289,288.646 346.942,300.992 C334.596,313.339 322.595,344.738 316.609,344.738 C310.623,344.738 298.623,313.339 286.276,300.992 C273.93,288.646 242.531,276.645 242.531,270.659 C242.531,264.673 273.93,252.673 286.276,240.327 C298.623,227.98 310.623,196.581 316.609,196.581 Z"
+                        Fill="{DynamicResource AppOnAccentBrush}">
+                    <Path.RenderTransform>
+                      <TranslateTransform X="5.634" />
+                    </Path.RenderTransform>
+                  </Path>
+                </Canvas>
+              </Viewbox>
+            </Border>
+            <TextBlock AutomationProperties.AutomationId="Sidebar.BrandText"
+                       Text="{Binding Title}"
+                       Margin="10,0,0,0"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource AppAccentBrush}" />
+          </StackPanel>
 
           <StackPanel Grid.Row="1" Spacing="6">
             <Button Classes="nav-item"

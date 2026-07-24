@@ -38,7 +38,6 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\fonts\**" />
-    <AvaloniaResource Include="Assets\macos\app_icon_64.png" />
   </ItemGroup>
 
   <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">

@@ -224,7 +224,7 @@
   <Style Selector="TextBlock.nav-label" x:DataType="vm:MainWindowViewModel">
     <Setter Property="FontSize" Value="14" />
     <Setter Property="LetterSpacing" Value="{Binding NavLabelLetterSpacing}" />
-    <Setter Property="Margin" Value="25,0,0,0" />
+    <Setter Property="Margin" Value="5,0,0,0" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 </Styles>
