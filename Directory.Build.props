@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <AppName>stelliberty</AppName>
-    <AppDisplayName>Stelliberty</AppDisplayName>
+    <AppDisplayName>Stelliberty Rev</AppDisplayName>
     <AppVersion>2.0.12</AppVersion>
     <AppPipePrefix>stelliberty</AppPipePrefix>
   </PropertyGroup>
