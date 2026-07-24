@@ -101,8 +101,11 @@
     </Border>
 
     <Grid Grid.Row="1" ColumnDefinitions="220,*" ClipToBounds="True">
+      <Border Width="1"
+              HorizontalAlignment="Right"
+              Background="{DynamicResource AppBorderBrush}"
+              IsHitTestVisible="False" />
       <Border AutomationProperties.AutomationId="Sidebar.Root"
-              Classes="sidebar-shadow"
               Padding="12,24,12,20"
               Background="Transparent">
         <Grid RowDefinitions="Auto,*,Auto">

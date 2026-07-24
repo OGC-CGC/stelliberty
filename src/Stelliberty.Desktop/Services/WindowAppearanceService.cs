@@ -186,13 +186,6 @@ internal sealed class WindowAppearanceService : IDisposable
         _window.Resources["AppDialogSurfaceBrush"] = surfaceBrush;
         _window.Resources["AppPopupSurfaceBrush"] = surfaceBrush;
         _window.Resources["ComboBoxPopupBackground"] = surfaceBrush;
-        _window.Resources["AppSidebarShadow"] = BoxShadows.Parse(effect == WindowEffect.None
-            ? _window.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light
-                ? "12 0 28 -18 #24000000, 2 0 8 -4 #22000000"
-                : "12 0 28 -18 #32FFFFFF, 2 0 8 -4 #26FFFFFF"
-            : isLightTheme
-                ? "14 0 34 -16 #3A000000, 3 0 10 -4 #24000000"
-                : "14 0 34 -16 #38FFFFFF, 3 0 10 -4 #28FFFFFF");
     }
 
     private void KeepMacOSBlurActive()

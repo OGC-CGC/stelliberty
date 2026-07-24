@@ -44,7 +44,6 @@
       <SolidColorBrush x:Key="ToastBorderBrush" Color="#E2E8F0" />
       <SolidColorBrush x:Key="ToastForegroundBrush" Color="#0F172A" />
       <BoxShadows x:Key="AppNavItemSelectedShadow">0 4 12 0 #141A2438</BoxShadows>
-      <BoxShadows x:Key="AppSidebarShadow">12 0 28 -18 #24000000, 2 0 8 -4 #22000000</BoxShadows>
       <!-- 表面海拔阴影分主题: Raised 抬起层(顶栏/主页/设置卡), List 内容列表层 -->
       <BoxShadows x:Key="AppSurfaceRaisedShadow">0 12 32 -18 #40000000</BoxShadows>
       <BoxShadows x:Key="AppSurfaceListShadow">0 4 14 -12 #2A000000</BoxShadows>
@@ -93,7 +92,6 @@
       <SolidColorBrush x:Key="ToastBorderBrush" Color="#334155" />
       <SolidColorBrush x:Key="ToastForegroundBrush" Color="#F8FAFC" />
       <BoxShadows x:Key="AppNavItemSelectedShadow">0 4 12 0 #2E000000</BoxShadows>
-      <BoxShadows x:Key="AppSidebarShadow">12 0 28 -18 #32FFFFFF, 2 0 8 -4 #26FFFFFF</BoxShadows>
       <!-- 深色背景吃光, 透明度整体高于浅色才可见 -->
       <BoxShadows x:Key="AppSurfaceRaisedShadow">0 12 32 -18 #66000000</BoxShadows>
       <BoxShadows x:Key="AppSurfaceListShadow">0 4 14 -12 #48000000</BoxShadows>
