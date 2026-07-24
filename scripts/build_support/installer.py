@@ -1,4 +1,5 @@
 import os
+import plistlib
 import re
 import shutil
 import subprocess
@@ -63,7 +64,7 @@ def check_packaging_tools(platform_name: str) -> None:
     if platform_name.startswith("macos"):
         if sys.platform != "darwin":
             raise RuntimeError("macOS packaging tools can only be checked on a macOS host")
-        for command in ("hdiutil", "pkgbuild", "productbuild", "iconutil"):
+        for command in ("hdiutil", "pkgbuild", "productbuild", "xcrun"):
             ensure_command(command, f"Missing {command}")
             print(f"  Tool   {shutil.which(command)}", flush=True)
         return
@@ -144,7 +145,7 @@ def pack_macos_installers(
     ensure_command("hdiutil", "Missing hdiutil; cannot create a DMG")
     ensure_command("pkgbuild", "Missing pkgbuild; cannot create the PKG component")
     ensure_command("productbuild", "Missing productbuild; cannot create the PKG")
-    ensure_command("iconutil", "Missing iconutil; cannot create the macOS icon")
+    ensure_command("xcrun", "Missing xcrun; cannot compile the Icon Composer icon")
 
     PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
     base_name = macos_package_base_name(metadata, platform_name, configuration)
@@ -169,7 +170,7 @@ def pack_macos_app(
     if not platform_name.startswith("macos"):
         raise RuntimeError(f"macOS app bundles do not support this platform: {platform_name}")
 
-    ensure_command("iconutil", "Missing iconutil; cannot create the macOS icon")
+    ensure_command("xcrun", "Missing xcrun; cannot compile the Icon Composer icon")
     PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
     app_path = PACKAGES_DIR / f"{display_name(metadata, configuration)}.app"
     if app_path.exists():
@@ -198,8 +199,9 @@ def build_macos_app_bundle(
         raise FileNotFoundError(f"macOS executable does not exist: {executable_path}")
 
     set_macos_payload_permissions(macos_dir, metadata, target)
-    write_macos_info_plist(metadata, configuration, platform_name, contents_dir / "Info.plist")
-    build_macos_icns(resources_dir / "AppIcon.icns", configuration)
+    info_plist_path = contents_dir / "Info.plist"
+    write_macos_info_plist(metadata, configuration, platform_name, info_plist_path)
+    build_macos_app_icon(resources_dir, info_plist_path, platform_name)
     return app_path
 
 
@@ -768,30 +770,49 @@ def copy_linux_icon(target_path: Path, configuration: str) -> None:
     shutil.copy2(source, target_path)
 
 
-def build_macos_icns(output_path: Path, configuration: str) -> None:
-    icon_prefix = "app_icon"
-    icon_sources = {
-        "icon_16x16.png": "app_icon_16.png",
-        "icon_16x16@2x.png": "app_icon_32.png",
-        "icon_32x32.png": "app_icon_32.png",
-        "icon_32x32@2x.png": "app_icon_64.png",
-        "icon_128x128.png": "app_icon_128.png",
-        "icon_128x128@2x.png": "app_icon_256.png",
-        "icon_256x256.png": "app_icon_256.png",
-        "icon_256x256@2x.png": "app_icon_512.png",
-        "icon_512x512.png": "app_icon_512.png",
-        "icon_512x512@2x.png": "app_icon_1024.png",
-    }
-    source_dir = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "macos"
-    with tempfile.TemporaryDirectory(prefix="app-iconset-") as temp_dir:
-        iconset_dir = Path(temp_dir) / "AppIcon.iconset"
-        iconset_dir.mkdir(parents=True, exist_ok=True)
-        for target_name, source_name in icon_sources.items():
-            source_path = source_dir / source_name.replace("app_icon", icon_prefix)
-            if not source_path.exists():
-                raise FileNotFoundError(f"macOS icon does not exist: {source_path}")
-            shutil.copy2(source_path, iconset_dir / target_name)
-        run_checked(["iconutil", "-c", "icns", str(iconset_dir), "-o", str(output_path)])
+def build_macos_app_icon(resources_dir: Path, info_plist_path: Path, platform_name: str) -> None:
+    icon_path = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "macos" / "AppIcon.icon"
+    if not icon_path.is_dir():
+        raise FileNotFoundError(f"Icon Composer icon does not exist: {icon_path}")
+
+    with tempfile.TemporaryDirectory(prefix="app-icon-") as temp_dir:
+        partial_info_plist = Path(temp_dir) / "assetcatalog_generated_info.plist"
+        run_checked([
+            "xcrun",
+            "actool",
+            "--compile",
+            str(resources_dir),
+            "--output-format",
+            "human-readable-text",
+            "--notices",
+            "--warnings",
+            "--app-icon",
+            "AppIcon",
+            "--standalone-icon-behavior",
+            "all",
+            "--output-partial-info-plist",
+            str(partial_info_plist),
+            "--development-region",
+            "zh-Hans",
+            "--target-device",
+            "mac",
+            "--minimum-deployment-target",
+            macos_min_system(platform_name),
+            "--platform",
+            "macosx",
+            str(icon_path),
+        ])
+        merge_macos_info_plist(info_plist_path, partial_info_plist)
+
+
+def merge_macos_info_plist(info_plist_path: Path, partial_info_plist: Path) -> None:
+    if not partial_info_plist.exists():
+        raise FileNotFoundError(f"Asset catalog Info.plist does not exist: {partial_info_plist}")
+
+    info = plistlib.loads(info_plist_path.read_bytes())
+    generated_info = plistlib.loads(partial_info_plist.read_bytes())
+    info.update(generated_info)
+    info_plist_path.write_bytes(plistlib.dumps(info, sort_keys=False))
 
 
 def set_macos_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:

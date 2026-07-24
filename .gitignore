@@ -26,6 +26,7 @@
 !/src/**/*.ico
 !/src/**/*.png
 !/src/**/*.icns
+!/src/**/*.svg
 
 !/native/
 !/native/**/
