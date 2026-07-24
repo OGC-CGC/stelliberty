@@ -49,6 +49,11 @@
             Background="Transparent"
             PointerPressed="OnTitleBarPointerPressed">
       <Grid x:Name="TitleBarLayout" ColumnDefinitions="*,Auto,Auto">
+        <Border Width="1"
+                Margin="219,0,0,0"
+                HorizontalAlignment="Left"
+                Background="{DynamicResource AppBorderBrush}"
+                IsHitTestVisible="False" />
         <controls:FpsCounter Grid.Column="1"
                              AutomationProperties.AutomationId="TitleBar.FpsCounter"
                              IsVisible="{Binding AppBehavior.IsTitleBarFpsVisible}"
