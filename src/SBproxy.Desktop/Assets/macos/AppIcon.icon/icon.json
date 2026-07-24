@@ -7,7 +7,7 @@
       "layers" : [
         {
           "blend-mode" : "normal",
-          "glass" : true,
+          "glass" : false,
           "image-name" : "app_icon.svg",
           "name" : "app_icon",
           "opacity" : 1,

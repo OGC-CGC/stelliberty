@@ -122,36 +122,46 @@
                     Height="24"
                     CornerRadius="6"
                     ClipToBounds="True"
-                    Background="{DynamicResource AppAccentBrush}">
+                    Background="#266BCF">
               <Viewbox Stretch="Uniform">
                 <Canvas Width="1024" Height="1024">
-                  <Ellipse Canvas.Left="775.180"
-                           Canvas.Top="246.441"
-                           Width="52.436"
-                           Height="52.436"
-                           Fill="{DynamicResource AppOnAccentBrush}" />
-                  <Ellipse Canvas.Left="235.430"
-                           Canvas.Top="538.634"
-                           Width="228.614"
-                           Height="228.614"
-                           Fill="{DynamicResource AppOnAccentBrush}" />
-                  <Path Data="M602.728,535.05 C601.02,525.04 600.129,514.754 600.129,504.261 C600.129,403.835 681.662,322.302 782.088,322.302 C882.513,322.302 964.046,403.835 964.046,504.261 C964.046,604.686 882.513,686.219 782.088,686.219 C742.418,686.219 705.696,673.497 675.783,651.913 C673.728,601.383 644.702,557.753 602.728,535.05 Z"
-                        Fill="{DynamicResource AppOnAccentBrush}">
-                    <Path.RenderTransform>
-                      <TranslateTransform X="-186.866" Y="-4.761" />
-                    </Path.RenderTransform>
-                  </Path>
-                  <Ellipse Canvas.Left="196.384"
-                           Canvas.Top="440.038"
-                           Width="46.282"
-                           Height="46.282"
-                           Fill="{DynamicResource AppOnAccentBrush}" />
-                  <Path Data="M316.609,196.581 C322.252,196.581 334.596,227.98 346.942,240.327 C359.289,252.673 390.688,264.673 390.688,270.659 C390.688,276.645 359.289,288.646 346.942,300.992 C334.596,313.339 322.595,344.738 316.609,344.738 C310.623,344.738 298.623,313.339 286.276,300.992 C273.93,288.646 242.531,276.645 242.531,270.659 C242.531,264.673 273.93,252.673 286.276,240.327 C298.623,227.98 310.623,196.581 316.609,196.581 Z"
-                        Fill="{DynamicResource AppOnAccentBrush}">
-                    <Path.RenderTransform>
-                      <TranslateTransform X="5.634" />
-                    </Path.RenderTransform>
-                  </Path>
+                  <Ellipse Canvas.Left="161.245"
+                           Canvas.Top="149.558"
+                           Width="701.520"
+                           Height="724.887"
+                           Fill="#FFD300" />
+                  <Ellipse Canvas.Left="214.900"
+                           Canvas.Top="371.927"
+                           Width="154.896"
+                           Height="140.075"
+                           Fill="#799653" />
+                  <Ellipse Canvas.Left="214.901"
+                           Canvas.Top="374.887"
+                           Width="142.423"
+                           Height="129.221"
+                           Fill="#94B865" />
+                  <Ellipse Canvas.Left="244.094"
+                           Canvas.Top="393.351"
+                           Width="84.268"
+                           Height="87.075"
+                           Fill="Black" />
+                  <Ellipse Canvas.Left="634.768"
+                           Canvas.Top="371.927"
+                           Width="154.896"
+                           Height="140.075"
+                           Fill="#799653" />
+                  <Ellipse Canvas.Left="634.768"
+                           Canvas.Top="374.887"
+                           Width="142.423"
+                           Height="129.221"
+                           Fill="#94B865" />
+                  <Ellipse Canvas.Left="676.851"
+                           Canvas.Top="393.848"
+                           Width="86.656"
+                           Height="89.542"
+                           Fill="Black" />
+                  <Path Data="M352.750,710.168 C352.750,710.168 447.355,708.585 492.550,710.168 C537.269,711.733 623.921,719.665 623.921,719.665"
+                        Fill="Black" />
                 </Canvas>
               </Viewbox>
             </Border>
