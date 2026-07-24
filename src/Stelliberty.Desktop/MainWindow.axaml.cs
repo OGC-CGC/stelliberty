@@ -760,6 +760,11 @@ public sealed partial class MainWindow : Window
 
     public void RequestShutdown()
     {
+        if (_isShutdownRequested)
+        {
+            return;
+        }
+
         _isShutdownRequested = true;
         Close();
     }
@@ -767,7 +772,9 @@ public sealed partial class MainWindow : Window
     protected override void OnClosing(WindowClosingEventArgs args)
     {
         _windowStateService.SaveNow();
-        if (!_isShutdownRequested && DataContext is MainWindowViewModel { AppBehavior.IsMinimizeToTrayEnabled: true })
+        if (!_isShutdownRequested
+            && args.CloseReason == WindowCloseReason.WindowClosing
+            && DataContext is MainWindowViewModel { AppBehavior.IsMinimizeToTrayEnabled: true })
         {
             args.Cancel = true;
             ClearTitleBarHoverState();

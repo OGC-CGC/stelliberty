@@ -355,7 +355,29 @@ public sealed partial class App : Avalonia.Application
                 desktop.MainWindow = mainWindow;
             }
 
-            desktop.ShutdownRequested += (_, _) =>
+            var isMacOSShutdownScheduled = false;
+            desktop.ShutdownRequested += (_, args) =>
+            {
+                if (!OperatingSystem.IsMacOS())
+                {
+                    return;
+                }
+
+                args.Cancel = true;
+                if (isMacOSShutdownScheduled)
+                {
+                    return;
+                }
+
+                isMacOSShutdownScheduled = true;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                    mainWindow.RequestShutdown();
+                    desktop.Shutdown(0);
+                });
+            };
+            desktop.Exit += (_, _) =>
             {
                 StopBackgroundServices();
                 viewModel.HomePage.DisableSystemProxyOnShutdown();
