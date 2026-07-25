@@ -1,3 +1,4 @@
+import os
 import re
 import urllib.request
 from dataclasses import dataclass
@@ -7,6 +8,7 @@ from build_support.paths import ROOT
 
 FONT_DIR = ROOT / "src" / "SBproxy.Desktop" / "Assets" / "fonts"
 GOOGLE_FONT_CSS = "https://fonts.googleapis.com/css2?family=Google+Sans"
+GITHUB_URL_PREFIX = os.environ.get("NETPROXY_GITHUB", "")
 GOOGLE_SANS = "GoogleSans-Regular.ttf"
 NOTO_SANS_SC = "NotoSansSC-VF.ttf"
 
@@ -22,7 +24,7 @@ FONT_ASSETS = [
     FontAsset(GOOGLE_SANS, GOOGLE_FONT_CSS, 32 * 1024),
     FontAsset(
         NOTO_SANS_SC,
-        "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/Variable/TTF/Subset/NotoSansSC-VF.ttf",
+        f"{GITHUB_URL_PREFIX}https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/Variable/TTF/Subset/NotoSansSC-VF.ttf",
         1024 * 1024,
     ),
 ]

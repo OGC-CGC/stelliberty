@@ -11,7 +11,8 @@ namespace SBproxy.Infrastructure.Core;
 
 public sealed class MihomoCoreUpdater(string coreExecutablePath, ICoreManager coreManager) : ICoreUpdater
 {
-    private const string LatestReleaseUrl = "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest";
+    private static readonly string GithubUrlPrefix = Environment.GetEnvironmentVariable("NETPROXY_GITHUB") ?? "";
+    private static readonly string LatestReleaseUrl = $"{GithubUrlPrefix}https://api.github.com/repos/MetaCubeX/mihomo/releases/latest";
     private static readonly HttpClient Http = CreateClient();
 
     public async Task<CoreUpdateResult> UpdateAsync(CancellationToken cancellationToken = default)
@@ -89,12 +90,19 @@ public sealed class MihomoCoreUpdater(string coreExecutablePath, ICoreManager co
                     && asset.TryGetProperty("browser_download_url", out var urlProp)
                     && urlProp.GetString() is { Length: > 0 } url)
                 {
-                    return (tag, url);
+                    return (tag, ApplyGithubUrlPrefix(url));
                 }
             }
         }
 
         throw new InvalidOperationException($"Matching core asset not found: {assetName}");
+    }
+
+    private static string ApplyGithubUrlPrefix(string url)
+    {
+        return url.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase)
+            ? $"{GithubUrlPrefix}{url}"
+            : url;
     }
 
     private async Task<string?> GetCurrentVersionAsync(CancellationToken cancellationToken)

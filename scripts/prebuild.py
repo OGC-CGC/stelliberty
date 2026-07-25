@@ -47,8 +47,9 @@ GEO_FILES: dict[str, str] = {
     "geosite.dat": "geosite.dat",
 }
 
-GEO_RELEASE = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest"
-MIHOMO_LATEST = "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
+GITHUB_URL_PREFIX = os.environ.get("NETPROXY_GITHUB", "")
+GEO_RELEASE = f"{GITHUB_URL_PREFIX}https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest"
+MIHOMO_LATEST = f"{GITHUB_URL_PREFIX}https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
 
 MIHOMO_ASSET_KEY: dict[str, str] = {
     "win-x64": "windows-amd64",
@@ -141,7 +142,7 @@ def fetch_mihomo_core(rid: str, target_dir: Path) -> Path:
     asset = pick_mihomo_asset(release, asset_key)
     print(f"  Asset {asset['name']}", flush=True)
 
-    payload = read_bytes(asset["browser_download_url"])
+    payload = read_bytes(apply_github_url_prefix(asset["browser_download_url"]))
     core_bytes = extract_core_bytes(asset["name"], payload)
 
     core_binary_name = "clash-mihomo-core.exe" if rid.startswith("win") else "clash-mihomo-core"
@@ -151,6 +152,16 @@ def fetch_mihomo_core(rid: str, target_dir: Path) -> Path:
         target.chmod(0o755)
     print(f"  Saved {target.name}  {format_bytes(len(core_bytes))}", flush=True)
     return target
+
+def apply_github_url_prefix(url: str) -> str:
+    github_prefixes = (
+        "https://github.com/",
+        "https://api.github.com/",
+        "https://raw.githubusercontent.com/",
+    )
+    if url.startswith(github_prefixes):
+        return f"{GITHUB_URL_PREFIX}{url}"
+    return url
 
 def pick_mihomo_asset(release: dict, asset_key: str) -> dict:
 
