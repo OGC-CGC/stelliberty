@@ -29,11 +29,6 @@ jobs:
         with:
           dotnet-version: 11.0.x
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
       - name: Set up Rust
         uses: actions/rust-toolchain@stable
         with:
@@ -55,6 +50,7 @@ jobs:
 
           "${apt_get[@]}" update
           "${apt_get[@]}" install -y --no-install-recommends \
+            python3 \
             build-essential \
             ca-certificates \
             curl \
