@@ -22,20 +22,20 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: ${NETPROXY_GITHUB}https://github.com/actions/checkout@v4
+        uses: https://github.com/actions/checkout@v4
 
       - name: Set up .NET
-        uses: ${NETPROXY_GITHUB}https://github.com/actions/setup-dotnet@v4
+        uses: https://github.com/actions/setup-dotnet@v4
         with:
           dotnet-version: 11.0.x
 
       - name: Set up Python
-        uses: ${NETPROXY_GITHUB}https://github.com/actions/setup-python@v5
+        uses: https://github.com/actions/setup-python@v5
         with:
           python-version: "3.x"
 
       - name: Set up Rust
-        uses: ${NETPROXY_GITHUB}https://github.com/dtolnay/rust-toolchain@stable
+        uses: https://github.com/dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-gnu
 
@@ -86,7 +86,7 @@ jobs:
           python scripts/build.py --platform linux-x64 --pack all
 
       - name: Upload Linux artifacts
-        uses: ${NETPROXY_GITHUB}https://github.com/actions/upload-artifact@v3
+        uses: https://github.com/actions/upload-artifact@v3
         with:
           name: sbproxy-linux-x64
           path: |
