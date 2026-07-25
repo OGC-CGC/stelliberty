@@ -195,7 +195,7 @@ def build_service_binaries(rid: str, target_dir: Path, configurations: list[str]
             "--manifest-path",
             str(RUST_WORKSPACE),
             "-p",
-            "sbproxy_service",
+            "sbproxyrev_service",
             "--target",
             target.rust_target,
         ]
@@ -203,7 +203,7 @@ def build_service_binaries(rid: str, target_dir: Path, configurations: list[str]
         if profile == "release":
             command.append("--release")
         env = os.environ.copy()
-        env["SBPROXY_APP_NAME"] = "stelliberty"
+        env["SBPROXY_APP_NAME"] = "sbproxyrev"
         env["SBPROXY_APP_VERSION"] = metadata.version
         subprocess.run(command, cwd=ROOT, env=env, check=True)
 

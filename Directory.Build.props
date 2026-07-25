@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <AppName>sbproxy</AppName>
-    <AppDisplayName>SBproxy Rev</AppDisplayName>
+    <AppDisplayName>Shadioium</AppDisplayName>
     <AppVersion>2.0.13-beta1</AppVersion>
     <AppPipePrefix>sbproxy</AppPipePrefix>
   </PropertyGroup>

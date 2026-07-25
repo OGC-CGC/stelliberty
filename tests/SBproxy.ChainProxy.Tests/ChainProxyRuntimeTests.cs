@@ -108,11 +108,11 @@ public sealed class ChainProxyRuntimeTests
             ]
         });
         var proxies = Proxies(output);
-        var internalHop = proxies.Single(proxy => Scalar(proxy, "name") == "__stelliberty_chain_chain-a_1");
+        var internalHop = proxies.Single(proxy => Scalar(proxy, "name") == "__sbproxyrev_chain_chain-a_1");
         var display = proxies.Single(proxy => Scalar(proxy, "name") == "JP via TW via HK");
 
         Assert.Equal("HK", Scalar(internalHop, "dialer-proxy"));
-        Assert.Equal("__stelliberty_chain_chain-a_1", Scalar(display, "dialer-proxy"));
+        Assert.Equal("__sbproxyrev_chain_chain-a_1", Scalar(display, "dialer-proxy"));
         Assert.Equal("jp.example", Scalar(display, "server"));
     }
 
@@ -197,7 +197,7 @@ public sealed class ChainProxyRuntimeTests
             ]
         });
 
-        Assert.DoesNotContain(Proxies(output), proxy => Scalar(proxy, "name").StartsWith("__stelliberty_chain_", StringComparison.Ordinal));
+        Assert.DoesNotContain(Proxies(output), proxy => Scalar(proxy, "name").StartsWith("__sbproxyrev_chain_", StringComparison.Ordinal));
     }
 
     [Fact(DisplayName = "Runtime applier skips invalid custom chains")]
@@ -230,7 +230,7 @@ public sealed class ChainProxyRuntimeTests
               - name: JP
                 type: ss
                 server: jp.example
-              - name: __stelliberty_chain_chain-a_1
+              - name: __sbproxyrev_chain_chain-a_1
                 type: ss
                 server: occupied.example
             proxy-groups:
@@ -247,7 +247,7 @@ public sealed class ChainProxyRuntimeTests
                 ]
             });
 
-        Assert.Contains(Proxies(output), proxy => Scalar(proxy, "name") == "__stelliberty_chain_chain-a_1_2");
+        Assert.Contains(Proxies(output), proxy => Scalar(proxy, "name") == "__sbproxyrev_chain_chain-a_1_2");
     }
 
     [Fact(DisplayName = "Runtime applier returns original content when no work can be done")]

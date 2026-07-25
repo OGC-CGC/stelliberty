@@ -49,7 +49,6 @@ It also ships with a large set of simulation and prewritten test flows that walk
   - [Control Test IDs](#control-test-ids)
   - [Build & Test](#build--test)
 - [PR Guidelines](#-pr-guidelines)
-- [Acknowledgements](#-acknowledgements)
 - [License](#-license)
 - [Friends](#-friends)
 
@@ -63,7 +62,7 @@ It also ships with a large set of simulation and prewritten test flows that walk
 
 ### Download
 
-Grab the package for your platform from the **[Releases page](https://github.com/Kindness-Kismet/stelliberty/releases/latest)**:
+Grab the package for your platform from the **[Telegram Channel](https://t.me/SBproxyRev)**:
 
 | Platform | Recommended | Alternative |
 |---|---|---|
@@ -355,23 +354,25 @@ Naming rule: `PageOrArea.SemanticName` — stable, unique, independent of visual
 
 ---
 
-## 💖 Acknowledgements
-
-<sub>[↑ Back to Navigation](#navigation)</sub>
-
-SBproxy is built with help from open-source projects such as Avalonia and mihomo.
-
-For complete third-party license and copyright information, see [License](#-license).
-
-<br>
-
----
-
 ## 📄 License
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-Third-party open-source projects used by SBproxy retain their original licenses and copyright notices.
+### Open Source Commitment
+
+This project is open-sourced under the WUSHIDRM Licence.
+
+### Commercial Use Restrictions
+
+This project and its derivative works must not be used for commercial purposes.
+
+### Branding and Identifiers
+
+Derivative works must not retain any identifier associated with the original SBproxy software, including but not limited to its name, logos, icons, product names, package names, application identifiers, and other branding.
+
+### Third-Party Components
+
+Third-party components remain subject to their original licenses. See the [WUSHIDRM LICENCE](LICENSE) for the complete terms and third-party project list.
 
 <br>
 
@@ -381,5 +382,5 @@ Third-party open-source projects used by SBproxy retain their original licenses 
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-- [Telegram Updates](https://t.me/MaterialDesign3) — Project updates and release notices.
+- [Telegram Updates](https://t.me/SBproxyRev) — Project updates and release notices.
 - [LINUX DO](https://linux.do/) — A friendly community for technology enthusiasts.

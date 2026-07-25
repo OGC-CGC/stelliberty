@@ -4,7 +4,7 @@ namespace SBproxy.Application.Platform;
 
 public static class AppRuntimeNames
 {
-    private const string LegacyServiceAppName = "stelliberty";
+    private const string ServiceAppName = "sbproxyrev";
 
 #if DEBUG
     public const string ChannelName = "Debug";
@@ -16,13 +16,13 @@ public static class AppRuntimeNames
     private const string FileDevSuffix = "";
 #endif
 
-    public static string ServiceName => $"{PascalIdentifier(LegacyServiceAppName)}Service{DevSuffix}";
+    public static string ServiceName => $"{PascalIdentifier(ServiceAppName)}Service{DevSuffix}";
 
     public static string ServiceBinaryName => OperatingSystem.IsWindows()
-        ? $"{FileToken(LegacyServiceAppName)}_service.exe"
-        : $"{FileToken(LegacyServiceAppName)}_service";
+        ? $"{FileToken(ServiceAppName)}_service.exe"
+        : $"{FileToken(ServiceAppName)}_service";
 
-    public static string ServiceInstalledBinaryStem => $"{FileToken(LegacyServiceAppName)}_service_host{FileDevSuffix}";
+    public static string ServiceInstalledBinaryStem => $"{FileToken(ServiceAppName)}_service_host{FileDevSuffix}";
 
     public static string CoreLockPrefix => $".{FileToken(AppMetadata.Name)}-core-";
 

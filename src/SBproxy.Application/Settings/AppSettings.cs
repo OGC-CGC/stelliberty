@@ -63,7 +63,7 @@ public sealed class AppSettings
 
     public string WebDavPassword { get; set; } = string.Empty;
 
-    public string WebDavRemoteDirectory { get; set; } = "stelliberty-backups";
+    public string WebDavRemoteDirectory { get; set; } = "sbproxyrev-backups";
 
     public int WebDavBackupIntervalHours { get; set; } = 24;
 

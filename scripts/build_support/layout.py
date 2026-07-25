@@ -29,25 +29,7 @@ def output_name(metadata: AppMetadata, platform_name: str, configuration: str) -
 
 
 def service_binary_name(metadata: AppMetadata, target: PlatformTarget) -> str:
-    suffix = ".exe" if target.service_binary.lower().endswith(".exe") else ""
-    return f"{file_token(metadata.app_name)}_service{suffix}"
-
-
-def file_token(value: str) -> str:
-    output: list[str] = []
-    previous_was_separator = False
-    for ch in value:
-        if ch.isascii() and ch.isalnum():
-            output.append(ch.lower())
-            previous_was_separator = False
-            continue
-
-        if not previous_was_separator:
-            output.append("_")
-            previous_was_separator = True
-
-    token = "".join(output).strip("_")
-    return token or "app"
+    return target.service_binary
 
 
 def display_version(version: str) -> str:

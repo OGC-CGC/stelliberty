@@ -48,6 +48,8 @@
 !/tests/**/*.cs
 !/tests/**/*.csproj
 
+!LICENCE
+
 /build/
 **/target/
 **/bin/

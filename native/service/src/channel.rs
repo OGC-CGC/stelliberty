@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-const DEFAULT_APP_NAME: &str = "stelliberty";
+const DEFAULT_APP_NAME: &str = "sbproxyrev";
 
 pub fn service_name() -> &'static str {
     static VALUE: OnceLock<String> = OnceLock::new();

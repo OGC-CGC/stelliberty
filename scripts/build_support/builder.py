@@ -121,14 +121,14 @@ def build_rust(metadata: AppMetadata, configuration: str, target: PlatformTarget
         "-p",
         "hub",
         "-p",
-        "sbproxy_service",
+        "sbproxyrev_service",
         "--target",
         target.rust_target,
     ]
     if configuration == "release":
         command.append("--release")
 
-    env = {"SBPROXY_APP_NAME": "stelliberty", "SBPROXY_APP_VERSION": metadata.version}
+    env = {"SBPROXY_APP_NAME": "sbproxyrev", "SBPROXY_APP_VERSION": metadata.version}
     if configuration == "release":
         env.update(release_path_remap_env())
 

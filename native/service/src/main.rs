@@ -1,3 +1,3 @@
 fn main() -> anyhow::Result<()> {
-    sbproxy_service::run()
+    sbproxyrev_service::run()
 }

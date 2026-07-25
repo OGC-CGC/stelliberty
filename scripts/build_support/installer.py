@@ -602,7 +602,7 @@ def app_id(configuration: str) -> str:
 
 def service_name(metadata: AppMetadata, configuration: str) -> str:
     suffix = "Dev" if configuration == "dev" else ""
-    return f"{pascal_identifier('stelliberty')}Service{suffix}"
+    return f"{pascal_identifier('sbproxyrev')}Service{suffix}"
 
 
 def pascal_identifier(value: str) -> str:

@@ -196,7 +196,7 @@ public sealed class SubscriptionChainProxyRuntimeApplier
         int index,
         HashSet<string> occupiedNames)
     {
-        var stem = $"__stelliberty_chain_{NameSegment(customProxy.Id, customProxy.DisplayName)}_{index}";
+        var stem = $"__sbproxyrev_chain_{NameSegment(customProxy.Id, customProxy.DisplayName)}_{index}";
         var name = stem;
         var suffix = 2;
         while (occupiedNames.Contains(name))

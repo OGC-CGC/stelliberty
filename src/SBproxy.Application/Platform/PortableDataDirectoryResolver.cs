@@ -16,15 +16,7 @@ public static class PortableDataDirectoryResolver
             return installDataDirectory;
         }
 
-        var dataDirectory = Path.Combine(
-            bundleParent.FullName,
-            $"{Path.GetFileNameWithoutExtension(bundleDirectory.Name)}.data");
-        var legacyDataDirectory = Path.Combine(
-            bundleParent.FullName,
-            $"{Path.GetFileNameWithoutExtension(bundleDirectory.Name).Replace("SBproxy", "Stelliberty", StringComparison.Ordinal)}.data");
-        return !Directory.Exists(dataDirectory) && Directory.Exists(legacyDataDirectory)
-            ? legacyDataDirectory
-            : dataDirectory;
+        return Path.Combine(bundleParent.FullName, "sbproxyrev.data");
     }
 
     public static string ResolveLinux(string baseDirectory, string? configuredDataDirectory)

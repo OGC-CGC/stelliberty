@@ -100,7 +100,7 @@
     <Button Grid.Column="0"
             Classes="about-link"
             AutomationProperties.AutomationId="Settings.About.GitHubLink"
-            Tag="https://t.me/StellibertyRev"
+            Tag="https://t.me/SBproxyRev"
             Click="OnOpenExternalLinkClicked">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Border Classes="about-link-icon-badge">
@@ -116,7 +116,7 @@
     <Button Grid.Column="1"
             Classes="about-link"
             AutomationProperties.AutomationId="Settings.About.IssuesLink"
-            Tag="https://t.me/StellibertyRev"
+            Tag="https://t.me/SBproxyRev"
             Click="OnOpenExternalLinkClicked">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Border Classes="about-link-icon-badge">
@@ -132,7 +132,7 @@
     <Button Grid.Column="2"
             Classes="about-link"
             AutomationProperties.AutomationId="Settings.About.TelegramLink"
-            Tag="https://t.me/StellibertyRev"
+            Tag="https://t.me/SBproxyRev"
             Click="OnOpenExternalLinkClicked">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Border Classes="about-link-icon-badge">

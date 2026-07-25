@@ -142,7 +142,7 @@ public sealed class WebDavDataBackupService(
         {
             Url = settings.Url.Trim(),
             RemoteDirectory = string.IsNullOrWhiteSpace(settings.RemoteDirectory)
-                ? "stelliberty-backups"
+                ? "sbproxyrev-backups"
                 : settings.RemoteDirectory.Trim(),
             UserName = settings.UserName.Trim(),
             RetentionCount = Math.Max(1, settings.RetentionCount)

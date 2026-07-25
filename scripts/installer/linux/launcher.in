@@ -1,3 +1,3 @@
 #!/bin/sh
-export PORTABLE_APP_DATA_DIR="/opt/stelliberty.data"
+export PORTABLE_APP_DATA_DIR="/opt/sbproxyrev.data"
 exec /opt/@APP_PACKAGE@/@APP_EXECUTABLE@ "$@"

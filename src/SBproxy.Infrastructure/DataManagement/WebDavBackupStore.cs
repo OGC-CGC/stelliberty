@@ -128,7 +128,7 @@ public sealed class WebDavBackupStore : IWebDavBackupStore, IDisposable
 
     private static IReadOnlyList<string> RemoteDirectorySegments(string remoteDirectory)
     {
-        var source = string.IsNullOrWhiteSpace(remoteDirectory) ? "stelliberty-backups" : remoteDirectory;
+        var source = string.IsNullOrWhiteSpace(remoteDirectory) ? "sbproxyrev-backups" : remoteDirectory;
         var segments = source
             .Replace('\\', '/')
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -137,7 +137,7 @@ public sealed class WebDavBackupStore : IWebDavBackupStore, IDisposable
             throw new InvalidOperationException("WebDAV remote directory cannot contain path traversal");
         }
 
-        return segments.Length == 0 ? ["stelliberty-backups"] : segments;
+        return segments.Length == 0 ? ["sbproxyrev-backups"] : segments;
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, Uri uri, WebDavBackupSettings settings)
