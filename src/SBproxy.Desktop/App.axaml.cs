@@ -217,7 +217,10 @@ public sealed partial class App : Avalonia.Application
                 isActive => _isServiceModeCoreHostActive = isActive);
             var coreUpdater = new MihomoCoreUpdater(DesktopApplicationLayout.CoreBinaryPath, coreManager);
             var connectionPage = new ConnectionPageViewModel(proxyCoreClient, localization: localization);
-            var proxyConfigSource = new FileRuntimeProxyConfigSource(platformDirectories.RuntimeDirectory, subscriptionSelectionStore);
+            var proxyConfigSource = new FileRuntimeProxyConfigSource(
+                platformDirectories.RuntimeDirectory,
+                platformDirectories.CoreDirectory,
+                subscriptionSelectionStore);
             var proxyConfigParser = new ProxyConfigParser();
             var proxyConfigLoader = new ProxyConfigLoader(
                 proxyConfigSource,
@@ -255,6 +258,8 @@ public sealed partial class App : Avalonia.Application
                 fallbackProxyConfigProvider,
                 localization,
                 new ProxySelectionService(proxyCoreClient, proxySelectionStore, subscriptionSelectionStore),
+                new ProxyNodeShareService(proxyConfigSource),
+                clipboardWriter,
                 initialSortMode: proxyNodeSortMode,
                 persistSortMode: sortMode =>
                 {

@@ -3,6 +3,7 @@ using SBproxy.Application.Connections;
 using SBproxy.Domain.Connections;
 using SBproxy.Application.Diagnostics;
 using SBproxy.Application.Localization;
+using SBproxy.Application.Platform;
 using SBproxy.Application.Proxies;
 using SBproxy.Domain.Proxies;
 using SBproxy.Presentation.Collections;
@@ -12,6 +13,14 @@ namespace SBproxy.Presentation.ViewModels;
 
 public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
 {
+    private static readonly HashSet<string> BuiltInEntryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE",
+    };
+    private static readonly HashSet<string> BuiltInEntryTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Direct", "Reject", "RejectDrop", "Reject-Drop", "Pass", "Compatible",
+    };
     private readonly ProxyNodeSorter _sorter = new();
     private readonly ProxyConfigLoader? _loader;
     private readonly ProxyDelayService? _delayService;
@@ -20,6 +29,9 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     private readonly IProxyConfigProvider? _primaryConfigProvider;
     private readonly IProxyConfigProvider? _fallbackConfigProvider;
     private readonly ILocalizationService? _localization;
+    private readonly ProxyNodeShareService? _nodeShareService;
+    private readonly IClipboardWriter? _clipboardWriter;
+    private readonly QrCodeGenerator _qrCodeGenerator = new();
     private readonly Action<ProxyNodeSortMode>? _persistSortMode;
     private ProxyConfig _config = new([], new Dictionary<string, ProxyNode>());
     private IReadOnlyList<ProxyGroup> _visibleGroups = [];
@@ -66,6 +78,11 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     private string? _loadedSubscriptionId;
     private int _externalSelectionSyncRunning;
     private readonly ResilientProxyConfigLoader _resilientLoader = new();
+    private ProxyNodeShareResult? _informationNode;
+    private ProxyNodeShareResult? _shareNode;
+    private QrCodeMatrix? _shareQrCodeMatrix;
+    private bool _isNodeInformationDialogVisible;
+    private bool _isNodeShareDialogVisible;
 
     public ProxyPageViewModel(
         ProxyConfigLoader? loader = null,
@@ -75,6 +92,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         IProxyConfigProvider? fallbackConfigProvider = null,
         ILocalizationService? localization = null,
         ProxySelectionService? selectionService = null,
+        ProxyNodeShareService? nodeShareService = null,
+        IClipboardWriter? clipboardWriter = null,
         ProxyNodeSortMode initialSortMode = ProxyNodeSortMode.Default,
         Action<ProxyNodeSortMode>? persistSortMode = null,
         bool isPresentationActive = true)
@@ -86,6 +105,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         _primaryConfigProvider = primaryConfigProvider;
         _fallbackConfigProvider = fallbackConfigProvider;
         _localization = localization;
+        _nodeShareService = nodeShareService;
+        _clipboardWriter = clipboardWriter;
         _sortMode = initialSortMode;
         _persistSortMode = persistSortMode;
         _isPresentationActive = isPresentationActive;
@@ -107,10 +128,17 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         SetNameSortCommand = new RelayCommand(() => SetSortMode(ProxyNodeSortMode.Name));
         SetDelaySortCommand = new RelayCommand(() => SetSortMode(ProxyNodeSortMode.Delay));
         CycleSortModeCommand = new RelayCommand(CycleSortMode);
+        NodeCardActionCommand = new RelayCommand<ProxyNodeRowViewModel>(RunNodeCardAction);
+        NodeMenuActionCommand = new RelayCommand<ProxyNodeMenuSelection>(RunNodeMenuAction);
+        CloseNodeInformationDialogCommand = new RelayCommand(CloseNodeInformationDialog);
+        CloseNodeShareDialogCommand = new RelayCommand(CloseNodeShareDialog);
+        CopyNodeShareCommand = new RelayCommand(CopyNodeShare);
     }
 
     // 节点切换请求核心清理连接；组合层接入连接页同步。
     public event EventHandler? NodeSelectionClosedConnections;
+
+    public event EventHandler<(string Message, ToastType Type)>? ToastRequested;
 
     public IReadOnlyList<ProxyGroup> VisibleGroups => _visibleGroups;
 
@@ -219,6 +247,45 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
 
     public bool IsPresentationActive => _isPresentationActive;
 
+    public bool IsNodeInformationDialogVisible => _isNodeInformationDialogVisible;
+
+    public bool IsNodeShareDialogVisible => _isNodeShareDialogVisible;
+
+    public bool IsDialogOverlayVisible => IsNodeInformationDialogVisible || IsNodeShareDialogVisible;
+
+    public string NodeInformationName => _informationNode?.Name ?? string.Empty;
+
+    public string NodeInformationType => _informationNode?.Type ?? "—";
+
+    public string NodeInformationServer => _informationNode?.Server ?? "—";
+
+    public string NodeInformationPort => _informationNode?.Port ?? "—";
+
+    public string NodeInformationProvider => string.IsNullOrWhiteSpace(_informationNode?.ProviderName)
+        ? Localize("Proxy.NodeInformation.Provider.Local")
+        : _informationNode.ProviderName;
+
+    public string NodeInformationDelay => _informationNode is null
+        ? "—"
+        : _entryNodes.TryGetValue(_informationNode.Name, out var node)
+            ? node.Delay switch
+            {
+                null => "—",
+                < 0 => "-1 ms",
+                _ => $"{node.Delay} ms",
+            }
+            : "—";
+
+    public string NodeShareContent => _shareNode?.Content ?? string.Empty;
+
+    public string NodeShareFormat => _shareNode?.IsYaml == true
+        ? Localize("Proxy.NodeShare.Format.Yaml")
+        : Localize("Proxy.NodeShare.Format.Uri");
+
+    public QrCodeMatrix? NodeShareQrCodeMatrix => _shareQrCodeMatrix;
+
+    public bool HasNodeShareQrCode => NodeShareQrCodeMatrix is not null;
+
     public ICommand RefreshProxiesCommand { get; }
     public ICommand SelectGroupCommand { get; }
     public ICommand SelectNodeCommand { get; }
@@ -231,6 +298,11 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     public ICommand SetNameSortCommand { get; }
     public ICommand SetDelaySortCommand { get; }
     public ICommand CycleSortModeCommand { get; }
+    public ICommand NodeCardActionCommand { get; }
+    public ICommand NodeMenuActionCommand { get; }
+    public ICommand CloseNodeInformationDialogCommand { get; }
+    public ICommand CloseNodeShareDialogCommand { get; }
+    public ICommand CopyNodeShareCommand { get; }
     public void LoadConfig(
         ProxyConfig config,
         bool shouldChangeCoreOnSelection = true,
@@ -990,12 +1062,19 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
 
     private ProxyNodeRowViewModel CreateNodeRow(string name)
     {
+        var entryKind = GetEntryKind(name);
         var row = new ProxyNodeRowViewModel(
             _entryNodes[name],
             string.Equals(name, _selectedGroup?.DisplaySelectionName, StringComparison.Ordinal),
             string.Equals(name, _locatedNodeName, StringComparison.Ordinal),
             _selectedGroup?.IsManualSelectable == true,
-            _delayTestingNodeNames.Contains(name));
+            _delayTestingNodeNames.Contains(name),
+            entryKind.IsNode,
+            entryKind.IsProxyGroup,
+            [
+                new ProxyNodeMenuSelection(name, ProxyNodeMenuAction.Information, Localize("Proxy.Menu.NodeInformation")),
+                new ProxyNodeMenuSelection(name, ProxyNodeMenuAction.Share, Localize("Proxy.Menu.ShareNode")),
+            ]);
         if (_batchDelayResults.TryGetValue(name, out var delay))
         {
             row.ApplyDelay(delay);
@@ -1004,14 +1083,159 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         return row;
     }
 
+    private void RunNodeCardAction(ProxyNodeRowViewModel? row)
+    {
+        if (row?.IsProxyGroup == true)
+        {
+            SelectGroup(row.Name);
+        }
+    }
+
+    private void RunNodeMenuAction(ProxyNodeMenuSelection? selection)
+    {
+        if (selection is null)
+        {
+            return;
+        }
+
+        switch (selection.Action)
+        {
+            case ProxyNodeMenuAction.Information:
+                ShowNodeInformation(selection.NodeName);
+                break;
+            case ProxyNodeMenuAction.Share:
+                ShowNodeShare(selection.NodeName);
+                break;
+        }
+    }
+
+    private void ShowNodeInformation(string nodeName)
+    {
+        var result = ReadNodeShare(nodeName);
+        if (result is null)
+        {
+            return;
+        }
+
+        _informationNode = result;
+        _isNodeInformationDialogVisible = true;
+        RaiseNodeInformationStateChanged();
+    }
+
+    private void ShowNodeShare(string nodeName)
+    {
+        var result = ReadNodeShare(nodeName);
+        if (result is null)
+        {
+            return;
+        }
+
+        QrCodeMatrix? matrix = null;
+        try
+        {
+            matrix = _qrCodeGenerator.Generate(result.Content);
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Warning($"Proxy node QR code generation failed: {exception.Message}");
+        }
+
+        _shareNode = result;
+        _shareQrCodeMatrix = matrix;
+        _isNodeShareDialogVisible = true;
+        RaiseNodeShareStateChanged();
+    }
+
+    private ProxyNodeShareResult? ReadNodeShare(string nodeName)
+    {
+        if (_nodeShareService is null
+            || !_entryNodes.TryGetValue(nodeName, out var node)
+            || _nodeShareService.Read(nodeName, node.ProviderName) is not { } result)
+        {
+            ToastRequested?.Invoke(this, (Localize("Proxy.Toast.NodeReadFailed"), ToastType.Error));
+            return null;
+        }
+
+        return result;
+    }
+
+    private void CopyNodeShare()
+    {
+        if (!string.IsNullOrWhiteSpace(_shareNode?.Content))
+        {
+            _clipboardWriter?.WriteText(_shareNode.Content);
+            ToastRequested?.Invoke(this, (Localize("Proxy.Toast.NodeShareCopied"), ToastType.Success));
+        }
+    }
+
+    private void CloseNodeInformationDialog()
+    {
+        if (!_isNodeInformationDialogVisible)
+        {
+            return;
+        }
+
+        _isNodeInformationDialogVisible = false;
+        RaiseNodeInformationStateChanged();
+    }
+
+    private void CloseNodeShareDialog()
+    {
+        if (!_isNodeShareDialogVisible)
+        {
+            return;
+        }
+
+        _isNodeShareDialogVisible = false;
+        RaiseNodeShareStateChanged();
+    }
+
+    private void RaiseNodeInformationStateChanged()
+    {
+        OnPropertyChanged(nameof(IsNodeInformationDialogVisible));
+        OnPropertyChanged(nameof(IsDialogOverlayVisible));
+        OnPropertyChanged(nameof(NodeInformationName));
+        OnPropertyChanged(nameof(NodeInformationType));
+        OnPropertyChanged(nameof(NodeInformationServer));
+        OnPropertyChanged(nameof(NodeInformationPort));
+        OnPropertyChanged(nameof(NodeInformationProvider));
+        OnPropertyChanged(nameof(NodeInformationDelay));
+    }
+
+    private void RaiseNodeShareStateChanged()
+    {
+        OnPropertyChanged(nameof(IsNodeShareDialogVisible));
+        OnPropertyChanged(nameof(IsDialogOverlayVisible));
+        OnPropertyChanged(nameof(NodeShareContent));
+        OnPropertyChanged(nameof(NodeShareFormat));
+        OnPropertyChanged(nameof(NodeShareQrCodeMatrix));
+        OnPropertyChanged(nameof(HasNodeShareQrCode));
+    }
+
     private void UpdateNodeRow(ProxyNodeRowViewModel row, string name, ProxyGroup? group)
     {
+        var entryKind = GetEntryKind(name);
         row.Update(
             _entryNodes[name],
             string.Equals(name, group?.DisplaySelectionName, StringComparison.Ordinal),
             string.Equals(name, _locatedNodeName, StringComparison.Ordinal),
             group?.IsManualSelectable == true,
-            _delayTestingNodeNames.Contains(name));
+            _delayTestingNodeNames.Contains(name),
+            entryKind.IsNode,
+            entryKind.IsProxyGroup);
+    }
+
+    private (bool IsNode, bool IsProxyGroup) GetEntryKind(string name)
+    {
+        var isKnownGroup = _config.Groups.Any(group =>
+            string.Equals(group.Name, name, StringComparison.Ordinal));
+        var isProxyGroup = VisibleGroups.Any(group =>
+            string.Equals(group.Name, name, StringComparison.Ordinal));
+        var node = _entryNodes[name];
+        var isNode = !isKnownGroup
+            && !BuiltInEntryNames.Contains(name)
+            && !BuiltInEntryTypes.Contains(node.Type);
+        return (isNode, isProxyGroup);
     }
 
     private void SyncGroupRows()
@@ -1183,6 +1407,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         _visibleNodeIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
         _visibleGroupRows = [];
         _isPresentationCacheReleased = true;
+        RaiseNodeInformationStateChanged();
+        RaiseNodeShareStateChanged();
         RaiseProxyStateChanged();
     }
 

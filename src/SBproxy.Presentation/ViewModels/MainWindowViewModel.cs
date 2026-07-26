@@ -193,6 +193,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         ProxyPage.SetCoreRunning(HomePage.IsCoreRunning);
         // 节点切换会关闭核心连接；无需耦合连接页即可清空本地连接行。
         ProxyPage.NodeSelectionClosedConnections += OnProxyNodeSelectionClosedConnections;
+        ProxyPage.ToastRequested += OnToastRequested;
         CoreLogPage = coreLogPage ?? new CoreLogPageViewModel(localization: localization);
         CoreLogPage.LogsCleared += OnCoreLogsCleared;
         RulePage = rulePage ?? new RulePageViewModel(localization: localization);
@@ -267,6 +268,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         SubscriptionPage.SubscriptionMetadataEdited -= OnSubscriptionMetadataEdited;
         SubscriptionPage.SubscriptionChainProxySaved -= OnSubscriptionChainProxySaved;
         SubscriptionPage.ToastRequested -= OnToastRequested;
+        ProxyPage.ToastRequested -= OnToastRequested;
         OverridePage.OverridesUpdated -= OnOverridesUpdated;
         OverridePage.OverridesEdited -= OnOverridesEdited;
         OverridePage.OverrideDeleted -= OnOverrideDeleted;

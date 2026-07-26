@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -12,27 +13,35 @@ namespace SBproxy.Desktop.Views;
 
 public sealed partial class ProxyView : UserControl, IPageContentLifecycle
 {
-    // 单格滚轮约移动一个分组标签，触控板增量仍按比例生效。
-    private const double GroupTabsWheelStep = 72;
+    private static readonly TimeSpan SelectorDropdownCloseDelay = TimeSpan.FromMilliseconds(120);
+    private const double CollapsedSelectorHeight = 34;
     private ProxyPageViewModel? _attachedViewModel;
     private bool _isPageContentActive;
+    private bool _isPointerOverSelectorRegion;
+    private bool _isRefreshingSelectorLayout;
+    private bool _isSelectorExpanded;
+    private bool _suppressSelectorArrowFocusExpansion;
+    private int _selectorDropdownCloseVersion;
     private int _handledLocateNodeRequestId;
     private int _handledScrollToTopRequestId;
+    private double _collapsedToolbarHeight;
+    private double _expandedSelectorHeight = CollapsedSelectorHeight;
     private double _savedNodeScrollOffset;
+    private readonly HashSet<Button> _hiddenSelectorButtons = [];
+    private FlyoutBase? _openNodeActionFlyout;
 
     public ProxyView()
     {
         InitializeComponent();
-        GroupTabsScroll.AddHandler(
-            InputElement.PointerWheelChangedEvent,
-            OnGroupTabsPointerWheelChanged,
-            RoutingStrategies.Tunnel,
-            handledEventsToo: true);
+        SelectorGroupItems.LayoutUpdated += OnSelectorGroupItemsLayoutUpdated;
         ProxyPageRoot.DataContextChanged += OnDataContextChanged;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _openNodeActionFlyout?.Hide();
+        _openNodeActionFlyout = null;
+        CloseSelectorDropdown();
         _savedNodeScrollOffset = NodeListScroll.Offset.Y;
         DeactivatePageContent();
         DetachViewModel();
@@ -117,6 +126,7 @@ public sealed partial class ProxyView : UserControl, IPageContentLifecycle
     private void DeactivatePageContent()
     {
         _isPageContentActive = false;
+        CloseSelectorDropdown();
         _attachedViewModel?.DeactivatePresentation();
         DetachViewModel();
     }
@@ -175,31 +185,243 @@ public sealed partial class ProxyView : UserControl, IPageContentLifecycle
         NodeListScroll.Offset = NodeListScroll.Offset.WithY(0);
     }
 
-    private void OnGroupScrollLeft(object? sender, RoutedEventArgs args)
+    private void OnSelectorArrowPointerEntered(object? sender, PointerEventArgs args)
     {
-        var step = GroupTabsScroll.Viewport.Width * 0.6;
-        GroupTabsScroll.Offset = GroupTabsScroll.Offset.WithX(Math.Max(0, GroupTabsScroll.Offset.X - step));
-    }
-
-    private void OnGroupScrollRight(object? sender, RoutedEventArgs args)
-    {
-        var step = GroupTabsScroll.Viewport.Width * 0.6;
-        var maxX = Math.Max(0, GroupTabsScroll.Extent.Width - GroupTabsScroll.Viewport.Width);
-        GroupTabsScroll.Offset = GroupTabsScroll.Offset.WithX(Math.Min(maxX, GroupTabsScroll.Offset.X + step));
-    }
-
-    private void OnGroupTabsPointerWheelChanged(object? sender, PointerWheelEventArgs args)
-    {
-        var delta = Math.Abs(args.Delta.X) > Math.Abs(args.Delta.Y) ? args.Delta.X : args.Delta.Y;
-        var maxX = Math.Max(0, GroupTabsScroll.Extent.Width - GroupTabsScroll.Viewport.Width);
-        var nextX = Math.Clamp(GroupTabsScroll.Offset.X - delta * GroupTabsWheelStep, 0, maxX);
-        if (Math.Abs(nextX - GroupTabsScroll.Offset.X) < 0.5)
+        RefreshSelectorLayout();
+        if (_expandedSelectorHeight <= CollapsedSelectorHeight + 1)
         {
             return;
         }
 
-        GroupTabsScroll.Offset = GroupTabsScroll.Offset.WithX(nextX);
-        args.Handled = true;
+        _isPointerOverSelectorRegion = true;
+        _selectorDropdownCloseVersion++;
+        SetSelectorExpanded(true);
+    }
+
+    private void OnSelectorArrowGotFocus(object? sender, RoutedEventArgs args)
+    {
+        if (_suppressSelectorArrowFocusExpansion)
+        {
+            return;
+        }
+
+        RefreshSelectorLayout();
+        if (_expandedSelectorHeight <= CollapsedSelectorHeight + 1)
+        {
+            return;
+        }
+
+        _selectorDropdownCloseVersion++;
+        SetSelectorExpanded(true);
+    }
+
+    private void OnSelectorArrowClick(object? sender, RoutedEventArgs args)
+    {
+        RefreshSelectorLayout();
+        if (_expandedSelectorHeight <= CollapsedSelectorHeight + 1)
+        {
+            return;
+        }
+
+        _selectorDropdownCloseVersion++;
+        SetSelectorExpanded(true);
+    }
+
+    private void OnSelectorGroupItemsLayoutUpdated(object? sender, EventArgs args)
+        => RefreshSelectorLayout();
+
+    private void RefreshSelectorLayout()
+    {
+        if (_isRefreshingSelectorLayout)
+        {
+            return;
+        }
+
+        _isRefreshingSelectorLayout = true;
+        try
+        {
+            var positionedRows = SelectorGroupItems
+                .GetVisualDescendants()
+                .OfType<Button>()
+                .Where(button => button.Classes.Contains("proxy-group-tab")
+                    && button.DataContext is ProxyGroupButtonViewModel)
+                .Select(button => new
+                {
+                    Button = button,
+                    button.Bounds.Height,
+                    Origin = button.TranslatePoint(default, SelectorGroupItems)
+                })
+                .Where(item => item.Origin is not null)
+                .Select(item => new
+                {
+                    item.Button,
+                    Y = item.Origin!.Value.Y,
+                    Bottom = item.Origin.Value.Y + item.Height
+                })
+                .ToList();
+
+            _expandedSelectorHeight = positionedRows.Count == 0
+                ? CollapsedSelectorHeight
+                : Math.Max(CollapsedSelectorHeight, positionedRows.Max(item => item.Bottom));
+
+            _hiddenSelectorButtons.Clear();
+            if (positionedRows.Count > 0)
+            {
+                var firstRowY = positionedRows.Min(item => item.Y);
+                foreach (var item in positionedRows.Where(item => item.Y > firstRowY + 1))
+                {
+                    _hiddenSelectorButtons.Add(item.Button);
+                }
+            }
+
+            var hasOverflow = _expandedSelectorHeight > CollapsedSelectorHeight + 1;
+            SelectorDropdownArrow.Opacity = hasOverflow ? 1 : 0;
+            SelectorDropdownArrow.IsHitTestVisible = hasOverflow;
+            SelectorDropdownArrow.IsTabStop = hasOverflow;
+            UpdateSelectorTabStops();
+
+            if (_collapsedToolbarHeight <= 0 && ProxyToolbarSurface.Bounds.Height > 0)
+            {
+                _collapsedToolbarHeight = ProxyToolbarSurface.Bounds.Height;
+                ProxyToolbarHost.Height = _collapsedToolbarHeight;
+            }
+
+            if (!hasOverflow && _isSelectorExpanded)
+            {
+                CloseSelectorDropdown();
+            }
+            else if (_isSelectorExpanded)
+            {
+                ApplySelectorExpansionHeight();
+            }
+        }
+        finally
+        {
+            _isRefreshingSelectorLayout = false;
+        }
+    }
+
+    private void SetSelectorExpanded(bool isExpanded)
+    {
+        if (_isSelectorExpanded == isExpanded)
+        {
+            return;
+        }
+
+        var moveFocusToArrow = !isExpanded
+            && _hiddenSelectorButtons.Any(button => button.IsKeyboardFocusWithin);
+        _isSelectorExpanded = isExpanded;
+        if (isExpanded)
+        {
+            UpdateSelectorTabStops();
+            ApplySelectorExpansionHeight();
+            return;
+        }
+
+        SelectorGroupItems.Height = CollapsedSelectorHeight;
+        ProxyToolbarSurface.Height = double.NaN;
+        UpdateSelectorTabStops();
+        if (moveFocusToArrow)
+        {
+            _suppressSelectorArrowFocusExpansion = true;
+            try
+            {
+                SelectorDropdownArrow.Focus(NavigationMethod.Tab);
+            }
+            finally
+            {
+                _suppressSelectorArrowFocusExpansion = false;
+            }
+        }
+    }
+
+    private void UpdateSelectorTabStops()
+    {
+        foreach (var button in SelectorGroupItems
+                     .GetVisualDescendants()
+                     .OfType<Button>()
+                     .Where(button => button.Classes.Contains("proxy-group-tab")))
+        {
+            button.IsTabStop = _isSelectorExpanded || !_hiddenSelectorButtons.Contains(button);
+        }
+    }
+
+    private void ApplySelectorExpansionHeight()
+    {
+        SelectorGroupItems.Height = _expandedSelectorHeight;
+        if (_collapsedToolbarHeight > 0)
+        {
+            ProxyToolbarSurface.Height =
+                _collapsedToolbarHeight + _expandedSelectorHeight - CollapsedSelectorHeight;
+        }
+    }
+
+    private void OnSelectorRegionPointerEntered(object? sender, PointerEventArgs args)
+    {
+        _isPointerOverSelectorRegion = true;
+        _selectorDropdownCloseVersion++;
+    }
+
+    private void OnSelectorRegionPointerExited(object? sender, PointerEventArgs args)
+    {
+        _isPointerOverSelectorRegion = false;
+        ScheduleSelectorDropdownClose();
+    }
+
+    private void OnSelectorRegionGotFocus(object? sender, RoutedEventArgs args)
+        => _selectorDropdownCloseVersion++;
+
+    private void OnSelectorRegionLostFocus(object? sender, RoutedEventArgs args)
+        => ScheduleSelectorDropdownClose();
+
+    private void OnSelectorItemClick(object? sender, RoutedEventArgs args)
+        => CloseSelectorDropdown();
+
+    private void ScheduleSelectorDropdownClose()
+    {
+        var version = ++_selectorDropdownCloseVersion;
+        DispatcherTimer.RunOnce(() =>
+        {
+            if (version == _selectorDropdownCloseVersion
+                && !_isPointerOverSelectorRegion
+                && !SelectorDropdownAnchor.IsKeyboardFocusWithin)
+            {
+                SetSelectorExpanded(false);
+            }
+        }, SelectorDropdownCloseDelay);
+    }
+
+    private void CloseSelectorDropdown()
+    {
+        _selectorDropdownCloseVersion++;
+        _isPointerOverSelectorRegion = false;
+        SetSelectorExpanded(false);
+    }
+
+    private void OnNodeActionButtonClick(object? sender, RoutedEventArgs args)
+    {
+        if (sender is not Button { DataContext: ProxyNodeRowViewModel { IsNode: true } } button
+            || FlyoutBase.GetAttachedFlyout(button) is not { } flyout)
+        {
+            return;
+        }
+
+        _openNodeActionFlyout?.Hide();
+        _openNodeActionFlyout = flyout;
+        FlyoutBase.ShowAttachedFlyout(button);
+    }
+
+    private void OnNodeMenuItemClick(object? sender, RoutedEventArgs args)
+    {
+        if (sender is Button { DataContext: ProxyNodeMenuSelection selection }
+            && ProxyPageRoot.DataContext is ProxyPageViewModel viewModel
+            && viewModel.NodeMenuActionCommand.CanExecute(selection))
+        {
+            viewModel.NodeMenuActionCommand.Execute(selection);
+        }
+
+        _openNodeActionFlyout?.Hide();
+        _openNodeActionFlyout = null;
     }
 
 }

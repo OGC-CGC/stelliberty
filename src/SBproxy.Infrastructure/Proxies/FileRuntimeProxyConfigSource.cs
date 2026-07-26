@@ -5,7 +5,10 @@ using SBproxy.Domain.Subscriptions;
 
 namespace SBproxy.Infrastructure.Proxies;
 
-public sealed class FileRuntimeProxyConfigSource(string runtimeDirectory, ISubscriptionSelectionStore selectionStore) : IProxyConfigSource
+public sealed class FileRuntimeProxyConfigSource(
+    string runtimeDirectory,
+    string coreDirectory,
+    ISubscriptionSelectionStore selectionStore) : IProxyConfigSource, IProxyNodeShareSource
 {
     public string ReadRuntimeConfig()
     {
@@ -17,5 +20,13 @@ public sealed class FileRuntimeProxyConfigSource(string runtimeDirectory, ISubsc
 
         var runtimePath = Path.Combine(runtimeDirectory, subscriptionId, "runtime.yaml");
         return File.Exists(runtimePath) ? File.ReadAllText(runtimePath) : "{}";
+    }
+
+    public string ReadProviderConfig(string path)
+    {
+        var resolvedPath = Path.IsPathRooted(path)
+            ? path
+            : Path.Combine(coreDirectory, path.StartsWith("./", StringComparison.Ordinal) ? path[2..] : path);
+        return File.ReadAllText(resolvedPath);
     }
 }

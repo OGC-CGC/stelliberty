@@ -14,28 +14,49 @@
         DataContext="{Binding ProxyPage}"
         x:DataType="vm:ProxyPageViewModel">
 
-      <Border Classes="surface-header"
-            Margin="8,0,25,0"
-            IsVisible="{Binding HasGroups}"
-            AutomationProperties.AutomationId="Proxy.Toolbar">
+    <Grid x:Name="ProxyToolbarHost"
+          Margin="8,0,25,0"
+          IsVisible="{Binding HasGroups}"
+          ZIndex="10">
+      <Border x:Name="ProxyToolbarSurface"
+              Classes="surface-header"
+              VerticalAlignment="Top"
+              PointerEntered="OnSelectorRegionPointerEntered"
+              PointerExited="OnSelectorRegionPointerExited"
+              AutomationProperties.AutomationId="Proxy.Toolbar">
       <StackPanel Spacing="13">
 
-        <Grid ColumnDefinitions="*,Auto">
-          <ScrollViewer x:Name="GroupTabsScroll"
-                        AutomationProperties.AutomationId="Proxy.GroupBarScroll"
-                        HorizontalScrollBarVisibility="Hidden"
-                        VerticalScrollBarVisibility="Disabled">
-            <ScrollViewer.Transitions>
-              <Transitions>
-                <VectorTransition Property="Offset" Duration="0:0:0.16" Easing="CubicEaseOut" />
-              </Transitions>
-            </ScrollViewer.Transitions>
-            <Grid>
-              <ItemsControl AutomationProperties.AutomationId="Proxy.GroupBar"
+        <Grid x:Name="SelectorDropdownAnchor"
+              GotFocus="OnSelectorRegionGotFocus"
+              LostFocus="OnSelectorRegionLostFocus">
+          <Border AutomationProperties.AutomationId="Proxy.SelectorDropdown.Current">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <Button x:Name="SelectorDropdownArrow"
+                      Grid.Column="1"
+                      Classes="selector-dropdown-arrow"
+                      Opacity="0"
+                      IsHitTestVisible="False"
+                      IsTabStop="False"
+                      PointerEntered="OnSelectorArrowPointerEntered"
+                      GotFocus="OnSelectorArrowGotFocus"
+                      Click="OnSelectorArrowClick"
+                      AutomationProperties.AutomationId="Proxy.SelectorDropdown.Arrow">
+                <iconPacks:PackIconMingCuteIcons Width="16"
+                                                  Height="16"
+                                                  Kind="DownSmallLine"
+                                                  Foreground="{DynamicResource AppTextSecondaryBrush}" />
+              </Button>
+
+              <ItemsControl x:Name="SelectorGroupItems"
+                            Height="34"
+                            ClipToBounds="True"
+                            AutomationProperties.AutomationId="Proxy.GroupBar"
                             ItemsSource="{Binding VisibleGroupRows}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" Spacing="26" />
+                    <WrapPanel Orientation="Horizontal"
+                               ItemSpacing="26"
+                               LineSpacing="8" />
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -45,30 +66,14 @@
                             Content="{Binding Name}"
                             AutomationProperties.AutomationId="{Binding AutomationId}"
                             Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).SelectGroupCommand}"
-                            CommandParameter="{Binding Name}" />
+                            CommandParameter="{Binding Name}"
+                            Click="OnSelectorItemClick" />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-
             </Grid>
-          </ScrollViewer>
+          </Border>
 
-          <StackPanel Grid.Column="1"
-                      Orientation="Horizontal" Spacing="2"
-                      VerticalAlignment="Center" Margin="10,0,0,0">
-            <Button Classes="toolbar-icon"
-                    AutomationProperties.AutomationId="Proxy.GroupScrollLeftButton"
-                    Click="OnGroupScrollLeft"
-                    ToolTip.Tip="{loc:Loc Proxy.Tooltip.GroupScrollLeft}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="16" Height="16" Kind="LeftSmallLine" />
-            </Button>
-            <Button Classes="toolbar-icon"
-                    AutomationProperties.AutomationId="Proxy.GroupScrollRightButton"
-                    Click="OnGroupScrollRight"
-                    ToolTip.Tip="{loc:Loc Proxy.Tooltip.GroupScrollRight}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="16" Height="16" Kind="RightSmallLine" />
-            </Button>
-          </StackPanel>
         </Grid>
 
         <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
@@ -119,7 +124,8 @@
           </TextBox>
         </Grid>
       </StackPanel>
-    </Border>
+      </Border>
+    </Grid>
 
     <Grid Grid.Row="1">
       <Border Classes="list-empty"
@@ -169,13 +175,13 @@
                           AutomationProperties.AutomationId="{Binding RowAutomationId}"
                           Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).SelectNodeCommand}"
                           CommandParameter="{Binding Name}"
-                          IsEnabled="{Binding IsClickable}"
-                          ToolTip.Tip="{Binding Name}" />
+                          IsEnabled="{Binding IsClickable}" />
                   <Grid Margin="13,10" RowDefinitions="*,Auto" IsHitTestVisible="False">
                     <TextBlock Text="{Binding Name}"
                                Foreground="{DynamicResource AppTextPrimaryBrush}"
                                FontWeight="SemiBold"
                                FontSize="14"
+                               Margin="0,0,28,0"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Border Grid.Row="1"
@@ -208,6 +214,51 @@
                                                         Kind="LoadingFill" />
                     </Panel>
                   </Button>
+                  <Button Classes="node-action-button"
+                          AutomationProperties.AutomationId="{Binding ActionAutomationId}"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Top"
+                          Margin="0,13,5,0"
+                          IsVisible="{Binding HasAction}"
+                          Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).NodeCardActionCommand}"
+                          CommandParameter="{Binding}"
+                          Click="OnNodeActionButtonClick">
+                    <FlyoutBase.AttachedFlyout>
+                      <Flyout Placement="BottomEdgeAlignedRight"
+                              FlyoutPresenterClasses="node-action-flyout">
+                        <Border Classes="card-menu-panel"
+                                Width="220">
+                          <ItemsControl ItemsSource="{Binding MenuOptions}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:ProxyNodeMenuSelection">
+                                <Button Classes="card-menu-row"
+                                        AutomationProperties.AutomationId="{Binding AutomationId}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        Click="OnNodeMenuItemClick">
+                                  <Grid ColumnDefinitions="24,*"
+                                        ColumnSpacing="14">
+                                    <iconPacks:PackIconMingCuteIcons Classes="card-menu-icon"
+                                                                      Width="16"
+                                                                      Height="16"
+                                                                      Kind="{Binding IconType}"
+                                                                      VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="card-menu-text"
+                                               Text="{Binding DisplayName}"
+                                               VerticalAlignment="Center" />
+                                  </Grid>
+                                </Button>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </Border>
+                      </Flyout>
+                    </FlyoutBase.AttachedFlyout>
+                    <iconPacks:PackIconMingCuteIcons Width="16"
+                                                      Height="16"
+                                                      Kind="{Binding ActionIconType}" />
+                  </Button>
                 </Grid>
               </Border>
             </DataTemplate>
@@ -216,5 +267,150 @@
       </ScrollViewer>
 
     </Grid>
+
+    <controls:OverlayDialogHost Grid.RowSpan="2"
+                                AutomationProperties.AutomationId="Proxy.DialogOverlay"
+                                IsOpen="{Binding IsDialogOverlayVisible}">
+      <controls:OverlayDialogHost.DialogContent>
+        <Grid>
+          <controls:DialogPanel PanelWidth="460"
+                                AutomationProperties.AutomationId="Proxy.NodeInformationDialog"
+                                IsOpen="{Binding IsNodeInformationDialogVisible}">
+            <controls:DialogPanel.DialogContent>
+              <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <TextBlock Classes="dialog-title"
+                             Text="{loc:Loc Proxy.NodeInformation.Title}"
+                             VerticalAlignment="Center" />
+                  <Button Grid.Column="1"
+                          Classes="dialog-close"
+                          AutomationProperties.AutomationId="Proxy.NodeInformationDialog.HeaderCloseButton"
+                          Command="{Binding CloseNodeInformationDialogCommand}">
+                    <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="CloseFill" />
+                  </Button>
+                </Grid>
+
+                <Border Classes="dialog-section">
+                  <StackPanel Spacing="0">
+                    <Border Classes="connection-detail-row dense">
+                      <Grid ColumnDefinitions="104,*" ColumnSpacing="12">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Proxy.NodeInformation.Name}" />
+                        <TextBlock Grid.Column="1" Classes="connection-detail-value"
+                                   Text="{Binding NodeInformationName}" />
+                      </Grid>
+                    </Border>
+                    <Border Classes="connection-detail-row dense">
+                      <Grid ColumnDefinitions="104,*" ColumnSpacing="12">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Proxy.NodeInformation.Type}" />
+                        <TextBlock Grid.Column="1" Classes="connection-detail-value"
+                                   Text="{Binding NodeInformationType}" />
+                      </Grid>
+                    </Border>
+                    <Border Classes="connection-detail-row dense">
+                      <Grid ColumnDefinitions="104,*" ColumnSpacing="12">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Proxy.NodeInformation.Server}" />
+                        <TextBlock Grid.Column="1" Classes="connection-detail-value"
+                                   Text="{Binding NodeInformationServer}" />
+                      </Grid>
+                    </Border>
+                    <Border Classes="connection-detail-row dense">
+                      <Grid ColumnDefinitions="104,*" ColumnSpacing="12">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Proxy.NodeInformation.Port}" />
+                        <TextBlock Grid.Column="1" Classes="connection-detail-value"
+                                   Text="{Binding NodeInformationPort}" />
+                      </Grid>
+                    </Border>
+                    <Border Classes="connection-detail-row dense">
+                      <Grid ColumnDefinitions="104,*" ColumnSpacing="12">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Proxy.NodeInformation.Provider}" />
+                        <TextBlock Grid.Column="1" Classes="connection-detail-value"
+                                   Text="{Binding NodeInformationProvider}" />
+                      </Grid>
+                    </Border>
+                    <Border Classes="connection-detail-row dense">
+                      <Grid ColumnDefinitions="104,*" ColumnSpacing="12">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Proxy.NodeInformation.Delay}" />
+                        <TextBlock Grid.Column="1" Classes="connection-detail-value"
+                                   Text="{Binding NodeInformationDelay}" />
+                      </Grid>
+                    </Border>
+                  </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                  <Button Classes="dialog-primary"
+                          AutomationProperties.AutomationId="Proxy.NodeInformationDialog.CloseButton"
+                          Command="{Binding CloseNodeInformationDialogCommand}"
+                          Content="{loc:Loc Common.Close}" />
+                </StackPanel>
+              </StackPanel>
+            </controls:DialogPanel.DialogContent>
+          </controls:DialogPanel>
+
+          <controls:DialogPanel PanelWidth="500"
+                                AutomationProperties.AutomationId="Proxy.NodeShareDialog"
+                                IsOpen="{Binding IsNodeShareDialogVisible}">
+            <controls:DialogPanel.DialogContent>
+              <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <StackPanel Spacing="2">
+                    <TextBlock Classes="dialog-title"
+                               Text="{loc:Loc Proxy.NodeShare.Title}" />
+                    <TextBlock Classes="dialog-subtitle"
+                               Text="{Binding NodeShareFormat}" />
+                  </StackPanel>
+                  <Button Grid.Column="1"
+                          Classes="dialog-close"
+                          AutomationProperties.AutomationId="Proxy.NodeShareDialog.HeaderCloseButton"
+                          Command="{Binding CloseNodeShareDialogCommand}">
+                    <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="CloseFill" />
+                  </Button>
+                </Grid>
+
+                <Border Width="200"
+                        Height="200"
+                        IsVisible="{Binding HasNodeShareQrCode}"
+                        HorizontalAlignment="Center"
+                        Background="White"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="10"
+                        AutomationProperties.AutomationId="Proxy.NodeShareDialog.PreviewBox">
+                  <controls:QrCodeMatrixView AutomationProperties.AutomationId="Proxy.NodeShareDialog.Matrix"
+                                             Matrix="{Binding NodeShareQrCodeMatrix}" />
+                </Border>
+
+                <Border Classes="dialog-section" MaxHeight="180">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock AutomationProperties.AutomationId="Proxy.NodeShareDialog.ContentText"
+                               FontFamily="Consolas"
+                               Text="{Binding NodeShareContent}"
+                               TextWrapping="Wrap" />
+                  </ScrollViewer>
+                </Border>
+
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8"
+                            HorizontalAlignment="Right">
+                  <Button Classes="dialog-secondary"
+                          AutomationProperties.AutomationId="Proxy.NodeShareDialog.CopyButton"
+                          Command="{Binding CopyNodeShareCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <iconPacks:PackIconMingCuteIcons Classes="icon" Width="14" Height="14" Kind="Copy2Line" />
+                      <TextBlock Text="{loc:Loc Common.Copy}" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="dialog-primary"
+                          AutomationProperties.AutomationId="Proxy.NodeShareDialog.CloseButton"
+                          Command="{Binding CloseNodeShareDialogCommand}"
+                          Content="{loc:Loc Common.Close}" />
+                </StackPanel>
+              </StackPanel>
+            </controls:DialogPanel.DialogContent>
+          </controls:DialogPanel>
+        </Grid>
+      </controls:OverlayDialogHost.DialogContent>
+    </controls:OverlayDialogHost>
   </Grid>
 </UserControl>
