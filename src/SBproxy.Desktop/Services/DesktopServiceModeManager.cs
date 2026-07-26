@@ -115,7 +115,10 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
             true,
             ManageTimeout,
             cancellationToken,
-            binaryPath: DesktopApplicationLayout.ServiceInstalledBinaryPath).ConfigureAwait(false);
+            binaryPath: DesktopApplicationLayout.ServiceInstalledBinaryPath,
+            commandArgument: OperatingSystem.IsMacOS()
+                ? DesktopApplicationLayout.InstallDataDirectory
+                : null).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             return result;
@@ -197,7 +200,8 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
         TimeSpan timeout,
         CancellationToken cancellationToken,
         string? standardInput = null,
-        string? binaryPath = null)
+        string? binaryPath = null,
+        string? commandArgument = null)
     {
         try
         {
@@ -209,7 +213,7 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
                 return ServiceModeOperationResult.Failed("Service executable is missing. Run prebuild or rebuild the app first.");
             }
 
-            using var process = StartProcess(command, elevated, selectedBinaryPath);
+            using var process = StartProcess(command, elevated, selectedBinaryPath, commandArgument);
             if (process is null)
             {
                 return ServiceModeOperationResult.Failed("Service command failed to start.");
@@ -394,36 +398,43 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
         return status;
     }
 
-    private static Process? StartProcess(string command, bool elevated, string binaryPath)
+    private static Process? StartProcess(
+        string command,
+        bool elevated,
+        string binaryPath,
+        string? commandArgument)
     {
 #if DEBUG
         if (elevated && IsCiServiceCommandEnabled())
         {
             return OperatingSystem.IsWindows()
-                ? StartDirectServiceCommand(command, binaryPath)
-                : StartSudoServiceCommand(command, binaryPath);
+                ? StartDirectServiceCommand(command, binaryPath, commandArgument)
+                : StartSudoServiceCommand(command, binaryPath, commandArgument);
         }
 #endif
 
         if (!elevated)
         {
-            return StartDirectServiceCommand(command, binaryPath);
+            return StartDirectServiceCommand(command, binaryPath, commandArgument);
         }
 
         if (OperatingSystem.IsWindows())
         {
-            return StartWindowsElevated(command, binaryPath);
+            return StartWindowsElevated(command, binaryPath, commandArgument);
         }
 
         if (OperatingSystem.IsMacOS())
         {
-            return StartMacOSElevated(command, binaryPath);
+            return StartMacOSElevated(command, binaryPath, commandArgument);
         }
 
-        return StartUnixElevated(command, binaryPath);
+        return StartUnixElevated(command, binaryPath, commandArgument);
     }
 
-    private static Process? StartDirectServiceCommand(string command, string binaryPath)
+    private static Process? StartDirectServiceCommand(
+        string command,
+        string binaryPath,
+        string? commandArgument)
     {
         var info = new ProcessStartInfo(binaryPath)
         {
@@ -434,6 +445,11 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
             CreateNoWindow = true,
         };
         info.ArgumentList.Add(command);
+        if (commandArgument is not null)
+        {
+            info.ArgumentList.Add(commandArgument);
+        }
+
         return Process.Start(info);
     }
 
@@ -446,7 +462,10 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
             StringComparison.Ordinal);
     }
 
-    private static Process? StartSudoServiceCommand(string command, string binaryPath)
+    private static Process? StartSudoServiceCommand(
+        string command,
+        string binaryPath,
+        string? commandArgument)
     {
         var info = new ProcessStartInfo("sudo")
         {
@@ -458,6 +477,11 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
         info.ArgumentList.Add("-n");
         info.ArgumentList.Add(binaryPath);
         info.ArgumentList.Add(command);
+        if (commandArgument is not null)
+        {
+            info.ArgumentList.Add(commandArgument);
+        }
+
         return Process.Start(info);
     }
 #endif
@@ -542,20 +566,38 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
     }
 
     [SupportedOSPlatform("windows")]
-    private static Process? StartWindowsElevated(string command, string binaryPath)
+    private static Process? StartWindowsElevated(
+        string command,
+        string binaryPath,
+        string? commandArgument)
     {
-        return Process.Start(new ProcessStartInfo(binaryPath)
+        var info = new ProcessStartInfo(binaryPath)
         {
             UseShellExecute = true,
             Verb = "runas",
-            Arguments = command,
-        });
+        };
+        info.ArgumentList.Add(command);
+        if (commandArgument is not null)
+        {
+            info.ArgumentList.Add(commandArgument);
+        }
+
+        return Process.Start(info);
     }
 
     [SupportedOSPlatform("macos")]
-    private static Process? StartMacOSElevated(string command, string binaryPath)
+    private static Process? StartMacOSElevated(
+        string command,
+        string binaryPath,
+        string? commandArgument)
     {
-        var script = $"do shell script {QuoteAppleScript(ShellQuote(binaryPath) + " " + ShellQuote(command))} with administrator privileges";
+        var shellCommand = ShellQuote(binaryPath) + " " + ShellQuote(command);
+        if (commandArgument is not null)
+        {
+            shellCommand += " " + ShellQuote(commandArgument);
+        }
+
+        var script = $"do shell script {QuoteAppleScript(shellCommand)} with administrator privileges";
         var info = new ProcessStartInfo("osascript")
         {
             UseShellExecute = false,
@@ -568,7 +610,10 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
         return Process.Start(info);
     }
 
-    private static Process? StartUnixElevated(string command, string binaryPath)
+    private static Process? StartUnixElevated(
+        string command,
+        string binaryPath,
+        string? commandArgument)
     {
         var info = new ProcessStartInfo("pkexec")
         {
@@ -579,6 +624,11 @@ internal sealed class DesktopServiceModeManager : IServiceModeManager
         };
         info.ArgumentList.Add(binaryPath);
         info.ArgumentList.Add(command);
+        if (commandArgument is not null)
+        {
+            info.ArgumentList.Add(commandArgument);
+        }
+
         return Process.Start(info);
     }
 

@@ -49,9 +49,6 @@ public sealed partial class SubscriptionPageViewModel
             case SubscriptionRowMenuAction.Delete:
                 ShowDeleteDialog(selection.SubscriptionId);
                 break;
-            case SubscriptionRowMenuAction.ViewRuntimeConfig:
-                ShowRuntimeConfigDialog(selection.SubscriptionId);
-                break;
             case SubscriptionRowMenuAction.OverrideSelector:
                 ShowOverrideSelector(selection.SubscriptionId);
                 break;
@@ -151,18 +148,6 @@ public sealed partial class SubscriptionPageViewModel
     private void ShowProviderSelector(string? subscriptionId)
     {
         Provider.Show(subscriptionId);
-        RaiseMenuStateChanged();
-    }
-
-    private void ShowRuntimeConfigDialog(string? subscriptionId)
-    {
-        var subscription = _subscriptions.FirstOrDefault(item => item.Id == subscriptionId);
-        if (subscription is null || _runtimeStore is null)
-        {
-            return;
-        }
-
-        RuntimeConfigDialog.Open(subscription.Id, subscription.Name, _runtimeStore.ReadRuntimeConfig(subscription.Id));
         RaiseMenuStateChanged();
     }
 

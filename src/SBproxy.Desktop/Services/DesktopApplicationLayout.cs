@@ -6,7 +6,7 @@ internal static class DesktopApplicationLayout
 {
     private static string BaseDirectory => AppContext.BaseDirectory;
 
-    private static string InstallDataDirectory => Path.Combine(BaseDirectory, PathConventions.DataDirectoryName);
+    public static string InstallDataDirectory => Path.Combine(BaseDirectory, PathConventions.DataDirectoryName);
 
     // 安装资源随版本替换，用户数据固定在安装载体之外。
     public static string AppDataDirectory => OperatingSystem.IsMacOS()

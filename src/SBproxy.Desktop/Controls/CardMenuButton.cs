@@ -34,6 +34,9 @@ public sealed class CardMenuButton : Button
     public static readonly StyledProperty<string> MoreItemTextProperty =
         AvaloniaProperty.Register<CardMenuButton, string>(nameof(MoreItemText), "More");
 
+    public static readonly StyledProperty<bool> IsPaginationEnabledProperty =
+        AvaloniaProperty.Register<CardMenuButton, bool>(nameof(IsPaginationEnabled), true);
+
     private const double MenuWidth = 220d;
     private const double WindowMargin = 16d;
     private static readonly TimeSpan OpenDuration = TimeSpan.FromMilliseconds(250);
@@ -94,6 +97,12 @@ public sealed class CardMenuButton : Button
         set => SetValue(MoreItemTextProperty, value);
     }
 
+    public bool IsPaginationEnabled
+    {
+        get => GetValue(IsPaginationEnabledProperty);
+        set => SetValue(IsPaginationEnabledProperty, value);
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -110,7 +119,7 @@ public sealed class CardMenuButton : Button
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == ItemsSourceProperty && _isOpen)
+        if ((change.Property == ItemsSourceProperty || change.Property == IsPaginationEnabledProperty) && _isOpen)
         {
             ReloadItems();
             RenderPage();
@@ -280,7 +289,7 @@ public sealed class CardMenuButton : Button
 
     private IEnumerable<object> GetPageItems()
     {
-        if (_items.Count <= 6)
+        if (!IsPaginationEnabled || _items.Count <= 6)
         {
             return _items;
         }

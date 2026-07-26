@@ -270,11 +270,6 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
                 new(Id, SubscriptionRowMenuAction.OpenExternalEditor, Localize("Subscriptions.Menu.ExternalEditor"))
             };
 
-            if (IsCurrent)
-            {
-                options.Add(new(Id, SubscriptionRowMenuAction.ViewRuntimeConfig, Localize("Subscriptions.Menu.RuntimeConfig")));
-            }
-
             options.Add(new(Id, SubscriptionRowMenuAction.OverrideSelector, Localize("Subscriptions.Menu.Overrides")));
             options.Add(new(Id, SubscriptionRowMenuAction.ProviderSelector, Localize("Subscriptions.Menu.Providers")));
             if (!IsLocalFile)

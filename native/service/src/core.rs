@@ -8,6 +8,8 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use crate::channel::core_lock_prefix;
+#[cfg(target_os = "macos")]
+use crate::channel::INSTALL_DATA_DIRECTORY_ENVIRONMENT_VARIABLE;
 use crate::logging;
 
 const CORE_LOCK_SUFFIX: &str = ".lock";
@@ -244,11 +246,20 @@ fn validate_start_request(request: &StartCoreRequest) -> Result<()> {
     let config_path = canonical_file(&request.config_path, "core config")?;
     let data_core_dir = canonical_dir(&request.data_core_dir, "core data directory")?;
 
-    if !same_path(&mihomo_path, &allowed.mihomo_path) {
+    validate_resolved_start_paths(&mihomo_path, &config_path, &data_core_dir, &allowed)
+}
+
+fn validate_resolved_start_paths(
+    mihomo_path: &Path,
+    config_path: &Path,
+    data_core_dir: &Path,
+    allowed: &AllowedCorePaths,
+) -> Result<()> {
+    if !same_path(mihomo_path, &allowed.mihomo_path) {
         return Err(anyhow!("Core executable path is outside the allowed area"));
     }
 
-    if !same_path(&data_core_dir, &allowed.core_dir) {
+    if !same_path(data_core_dir, &allowed.core_dir) {
         return Err(anyhow!("Core data directory is outside the allowed area"));
     }
 
@@ -267,12 +278,13 @@ struct AllowedCorePaths {
 
 impl AllowedCorePaths {
     fn resolve() -> Result<Self> {
-        let data_root = service_data_root()?;
-        let core_dir = data_root
+        let service_data_root = service_data_root()?;
+        let install_data_root = install_data_root()?;
+        let core_dir = install_data_root
             .join("core")
             .canonicalize()
             .context("Core directory does not exist")?;
-        let runtime_dir = data_root
+        let runtime_dir = service_data_root
             .join("runtime")
             .canonicalize()
             .context("Runtime config directory does not exist")?;
@@ -288,6 +300,32 @@ impl AllowedCorePaths {
     }
 }
 
+#[cfg(target_os = "macos")]
+fn service_data_root() -> Result<PathBuf> {
+    let exe = std::env::current_exe().context("Failed to get the service executable path")?;
+    let data_root = macos_service_data_root_from_executable(&exe)?;
+    data_root
+        .canonicalize()
+        .context("Failed to resolve the app data directory")
+}
+
+#[cfg(target_os = "macos")]
+fn macos_service_data_root_from_executable(exe: &Path) -> Result<PathBuf> {
+    let service_directory = exe
+        .parent()
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.eq_ignore_ascii_case("service"))
+        })
+        .ok_or_else(|| anyhow!("Service executable is not under the service directory"))?;
+    service_directory
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(|| anyhow!("Service directory is not under the app data directory"))
+}
+
+#[cfg(not(target_os = "macos"))]
 fn service_data_root() -> Result<PathBuf> {
     let exe = std::env::current_exe().context("Failed to get the service executable path")?;
     let data_root = exe
@@ -301,6 +339,20 @@ fn service_data_root() -> Result<PathBuf> {
     data_root
         .canonicalize()
         .context("Failed to resolve the app data directory")
+}
+
+#[cfg(target_os = "macos")]
+fn install_data_root() -> Result<PathBuf> {
+    let configured = std::env::var(INSTALL_DATA_DIRECTORY_ENVIRONMENT_VARIABLE)
+        .context("Trusted install data directory is not configured")?;
+    std::path::Path::new(&configured)
+        .canonicalize()
+        .context("Failed to resolve the trusted install data directory")
+}
+
+#[cfg(not(target_os = "macos"))]
+fn install_data_root() -> Result<PathBuf> {
+    service_data_root()
 }
 
 fn canonical_file(path: &str, label: &str) -> Result<PathBuf> {
@@ -325,7 +377,7 @@ fn canonical_dir(path: &str, label: &str) -> Result<PathBuf> {
     Err(anyhow!("{label} is not a directory"))
 }
 
-fn core_binary_name() -> &'static str {
+pub(crate) fn core_binary_name() -> &'static str {
     if cfg!(windows) {
         "clash-mihomo-core.exe"
     } else {
@@ -340,6 +392,70 @@ fn same_path(left: &Path, right: &Path) -> bool {
             .eq_ignore_ascii_case(&right.as_os_str().to_string_lossy())
     } else {
         left == right
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolved_start_paths_allow_split_install_and_runtime_roots() {
+        let allowed = AllowedCorePaths {
+            core_dir: PathBuf::from("install/data/core"),
+            runtime_dir: PathBuf::from("user/Application Support/app/runtime"),
+            mihomo_path: PathBuf::from("install/data/core/clash-mihomo-core"),
+        };
+
+        let result = validate_resolved_start_paths(
+            Path::new("install/data/core/clash-mihomo-core"),
+            Path::new("user/Application Support/app/runtime/subscription/runtime.yaml"),
+            Path::new("install/data/core"),
+            &allowed,
+        );
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn resolved_start_paths_reject_untrusted_core_and_runtime_paths() {
+        let allowed = AllowedCorePaths {
+            core_dir: PathBuf::from("install/data/core"),
+            runtime_dir: PathBuf::from("user/Application Support/app/runtime"),
+            mihomo_path: PathBuf::from("install/data/core/clash-mihomo-core"),
+        };
+
+        let wrong_core = validate_resolved_start_paths(
+            Path::new("other/core/clash-mihomo-core"),
+            Path::new("user/Application Support/app/runtime/subscription/runtime.yaml"),
+            Path::new("other/core"),
+            &allowed,
+        );
+        let wrong_runtime = validate_resolved_start_paths(
+            Path::new("install/data/core/clash-mihomo-core"),
+            Path::new("other/runtime.yaml"),
+            Path::new("install/data/core"),
+            &allowed,
+        );
+
+        assert!(wrong_core.is_err());
+        assert!(wrong_runtime.is_err());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_service_data_root_supports_application_support_paths() -> Result<()> {
+        let executable = Path::new(
+            "/Users/test/Library/Application Support/com.sbproxy.sbproxy/service/sbproxyrev_service_host",
+        );
+
+        let result = macos_service_data_root_from_executable(executable)?;
+
+        assert_eq!(
+            result,
+            PathBuf::from("/Users/test/Library/Application Support/com.sbproxy.sbproxy")
+        );
+        Ok(())
     }
 }
 

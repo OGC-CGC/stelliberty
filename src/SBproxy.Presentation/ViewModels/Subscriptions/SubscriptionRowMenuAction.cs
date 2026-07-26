@@ -9,7 +9,6 @@ public enum SubscriptionRowMenuAction
     OpenExternalEditor,
     ChainProxy,
     Delete,
-    ViewRuntimeConfig,
     OverrideSelector,
     ProviderSelector,
     CopyLink,

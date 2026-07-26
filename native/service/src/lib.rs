@@ -15,7 +15,7 @@ use anyhow::{Result, bail};
 const HELP_COMMANDS: &str = "\
 Commands:
   foreground       Run the service in the foreground
-  install          Install and start the system service
+  install [path]   Install and start the system service
   uninstall        Stop and uninstall the system service
   start            Start the system service
   stop             Stop the system service
@@ -44,7 +44,7 @@ pub fn run() -> Result<()> {
         }
         None => run_without_command(),
         Some("foreground") => service::run_foreground(),
-        Some("install") => installer::install(),
+        Some("install") => installer::install(args.get(2).map(String::as_str)),
         Some("uninstall") => installer::uninstall(),
         Some("start") => installer::start(),
         Some("stop") => installer::stop(),

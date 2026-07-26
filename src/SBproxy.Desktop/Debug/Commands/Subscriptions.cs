@@ -108,12 +108,6 @@ internal static partial class DebugCommands
             return SubscriptionState(page, viewModel);
         }
 
-        if (spec.StartsWith("runtime_config ", StringComparison.OrdinalIgnoreCase))
-        {
-            page.ShowRuntimeConfigDialogCommand.Execute(spec["runtime_config ".Length..].Trim());
-            return OutputValue(page.RuntimeConfigDialog.Content);
-        }
-
         if (spec.StartsWith("save_file ", StringComparison.OrdinalIgnoreCase))
         {
             var tokens = SplitCommandTokens(spec["save_file ".Length..].Trim());

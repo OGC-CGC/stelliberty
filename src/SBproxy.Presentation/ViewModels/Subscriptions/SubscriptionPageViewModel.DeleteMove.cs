@@ -76,8 +76,6 @@ public sealed partial class SubscriptionPageViewModel
 
         ChainProxy.ClearForSubscription(subscriptionId);
 
-        RuntimeConfigDialog.ClearForSubscription(subscriptionId);
-
         FileEditor.ClearForSubscription(subscriptionId);
 
         EditDialog.ClearForSubscription(subscriptionId);

@@ -9,7 +9,6 @@ public sealed record SubscriptionRowMenuSelection(string SubscriptionId, Subscri
         SubscriptionRowMenuAction.OpenExternalEditor => "ExternalLinkLine",
         SubscriptionRowMenuAction.ChainProxy => "Tree3Line",
         SubscriptionRowMenuAction.Delete => "DeleteLine",
-        SubscriptionRowMenuAction.ViewRuntimeConfig => "EyeLine",
         SubscriptionRowMenuAction.OverrideSelector => "PencilRulerLine",
         SubscriptionRowMenuAction.ProviderSelector => "Plugin2Line",
         SubscriptionRowMenuAction.CopyLink => "Copy2Line",

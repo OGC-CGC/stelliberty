@@ -759,29 +759,6 @@ public sealed class SubscriptionBusinessTests
         Assert.False(editor.IsDialogVisible);
     }
 
-    [Fact(DisplayName = "Runtime config dialog keeps new preview when reopened before reset")]
-    public async Task RuntimeConfigDialogKeepsNewPreviewWhenReopenedBeforeReset()
-    {
-        var dialog = new SubscriptionRuntimeConfigDialogViewModel();
-
-        dialog.Open("sub-1", "Sub 1", "mode: rule");
-        dialog.Close();
-        dialog.Open("sub-2", "Sub 2", "mode: global");
-        await Task.Delay(250);
-
-        Assert.True(dialog.IsDialogVisible);
-        Assert.Equal("sub-2", dialog.DialogSubscriptionId);
-        Assert.Equal("Sub 2", dialog.Title);
-        Assert.Equal("mode: global", dialog.Content);
-
-        dialog.ClearForSubscription("sub-1");
-        Assert.True(dialog.IsDialogVisible);
-
-        dialog.ClearForSubscription("sub-2");
-        await WaitUntilAsync(() => !dialog.IsDialogVisible && dialog.DialogSubscriptionId is null);
-        Assert.Equal("", dialog.Content);
-    }
-
     [Fact(DisplayName = "Subscription updater disables auto update on permanent config failure")]
     public async Task SubscriptionUpdaterDisablesAutoUpdateOnPermanentConfigFailure()
     {

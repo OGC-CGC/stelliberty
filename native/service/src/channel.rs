@@ -2,6 +2,8 @@ use std::sync::OnceLock;
 
 const DEFAULT_APP_NAME: &str = "sbproxyrev";
 
+pub const INSTALL_DATA_DIRECTORY_ENVIRONMENT_VARIABLE: &str = "SBPROXY_INSTALL_DATA_DIR";
+
 pub fn service_name() -> &'static str {
     static VALUE: OnceLock<String> = OnceLock::new();
     VALUE.get_or_init(|| format!("{}Service{}", pascal_identifier(app_name()), dev_suffix()))

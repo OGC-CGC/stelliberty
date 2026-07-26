@@ -35,7 +35,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
     private readonly DialogCloseResetScheduler _qrCodeCloseReset = new();
     private readonly SubscriptionDeleter? _subscriptionDeleter;
     private readonly ISubscriptionSelectionStore? _subscriptionSelectionStore;
-    private readonly ISelectedSubscriptionRuntimeStore? _runtimeStore;
     private readonly ObservableCollection<SubscriptionItemViewModel> _subscriptions = [];
     private readonly ReadOnlyObservableCollection<SubscriptionItemViewModel> _subscriptionView;
     private readonly UpdateOperationState _updateState = new();
@@ -59,7 +58,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         SelectedSubscriptionProviderCatalogLoader? providerCatalogLoader = null,
         SubscriptionDeleter? subscriptionDeleter = null,
         ISubscriptionSelectionStore? subscriptionSelectionStore = null,
-        ISelectedSubscriptionRuntimeStore? runtimeStore = null,
         ILocalizationService? localization = null,
         Func<string, SubscriptionChainProxyContext>? chainProxyContextLoader = null)
     {
@@ -78,7 +76,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         _localization = localization;
         _subscriptionDeleter = subscriptionDeleter;
         _subscriptionSelectionStore = subscriptionSelectionStore;
-        _runtimeStore = runtimeStore;
         Provider = new SubscriptionProviderViewModel(providerCatalogLoader, providerUploader, localization);
         Provider.ProvidersSynced += (sender, args) => ProvidersSynced?.Invoke(sender, args);
         Provider.DialogStateChanged += (_, _) => OnPropertyChanged(nameof(IsDialogOverlayVisible));
@@ -89,8 +86,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         OverrideSelector = new SubscriptionOverrideSelectorViewModel();
         OverrideSelector.SaveRequested += OnOverrideSelectionSaveRequested;
         OverrideSelector.DialogStateChanged += (_, _) => OnPropertyChanged(nameof(IsDialogOverlayVisible));
-        RuntimeConfigDialog = new SubscriptionRuntimeConfigDialogViewModel();
-        RuntimeConfigDialog.DialogStateChanged += (_, _) => OnPropertyChanged(nameof(IsDialogOverlayVisible));
         FileEditor = new SubscriptionFileEditorViewModel();
         FileEditor.Confirmed += OnFileEditorConfirmed;
         FileEditor.DialogStateChanged += (_, _) => OnPropertyChanged(nameof(IsDialogOverlayVisible));
@@ -114,7 +109,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         ShowQrCodeCommand = new RelayCommand<string>(ShowQrCode);
         CloseQrCodeDialogCommand = new RelayCommand(CloseQrCodeDialog);
         ShowOverrideSelectorCommand = new RelayCommand<string>(ShowOverrideSelector);
-        ShowRuntimeConfigDialogCommand = new RelayCommand<string>(ShowRuntimeConfigDialog);
         EditFileCommand = new RelayCommand<string>(EditFile);
         ShowChainProxyDialogCommand = new RelayCommand<string>(ShowChainProxyDialog);
         ShowEditDialogCommand = new RelayCommand<string>(ShowEditDialog);
@@ -207,8 +201,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
 
     public SubscriptionOverrideSelectorViewModel OverrideSelector { get; }
 
-    public SubscriptionRuntimeConfigDialogViewModel RuntimeConfigDialog { get; }
-
     public SubscriptionFileEditorViewModel FileEditor { get; }
 
     public SubscriptionEditDialogViewModel EditDialog { get; }
@@ -226,7 +218,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         || IsDeleteDialogVisible
         || OverrideSelector.IsDialogVisible
         || Provider.IsProviderSelectorDialogVisible
-        || RuntimeConfigDialog.IsDialogVisible
         || FileEditor.IsDialogVisible
         || ChainProxy.IsDialogVisible
         || IsQrCodeDialogVisible;
@@ -243,7 +234,6 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
     public ICommand ShowQrCodeCommand { get; }
     public ICommand CloseQrCodeDialogCommand { get; }
     public ICommand ShowOverrideSelectorCommand { get; }
-    public ICommand ShowRuntimeConfigDialogCommand { get; }
     public ICommand EditFileCommand { get; }
     public ICommand ShowChainProxyDialogCommand { get; }
     public ICommand ShowEditDialogCommand { get; }

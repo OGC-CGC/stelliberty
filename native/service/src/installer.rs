@@ -8,11 +8,15 @@ use crate::channel::linux_unit_path;
 #[cfg(any(windows, target_os = "linux"))]
 use crate::channel::service_name;
 #[cfg(target_os = "macos")]
-use crate::channel::{launchd_label, launchd_plist_path};
+use crate::channel::{
+    INSTALL_DATA_DIRECTORY_ENVIRONMENT_VARIABLE, launchd_label, launchd_plist_path,
+};
+#[cfg(target_os = "macos")]
+use crate::core::core_binary_name;
 use crate::ipc::send_command;
 use crate::protocol::{ServiceCommand, ServiceResponse};
 
-pub fn install() -> Result<()> {
+pub fn install(_install_data_directory: Option<&str>) -> Result<()> {
     #[cfg(windows)]
     {
         windows_install()?;
@@ -25,7 +29,9 @@ pub fn install() -> Result<()> {
 
     #[cfg(target_os = "macos")]
     {
-        macos_install()?;
+        let install_data_directory = _install_data_directory
+            .context("The macOS service install command requires the install data directory")?;
+        macos_install(install_data_directory)?;
     }
 
     #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
@@ -448,17 +454,34 @@ fn linux_service_owner(path: &std::path::Path) -> Result<(u32, u32)> {
 }
 
 #[cfg(target_os = "macos")]
-fn macos_install() -> Result<()> {
+fn macos_install(install_data_directory: &str) -> Result<()> {
     let _ = command_success("launchctl", &["bootout", "system", launchd_plist_path()]);
     let binary_path =
         std::env::current_exe().context("Failed to get the service executable path")?;
     let (user_name, group_name) = macos_service_owner(&binary_path)?;
+    let install_data_directory = std::path::Path::new(install_data_directory)
+        .canonicalize()
+        .context("Failed to resolve the install data directory")?;
+    let core_directory = install_data_directory
+        .join("core")
+        .canonicalize()
+        .context("Core directory does not exist under the install data directory")?;
+    let core_binary = core_directory.join(core_binary_name());
+    if !core_binary.is_file() {
+        bail!(
+            "Core executable does not exist under the install data directory: {}",
+            core_binary.display()
+        );
+    }
+
     let plist = format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>Label</key><string>{}</string>\n  <key>UserName</key><string>{}</string>\n  <key>GroupName</key><string>{}</string>\n  <key>ProgramArguments</key><array><string>{}</string></array>\n  <key>RunAtLoad</key><true/>\n  <key>KeepAlive</key><true/>\n</dict>\n</plist>\n",
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>Label</key><string>{}</string>\n  <key>UserName</key><string>{}</string>\n  <key>GroupName</key><string>{}</string>\n  <key>ProgramArguments</key><array><string>{}</string></array>\n  <key>EnvironmentVariables</key>\n  <dict>\n    <key>{}</key><string>{}</string>\n  </dict>\n  <key>RunAtLoad</key><true/>\n  <key>KeepAlive</key><true/>\n</dict>\n</plist>\n",
         xml_escape(launchd_label()),
         xml_escape(&user_name),
         xml_escape(&group_name),
-        xml_escape(&binary_path.display().to_string())
+        xml_escape(&binary_path.display().to_string()),
+        xml_escape(INSTALL_DATA_DIRECTORY_ENVIRONMENT_VARIABLE),
+        xml_escape(&install_data_directory.display().to_string())
     );
     std::fs::write(launchd_plist_path(), plist).context("Failed to write the launchd plist")?;
     command_success("launchctl", &["bootstrap", "system", launchd_plist_path()])
