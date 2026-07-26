@@ -2,7 +2,12 @@ namespace SBproxy.Application.Platform;
 
 public static class PortableDataDirectoryResolver
 {
-    public static string ResolveMacOS(string baseDirectory)
+    private const string MacOSApplicationsDirectory = "/Applications";
+
+    public static string ResolveMacOS(
+        string baseDirectory,
+        string userProfileDirectory,
+        string bundleIdentifier)
     {
         var installDataDirectory = InstallDataDirectory(baseDirectory);
         var macOSDirectory = new DirectoryInfo(Path.TrimEndingDirectorySeparator(baseDirectory));
@@ -16,7 +21,9 @@ public static class PortableDataDirectoryResolver
             return installDataDirectory;
         }
 
-        return Path.Combine(bundleParent.FullName, "sbproxyrev.data");
+        return IsInstalledApplication(bundleDirectory.FullName)
+            ? Path.Combine(userProfileDirectory, "Library", "Application Support", bundleIdentifier)
+            : Path.Combine(bundleParent.FullName, $"{bundleIdentifier}.data");
     }
 
     public static string ResolveLinux(string baseDirectory, string? configuredDataDirectory)
@@ -28,4 +35,11 @@ public static class PortableDataDirectoryResolver
 
     private static string InstallDataDirectory(string baseDirectory) =>
         Path.Combine(baseDirectory, PathConventions.DataDirectoryName);
+
+    private static bool IsInstalledApplication(string bundlePath)
+    {
+        var normalizedBundlePath = Path.GetFullPath(bundlePath);
+        var applicationsPrefix = MacOSApplicationsDirectory + Path.DirectorySeparatorChar;
+        return normalizedBundlePath.StartsWith(applicationsPrefix, StringComparison.Ordinal);
+    }
 }

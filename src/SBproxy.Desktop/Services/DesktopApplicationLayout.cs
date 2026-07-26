@@ -10,7 +10,10 @@ internal static class DesktopApplicationLayout
 
     // 安装资源随版本替换，用户数据固定在安装载体之外。
     public static string AppDataDirectory => OperatingSystem.IsMacOS()
-        ? PortableDataDirectoryResolver.ResolveMacOS(BaseDirectory)
+        ? PortableDataDirectoryResolver.ResolveMacOS(
+            BaseDirectory,
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            AppRuntimeNames.BundleIdentifier)
         : OperatingSystem.IsLinux()
             ? PortableDataDirectoryResolver.ResolveLinux(
                 BaseDirectory,

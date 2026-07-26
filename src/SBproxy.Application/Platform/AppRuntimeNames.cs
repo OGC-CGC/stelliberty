@@ -32,6 +32,8 @@ public static class AppRuntimeNames
 
     public static string FileNameToken => FileToken(AppMetadata.Name);
 
+    public static string BundleIdentifier => $"com.{FileNameToken}.{FileNameToken}{FileDevSuffix.Replace('_', '.')}";
+
     private static string PascalIdentifier(string value)
     {
         var builder = new StringBuilder(value.Length);
