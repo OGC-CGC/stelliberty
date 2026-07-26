@@ -21,12 +21,10 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     private readonly IProxyConfigProvider? _fallbackConfigProvider;
     private readonly ILocalizationService? _localization;
     private readonly Action<ProxyNodeSortMode>? _persistSortMode;
-    private readonly Action<ProxyPageLayout>? _persistLayout;
     private ProxyConfig _config = new([], new Dictionary<string, ProxyNode>());
     private IReadOnlyList<ProxyGroup> _visibleGroups = [];
     private IReadOnlyDictionary<string, ProxyNode> _entryNodes = new Dictionary<string, ProxyNode>(StringComparer.Ordinal);
     private IReadOnlyList<ProxyGroupButtonViewModel> _visibleGroupRows = [];
-    private IReadOnlyList<ProxyGroupCardViewModel> _visibleGroupCards = [];
     private readonly LazyRowList<string, ProxyNodeRowViewModel> _visibleNodeRows;
     private IReadOnlyList<string> _visibleNodeNames = [];
     private IReadOnlyDictionary<string, int> _visibleNodeIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -37,8 +35,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     private ProxyGroup? _selectedGroup;
     private ProxyNodeSortMode _sortMode;
     private string _searchKeyword = string.Empty;
-    private ProxyPageLayout _layoutMode;
-    private string? _expandedGroupName;
     private Domain.Proxies.OutboundMode _outboundMode = Domain.Proxies.OutboundMode.Rule;
     private bool _isCoreRunning;
     private readonly HashSet<string> _delayTestedNodeNames = new(StringComparer.Ordinal);
@@ -79,8 +75,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         IProxyConfigProvider? fallbackConfigProvider = null,
         ILocalizationService? localization = null,
         ProxySelectionService? selectionService = null,
-        ProxyPageLayout initialLayout = ProxyPageLayout.Horizontal,
-        Action<ProxyPageLayout>? persistLayout = null,
         ProxyNodeSortMode initialSortMode = ProxyNodeSortMode.Default,
         Action<ProxyNodeSortMode>? persistSortMode = null,
         bool isPresentationActive = true)
@@ -94,8 +88,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         _localization = localization;
         _sortMode = initialSortMode;
         _persistSortMode = persistSortMode;
-        _layoutMode = initialLayout;
-        _persistLayout = persistLayout;
         _isPresentationActive = isPresentationActive;
         _visibleNodeRows = new LazyRowList<string, ProxyNodeRowViewModel>((name, _) => CreateNodeRow(name));
         _emptyText = Localize("Proxy.Empty.NoGroups");
@@ -115,8 +107,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         SetNameSortCommand = new RelayCommand(() => SetSortMode(ProxyNodeSortMode.Name));
         SetDelaySortCommand = new RelayCommand(() => SetSortMode(ProxyNodeSortMode.Delay));
         CycleSortModeCommand = new RelayCommand(CycleSortMode);
-        ToggleLayoutCommand = new RelayCommand(ToggleLayout);
-        ToggleGroupExpandCommand = new RelayCommand<string>(ToggleGroupExpand);
     }
 
     // 节点切换请求核心清理连接；组合层接入连接页同步。
@@ -125,26 +115,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<ProxyGroup> VisibleGroups => _visibleGroups;
 
     public IReadOnlyList<ProxyGroupButtonViewModel> VisibleGroupRows => _visibleGroupRows;
-
-    public IReadOnlyList<ProxyGroupCardViewModel> VisibleGroupCards => _visibleGroupCards;
-
-    public ProxyPageLayout LayoutMode => _layoutMode;
-
-    public bool IsVerticalLayout => _layoutMode == ProxyPageLayout.Vertical;
-
-    // 空状态、横向节点和纵向卡片互斥。
-    public bool IsHorizontalContentVisible => !_isEmptyVisible && _layoutMode == ProxyPageLayout.Horizontal;
-
-    public bool IsVerticalContentVisible => !_isEmptyVisible && _layoutMode == ProxyPageLayout.Vertical;
-
-    public string? ExpandedGroupName => _expandedGroupName;
-
-    // 切换图标指向备用布局，保持提示和动作一致。
-    public string LayoutToggleIcon => _layoutMode == ProxyPageLayout.Vertical ? "LayoutGridLine" : "Rows4Line";
-
-    public string LayoutToggleTooltip => Localize(_layoutMode == ProxyPageLayout.Vertical
-        ? "Proxy.Tooltip.SwitchToGrid"
-        : "Proxy.Tooltip.SwitchToList");
 
     public ProxyGroup? SelectedGroup => _selectedGroup;
 
@@ -261,9 +231,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     public ICommand SetNameSortCommand { get; }
     public ICommand SetDelaySortCommand { get; }
     public ICommand CycleSortModeCommand { get; }
-    public ICommand ToggleLayoutCommand { get; }
-    public ICommand ToggleGroupExpandCommand { get; }
-
     public void LoadConfig(
         ProxyConfig config,
         bool shouldChangeCoreOnSelection = true,
@@ -291,7 +258,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         }
 
         _selectedGroup = VisibleGroups.FirstOrDefault();
-        _expandedGroupName = null;
         _searchKeyword = string.Empty;
         _delayTestedNodeNames.Clear();
         _batchDelayTestedNodeNames.Clear();
@@ -354,14 +320,12 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         DeactivatePresentation();
         CancelDelayTests();
         _visibleGroupRows = [];
-        _visibleGroupCards = [];
         _visibleNodeRows.Release();
         _visibleNodeNames = [];
         _visibleNodeIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
         _entryNodes = new Dictionary<string, ProxyNode>(StringComparer.Ordinal);
         _isPresentationCacheReleased = true;
         OnPropertyChanged(nameof(VisibleGroupRows));
-        OnPropertyChanged(nameof(VisibleGroupCards));
     }
 
     public void RefreshProxies()
@@ -503,51 +467,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             ProxyNodeSortMode.Name => ProxyNodeSortMode.Delay,
             _ => ProxyNodeSortMode.Default,
         });
-    }
-
-    public void ToggleLayout()
-    {
-        SetLayout(_layoutMode == ProxyPageLayout.Horizontal
-            ? ProxyPageLayout.Vertical
-            : ProxyPageLayout.Horizontal);
-    }
-
-    public void SetLayout(ProxyPageLayout layout)
-    {
-        if (_layoutMode == layout)
-        {
-            return;
-        }
-
-        _layoutMode = layout;
-        _persistLayout?.Invoke(layout);
-        RaiseProxyStateChanged();
-    }
-
-    // 纵向手风琴互斥，并为展开分组复用节点列表。
-    public void ToggleGroupExpand(string? groupName)
-    {
-        if (string.IsNullOrWhiteSpace(groupName))
-        {
-            return;
-        }
-
-        if (string.Equals(_expandedGroupName, groupName, StringComparison.Ordinal))
-        {
-            _expandedGroupName = null;
-            RaiseProxyStateChanged();
-            return;
-        }
-
-        var group = VisibleGroups.FirstOrDefault(item => string.Equals(item.Name, groupName, StringComparison.Ordinal));
-        if (group is null)
-        {
-            return;
-        }
-
-        _expandedGroupName = groupName;
-        _selectedGroup = group;
-        RaiseProxyStateChanged();
     }
 
     public void SelectGroup(string? groupName)
@@ -976,13 +895,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DelayTestingNodeNames));
         OnPropertyChanged(nameof(IsDelayTesting));
         OnPropertyChanged(nameof(IsBatchDelayTesting));
-        OnPropertyChanged(nameof(LayoutMode));
-        OnPropertyChanged(nameof(IsVerticalLayout));
-        OnPropertyChanged(nameof(IsHorizontalContentVisible));
-        OnPropertyChanged(nameof(IsVerticalContentVisible));
-        OnPropertyChanged(nameof(ExpandedGroupName));
-        OnPropertyChanged(nameof(LayoutToggleIcon));
-        OnPropertyChanged(nameof(LayoutToggleTooltip));
     }
 
     private void RefreshConfigIndexes()
@@ -1001,14 +913,7 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
 
     private void RefreshVisibleRows()
     {
-        if (_expandedGroupName is not null
-            && !VisibleGroups.Any(group => string.Equals(group.Name, _expandedGroupName, StringComparison.Ordinal)))
-        {
-            _expandedGroupName = null;
-        }
-
         SyncGroupRows();
-        SyncGroupCards();
 
         if (_selectedGroup is null)
         {
@@ -1042,9 +947,7 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             }
         }
 
-        _isEmptyVisible = _layoutMode == ProxyPageLayout.Vertical
-            ? VisibleGroups.Count == 0
-            : _selectedGroup is null || _visibleNodeRows.Count == 0;
+        _isEmptyVisible = _selectedGroup is null || _visibleNodeRows.Count == 0;
 
         // Direct 模式隐藏代理分组，避免展示无效选择。
         if (_isCoreRunning && _outboundMode == Domain.Proxies.OutboundMode.Direct && VisibleGroups.Count == 0)
@@ -1150,69 +1053,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         }
 
         return true;
-    }
-
-    private void SyncGroupCards()
-    {
-        if (GroupCardsMatchCurrentGroups())
-        {
-            // 顺序稳定时复用卡片实例，同时替换快照。
-            for (var index = 0; index < _visibleGroupCards.Count; index++)
-            {
-                var group = VisibleGroups[index];
-                _visibleGroupCards[index].Update(
-                    group,
-                    FriendlySelectionName(group),
-                    NodeCountLabel(group.All.Count),
-                    string.Equals(group.Name, _expandedGroupName, StringComparison.Ordinal));
-            }
-
-            return;
-        }
-
-        _visibleGroupCards = VisibleGroups
-            .Select(group => new ProxyGroupCardViewModel(
-                group,
-                FriendlySelectionName(group),
-                NodeCountLabel(group.All.Count),
-                string.Equals(group.Name, _expandedGroupName, StringComparison.Ordinal)))
-            .ToList();
-        OnPropertyChanged(nameof(VisibleGroupCards));
-    }
-
-    private bool GroupCardsMatchCurrentGroups()
-    {
-        if (_visibleGroupCards.Count != VisibleGroups.Count)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < _visibleGroupCards.Count; index++)
-        {
-            if (!string.Equals(_visibleGroupCards[index].Name, VisibleGroups[index].Name, StringComparison.Ordinal))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private string NodeCountLabel(int count) => string.Format(
-        System.Globalization.CultureInfo.CurrentCulture,
-        Localize("Proxy.Group.NodeCount"),
-        count);
-
-    // 内置出站使用本地化显示名；自定义名称保持不变。
-    private string FriendlySelectionName(ProxyGroup group)
-    {
-        var name = group.DisplaySelectionName ?? string.Empty;
-        return name switch
-        {
-            "DIRECT" => Localize("Proxy.Selection.Direct"),
-            "REJECT" or "REJECT-DROP" => Localize("Proxy.Selection.Reject"),
-            _ => name,
-        };
     }
 
     private CancellationTokenSource BeginSingleDelayTest(string nodeName)
@@ -1342,7 +1182,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         _visibleNodeNames = [];
         _visibleNodeIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
         _visibleGroupRows = [];
-        _visibleGroupCards = [];
         _isPresentationCacheReleased = true;
         RaiseProxyStateChanged();
     }

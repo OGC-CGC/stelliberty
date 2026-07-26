@@ -244,9 +244,6 @@ public sealed partial class App : Avalonia.Application
                 mihomoApiProxyConfigProvider,
                 primaryProxyConfigProvider,
                 proxySelectionSyncState);
-            var proxyPageLayout = Enum.TryParse<ProxyPageLayout>(settings.ProxyPageLayout, ignoreCase: true, out var parsedProxyLayout)
-                ? parsedProxyLayout
-                : ProxyPageLayout.Horizontal;
             var proxyNodeSortMode = Enum.TryParse<ProxyNodeSortMode>(settings.ProxyNodeSortMode, ignoreCase: true, out var parsedProxyNodeSortMode)
                 ? parsedProxyNodeSortMode
                 : ProxyNodeSortMode.Default;
@@ -258,13 +255,6 @@ public sealed partial class App : Avalonia.Application
                 fallbackProxyConfigProvider,
                 localization,
                 new ProxySelectionService(proxyCoreClient, proxySelectionStore, subscriptionSelectionStore),
-                initialLayout: proxyPageLayout,
-                persistLayout: layout =>
-                {
-                    // 复用共享设置实例，避免后续完整保存丢失这个偏好。
-                    settings.ProxyPageLayout = layout.ToString();
-                    settingsStore.Save(settings);
-                },
                 initialSortMode: proxyNodeSortMode,
                 persistSortMode: sortMode =>
                 {

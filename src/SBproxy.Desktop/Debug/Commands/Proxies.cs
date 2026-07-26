@@ -88,45 +88,6 @@ internal static partial class DebugCommands
             return ProxyState(page);
         }
 
-        if (spec.StartsWith("set_layout ", StringComparison.OrdinalIgnoreCase))
-        {
-            var mode = spec["set_layout ".Length..].Trim();
-            if (!Enum.TryParse<ProxyPageLayout>(mode, ignoreCase: true, out var layout))
-            {
-                throw new InvalidOperationException($"Unknown layout: {mode}");
-            }
-
-            page.SetLayout(layout);
-            return ProxyState(page);
-        }
-
-        if (string.Equals(spec, "toggle_layout", StringComparison.OrdinalIgnoreCase))
-        {
-            page.ToggleLayout();
-            return ProxyState(page);
-        }
-
-        if (spec.StartsWith("expand_group ", StringComparison.OrdinalIgnoreCase))
-        {
-            var name = spec["expand_group ".Length..].Trim();
-            if (!string.Equals(page.ExpandedGroupName, name, StringComparison.Ordinal))
-            {
-                page.ToggleGroupExpand(name);
-            }
-
-            return ProxyState(page);
-        }
-
-        if (string.Equals(spec, "collapse_group", StringComparison.OrdinalIgnoreCase))
-        {
-            if (page.ExpandedGroupName is { } expanded)
-            {
-                page.ToggleGroupExpand(expanded);
-            }
-
-            return ProxyState(page);
-        }
-
         if (string.Equals(spec, "state", StringComparison.OrdinalIgnoreCase))
         {
             return ProxyState(page);
@@ -155,9 +116,7 @@ internal static partial class DebugCommands
             $"testing={page.IsDelayTesting.ToString().ToLowerInvariant()}",
             $"batch={page.IsBatchDelayTesting.ToString().ToLowerInvariant()}",
             $"tested={string.Join(',', testedNodeNames)}",
-            $"layout={page.LayoutMode.ToString().ToLowerInvariant()}",
-            $"sort={page.SortMode.ToString().ToLowerInvariant()}",
-            $"expanded={page.ExpandedGroupName ?? string.Empty}"
+            $"sort={page.SortMode.ToString().ToLowerInvariant()}"
         ]);
     }
 }

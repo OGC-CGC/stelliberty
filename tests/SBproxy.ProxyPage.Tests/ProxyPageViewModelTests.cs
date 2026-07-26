@@ -678,25 +678,6 @@ public sealed class ProxyPageViewModelTests
         }
     }
 
-    [Fact(DisplayName = "Layout mode defaults to horizontal and toggle persists")]
-    public void LayoutModeDefaultsToHorizontalAndTogglePersists()
-    {
-        ProxyPageLayout? persisted = null;
-        var page = new ProxyPageViewModel(persistLayout: layout => persisted = layout);
-
-        Assert.Equal(ProxyPageLayout.Horizontal, page.LayoutMode);
-        Assert.False(page.IsVerticalLayout);
-
-        page.ToggleLayoutCommand.Execute(null);
-        Assert.Equal(ProxyPageLayout.Vertical, page.LayoutMode);
-        Assert.True(page.IsVerticalLayout);
-        Assert.Equal(ProxyPageLayout.Vertical, persisted);
-
-        page.ToggleLayoutCommand.Execute(null);
-        Assert.Equal(ProxyPageLayout.Horizontal, page.LayoutMode);
-        Assert.Equal(ProxyPageLayout.Horizontal, persisted);
-    }
-
     [Fact(DisplayName = "Sort mode persists across page recreation and config reload")]
     public void SortModePersistsAcrossPageRecreationAndConfigReload()
     {
@@ -716,42 +697,6 @@ public sealed class ProxyPageViewModelTests
 
         Assert.Equal(ProxyNodeSortMode.Delay, recreated.SortMode);
         Assert.Equal(["KR", "JP"], recreated.VisibleNodeRows.Select(row => row.Name));
-    }
-
-    [Fact(DisplayName = "Vertical group cards reflect visible groups collapsed by default")]
-    public void VerticalGroupCardsReflectVisibleGroupsCollapsedByDefault()
-    {
-        var page = new ProxyPageViewModel(initialLayout: ProxyPageLayout.Vertical);
-        page.LoadConfig(SampleConfig());
-
-        Assert.Equal(["Auto", "Fallback", "Select", "Balance"], page.VisibleGroupCards.Select(card => card.Name));
-        Assert.All(page.VisibleGroupCards, card => Assert.False(card.IsExpanded));
-        Assert.Null(page.ExpandedGroupName);
-        Assert.True(page.IsVerticalContentVisible);
-        Assert.False(page.IsEmptyVisible);
-    }
-
-    [Fact(DisplayName = "Expanding a group is exclusive, drives node rows, and collapses on reclick")]
-    public void ExpandingGroupIsExclusiveDrivesNodeRowsAndCollapsesOnReclick()
-    {
-        var page = new ProxyPageViewModel(initialLayout: ProxyPageLayout.Vertical);
-        page.LoadConfig(SampleConfig());
-
-        page.ToggleGroupExpandCommand.Execute("Select");
-        Assert.Equal("Select", page.ExpandedGroupName);
-        Assert.Equal("Select", page.SelectedGroup?.Name);
-        Assert.True(page.VisibleGroupCards.Single(card => card.Name == "Select").IsExpanded);
-        Assert.Equal(["JP", "KR", "US"], page.VisibleNodeRows.Select(row => row.Name));
-
-        page.ToggleGroupExpandCommand.Execute("Fallback");
-        Assert.Equal("Fallback", page.ExpandedGroupName);
-        Assert.False(page.VisibleGroupCards.Single(card => card.Name == "Select").IsExpanded);
-        Assert.True(page.VisibleGroupCards.Single(card => card.Name == "Fallback").IsExpanded);
-        Assert.Equal(["US", "KR"], page.VisibleNodeRows.Select(row => row.Name));
-
-        page.ToggleGroupExpandCommand.Execute("Fallback");
-        Assert.Null(page.ExpandedGroupName);
-        Assert.All(page.VisibleGroupCards, card => Assert.False(card.IsExpanded));
     }
 
     private static ProxyConfig SampleConfig()
