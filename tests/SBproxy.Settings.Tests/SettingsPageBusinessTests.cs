@@ -978,6 +978,38 @@ public sealed class SettingsPageBusinessTests
         Assert.True(localization.SetLanguageCount >= 2);
     }
 
+    [Fact(DisplayName = "Language settings switch between system and matching explicit language")]
+    public void LanguageSettingsSwitchBetweenSystemAndMatchingExplicitLanguage()
+    {
+        var settings = new AppSettings { Language = nameof(AppLanguage.System) };
+        var store = new FakeSettingsStore(settings);
+        var localization = new FakeLocalizationService();
+        var viewModel = new SettingsLanguageViewModel(settings, store, localization);
+        var options = viewModel.Options;
+        var optionsChangeCount = 0;
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(SettingsLanguageViewModel.Options))
+            {
+                optionsChangeCount++;
+            }
+        };
+
+        viewModel.SetLanguage(AppLanguage.ZhHans);
+
+        Assert.Equal(AppLanguage.ZhHans, viewModel.SelectedOption.Value);
+        Assert.Equal(nameof(AppLanguage.ZhHans), settings.Language);
+        Assert.Same(options, viewModel.Options);
+
+        viewModel.SetLanguage(AppLanguage.System);
+
+        Assert.Equal(AppLanguage.System, viewModel.SelectedOption.Value);
+        Assert.Equal(nameof(AppLanguage.System), settings.Language);
+        Assert.Same(options, viewModel.Options);
+        Assert.Equal(0, optionsChangeCount);
+        Assert.Equal(2, store.SaveCount);
+    }
+
     [Fact(DisplayName = "Update settings manual check and ignore persist latest version")]
     public async Task UpdateSettingsManualCheckAndIgnorePersistLatestVersion()
     {
@@ -1189,7 +1221,9 @@ public sealed class SettingsPageBusinessTests
         public AppLanguage CurrentLanguage { get; private set; } = AppLanguage.ZhHans;
         public int SetLanguageCount { get; private set; }
 
-        public AppLanguage EffectiveLanguage => CurrentLanguage;
+        public AppLanguage EffectiveLanguage => CurrentLanguage == AppLanguage.System
+            ? AppLanguage.ZhHans
+            : CurrentLanguage;
 
         public event EventHandler? LanguageChanged;
 

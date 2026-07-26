@@ -9,6 +9,8 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
     private readonly AppSettings _settings;
     private readonly IAppSettingsStore _settingsStore;
     private readonly ILocalizationService _localization;
+    private IReadOnlyList<SelectionOption<AppLanguage>> _options;
+    private AppLanguage _optionsLanguage;
     private AppLanguage _selectedLanguage;
 
     public SettingsLanguageViewModel(AppSettings settings, IAppSettingsStore settingsStore, ILocalizationService localization)
@@ -18,18 +20,14 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
         _localization = localization;
         _selectedLanguage = ParseEnum(settings.Language, AppLanguage.System);
         _localization.SetLanguage(_selectedLanguage);
+        _optionsLanguage = _localization.EffectiveLanguage;
+        _options = CreateOptions();
         _localization.LanguageChanged += OnLanguageChanged;
     }
 
     public string FieldLabelText => _localization.GetString("Settings.Field.Language");
 
-    public IReadOnlyList<SelectionOption<AppLanguage>> Options =>
-    [
-        new(AppLanguage.System, _localization.GetString("Language.Option.System")),
-        new(AppLanguage.ZhHans, _localization.GetString("Language.Option.ZhHans")),
-        new(AppLanguage.ZhHant, _localization.GetString("Language.Option.ZhHant")),
-        new(AppLanguage.En, _localization.GetString("Language.Option.En")),
-    ];
+    public IReadOnlyList<SelectionOption<AppLanguage>> Options => _options;
 
     public SelectionOption<AppLanguage> SelectedOption
     {
@@ -75,8 +73,26 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(FieldLabelText));
-        OnPropertyChanged(nameof(Options));
+        var effectiveLanguage = _localization.EffectiveLanguage;
+        if (_optionsLanguage != effectiveLanguage)
+        {
+            _optionsLanguage = effectiveLanguage;
+            _options = CreateOptions();
+            OnPropertyChanged(nameof(Options));
+        }
+
         OnPropertyChanged(nameof(SelectedOption));
+    }
+
+    private IReadOnlyList<SelectionOption<AppLanguage>> CreateOptions()
+    {
+        return
+        [
+            new(AppLanguage.System, _localization.GetString("Language.Option.System")),
+            new(AppLanguage.ZhHans, _localization.GetString("Language.Option.ZhHans")),
+            new(AppLanguage.ZhHant, _localization.GetString("Language.Option.ZhHant")),
+            new(AppLanguage.En, _localization.GetString("Language.Option.En")),
+        ];
     }
 
     private static T ParseEnum<T>(string value, T fallback) where T : struct
