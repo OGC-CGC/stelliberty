@@ -175,11 +175,13 @@
                           HorizontalAlignment="Left"
                           VerticalAlignment="Center">
                     <TextBlock AutomationProperties.AutomationId="{Binding LevelAutomationId}"
+                               FontFamily="{StaticResource AppMonospaceFontFamily}"
                                Text="{Binding LevelText}" />
                   </Border>
                   <TextBlock Grid.Column="3"
                              AutomationProperties.AutomationId="{Binding PayloadAutomationId}"
                              Text="{Binding Payload}"
+                             FontFamily="{StaticResource AppMonospaceFontFamily}"
                              Foreground="{DynamicResource AppTextPrimaryBrush}"
                              FontSize="13"
                              TextWrapping="Wrap"

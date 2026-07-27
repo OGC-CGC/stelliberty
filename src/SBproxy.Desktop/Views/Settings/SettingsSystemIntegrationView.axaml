@@ -84,6 +84,7 @@
                    AutomationProperties.AutomationId="Settings.PacScriptBox"
                    AcceptsReturn="True"
                    MinLines="3"
+                   FontFamily="{StaticResource AppMonospaceFontFamily}"
                    TextWrapping="NoWrap"
                    Text="{Binding SystemIntegration.PacScript, Mode=TwoWay}" />
         </StackPanel>
