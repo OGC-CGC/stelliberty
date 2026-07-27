@@ -502,7 +502,7 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="TextBlock.connection-detail-value[Tag=mono]">
-    <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
+    <Setter Property="FontFamily" Value="{StaticResource AppMonospaceFontFamily}" />
     <Setter Property="FontSize" Value="12" />
   </Style>
   <Style Selector="TextBlock.connection-detail-value[Tag=accent]">

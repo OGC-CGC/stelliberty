@@ -164,7 +164,7 @@
                   <TextBlock Grid.Column="1"
                              AutomationProperties.AutomationId="{Binding TimeAutomationId}"
                              Text="{Binding FormattedTime}"
-                             FontFamily="Consolas"
+                             FontFamily="{StaticResource AppMonospaceFontFamily}"
                              Foreground="{DynamicResource AppTextTertiaryBrush}"
                              FontSize="12"
                              Margin="14,0,0,0"

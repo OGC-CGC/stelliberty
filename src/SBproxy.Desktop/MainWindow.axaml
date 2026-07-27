@@ -60,7 +60,7 @@
                              IsHitTestVisible="False"
                              VerticalAlignment="Center"
                              Margin="0,0,10,0"
-                             FontFamily="Consolas"
+                             FontFamily="{StaticResource AppMonospaceFontFamily}"
                              FontSize="11"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource AppTextSecondaryBrush}" />

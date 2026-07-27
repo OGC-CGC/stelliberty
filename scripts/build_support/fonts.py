@@ -1,6 +1,9 @@
+import hashlib
+import io
 import os
 import re
 import urllib.request
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +14,21 @@ GOOGLE_FONT_CSS = "https://fonts.googleapis.com/css2?family=Google+Sans"
 GITHUB_URL_PREFIX = os.environ.get("NETPROXY_GITHUB", "")
 GOOGLE_SANS = "GoogleSans-Regular.ttf"
 NOTO_SANS_SC = "NotoSansSC-VF.ttf"
+MAPLE_MONO_ARCHIVE_URL = (
+    f"{GITHUB_URL_PREFIX}https://github.com/subframe7536/maple-font/"
+    "releases/download/v7.9/MapleMono-CN.zip"
+)
+MAPLE_MONO_ARCHIVE_SHA256 = "cb1e79b2c23dff772ae351784ef2b84454a61b3920e9b20bd5db4bf207e4472d"
+MAPLE_MONO_FILES = {
+    "MapleMono-CN-Regular.ttf": (
+        1024 * 1024,
+        "e6338c3dca9a3bed3fb81f43c8bb8feca3b6ad54829f5a3229527d030a321dbd",
+    ),
+    "MapleMono-CN-SemiBold.ttf": (
+        1024 * 1024,
+        "320c87dc4134f0bc88ad878255af1f1957c9e7898e76638efc9a3cdf3868574e",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -43,11 +61,64 @@ def ensure_app_fonts() -> list[Path]:
             path.write_bytes(payload)
         paths.append(path)
 
+    paths.extend(ensure_maple_mono_fonts())
     return paths
 
 
-def is_valid_font(path: Path, min_bytes: int) -> bool:
-    return path.exists() and path.stat().st_size >= min_bytes
+def ensure_maple_mono_fonts() -> list[Path]:
+    paths = [FONT_DIR / name for name in MAPLE_MONO_FILES]
+    if all(
+        is_valid_font(path, *MAPLE_MONO_FILES[path.name])
+        for path in paths
+    ):
+        return paths
+
+    archive_payload = read_bytes(MAPLE_MONO_ARCHIVE_URL)
+    verify_sha256(archive_payload, MAPLE_MONO_ARCHIVE_SHA256, "Maple Mono archive")
+
+    font_payloads: dict[Path, bytes] = {}
+    with zipfile.ZipFile(io.BytesIO(archive_payload)) as archive:
+        for path in paths:
+            min_bytes, expected_sha256 = MAPLE_MONO_FILES[path.name]
+            try:
+                payload = archive.read(path.name)
+            except KeyError as exception:
+                raise RuntimeError(
+                    f"Maple Mono archive does not contain {path.name}"
+                ) from exception
+            if len(payload) < min_bytes:
+                raise RuntimeError(
+                    f"Downloaded font asset is unexpectedly small: {path.name}"
+                )
+            verify_sha256(payload, expected_sha256, path.name)
+            font_payloads[path] = payload
+
+    for path, payload in font_payloads.items():
+        path.write_bytes(payload)
+    return paths
+
+
+def is_valid_font(
+    path: Path,
+    min_bytes: int,
+    expected_sha256: str | None = None,
+) -> bool:
+    if not path.exists() or path.stat().st_size < min_bytes:
+        return False
+
+    return expected_sha256 is None or sha256(path.read_bytes()) == expected_sha256
+
+
+def verify_sha256(payload: bytes, expected: str, description: str) -> None:
+    actual = sha256(payload)
+    if actual != expected:
+        raise RuntimeError(
+            f"SHA-256 mismatch for {description}: expected {expected}, got {actual}"
+        )
+
+
+def sha256(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
 
 
 def read_font_bytes(asset: FontAsset) -> bytes:

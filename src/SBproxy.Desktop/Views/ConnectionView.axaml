@@ -239,7 +239,7 @@
                           <TextBlock AutomationProperties.AutomationId="{Binding DurationAutomationId}"
                                      Text="{Binding DurationText}"
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                     FontFamily="Consolas"
+                                     FontFamily="{StaticResource AppMonospaceFontFamily}"
                                      FontSize="12"
                                      FontWeight="SemiBold" />
                         </StackPanel>
@@ -315,21 +315,21 @@
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                           <StackPanel Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Common.Upload}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="SemiBold"
+                            <TextBlock FontFamily="{StaticResource AppMonospaceFontFamily}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryUpload"
                                        Text="{Binding DetailSummaryUpload}" />
                           </StackPanel>
                           <StackPanel Grid.Column="1" Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Common.Download}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="SemiBold"
+                            <TextBlock FontFamily="{StaticResource AppMonospaceFontFamily}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryDownload"
                                        Text="{Binding DetailSummaryDownload}" />
                           </StackPanel>
                           <StackPanel Grid.Column="2" Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Connections.Card.Duration}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="SemiBold"
+                            <TextBlock FontFamily="{StaticResource AppMonospaceFontFamily}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryDuration"
                                        Text="{Binding DetailSummaryDuration}" />

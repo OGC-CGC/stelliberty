@@ -6,6 +6,8 @@
              Name="SBproxy">
   <Application.Resources>
     <ResourceDictionary>
+      <FontFamily x:Key="AppMonospaceFontFamily">avares://sbproxy/Assets/fonts#Maple Mono CN</FontFamily>
+
       <ControlTheme x:Key="{x:Type chrome:WindowDrawnDecorations}"
                     TargetType="chrome:WindowDrawnDecorations">
         <Setter Property="DefaultTitleBarHeight" Value="36" />

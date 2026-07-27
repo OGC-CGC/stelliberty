@@ -384,7 +384,7 @@
                 <Border Classes="dialog-section" MaxHeight="180">
                   <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <TextBlock AutomationProperties.AutomationId="Proxy.NodeShareDialog.ContentText"
-                               FontFamily="Consolas"
+                               FontFamily="{StaticResource AppMonospaceFontFamily}"
                                Text="{Binding NodeShareContent}"
                                TextWrapping="Wrap" />
                   </ScrollViewer>
