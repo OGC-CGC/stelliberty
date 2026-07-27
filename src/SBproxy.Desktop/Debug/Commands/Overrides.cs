@@ -1,5 +1,6 @@
 #if DEBUG
 using Avalonia.Input.Platform;
+using SBproxy.Domain.Overrides;
 using SBproxy.Presentation.ViewModels;
 using OverrideFormat = SBproxy.Domain.Overrides.OverrideFormat;
 

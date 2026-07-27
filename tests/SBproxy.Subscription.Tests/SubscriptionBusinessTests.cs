@@ -1,6 +1,7 @@
 using System.Text;
 using SBproxy.Application.Localization;
 using SBproxy.Application.Overrides;
+using SBproxy.Application.Platform;
 using SBproxy.Application.Proxies;
 using SBproxy.Application.Runtime;
 using SBproxy.Application.Subscriptions;
@@ -12,8 +13,8 @@ using Xunit;
 using DomainSubscription = SBproxy.Domain.Subscriptions.Subscription;
 using DomainSubscriptionAutoUpdateMode = SBproxy.Domain.Subscriptions.SubscriptionAutoUpdateMode;
 using DomainSubscriptionUpdateProxyMode = SBproxy.Domain.Subscriptions.SubscriptionUpdateProxyMode;
-using PresentationSubscriptionAutoUpdateMode = SBproxy.Presentation.ViewModels.SubscriptionAutoUpdateMode;
-using PresentationSubscriptionUpdateProxyMode = SBproxy.Presentation.ViewModels.SubscriptionUpdateProxyMode;
+using PresentationSubscriptionAutoUpdateMode = SBproxy.Domain.Subscriptions.SubscriptionAutoUpdateMode;
+using PresentationSubscriptionUpdateProxyMode = SBproxy.Domain.Subscriptions.SubscriptionUpdateProxyMode;
 
 namespace SBproxy.Subscription.Tests;
 
@@ -139,6 +140,25 @@ public sealed class SubscriptionBusinessTests
 
         Assert.Equal(["remote", "local"], opener.OpenedSubscriptionIds);
         Assert.Null(page.SelectedRowMenuAction);
+    }
+
+    [Fact(DisplayName = "Page copy link reports success only for remote subscriptions")]
+    public void PageCopyLinkReportsSuccessOnlyForRemoteSubscriptions()
+    {
+        var clipboard = new FakeClipboardWriter();
+        var page = new SubscriptionPageViewModel(
+            clipboardWriter: clipboard,
+            localization: new FakeLocalizationService());
+        page.LoadSubscriptions([Subscription("remote"), Subscription("local", isLocal: true)]);
+        var toasts = new List<(string Message, ToastType Type)>();
+        page.ToastRequested += (_, toast) => toasts.Add(toast);
+
+        page.CopyLinkCommand.Execute("remote");
+        page.CopyLinkCommand.Execute("local");
+        page.CopyLinkCommand.Execute("missing");
+
+        Assert.Equal(["https://sub.example/config.yaml"], clipboard.Texts);
+        Assert.Equal([("订阅链接已复制", ToastType.Success)], toasts);
     }
 
     [Fact(DisplayName = "Page move subscription with transient item updates view but skips persisting order")]
@@ -989,6 +1009,36 @@ public sealed class SubscriptionBusinessTests
         await firstTick;
     }
 
+    [Fact(DisplayName = "Auto delay coordinator swallows failures and keeps next cycle")]
+    public async Task AutoDelayCoordinatorSwallowsFailuresAndKeepsNextCycle()
+    {
+        var now = DateTimeOffset.UnixEpoch;
+        var subscriptionPage = new SubscriptionPageViewModel();
+        subscriptionPage.AddSubscription(new SubscriptionItemViewModel(
+            "sub-1",
+            "Remote",
+            "https://sub.example/config.yaml",
+            isLocalFile: false,
+            autoTestDelayIntervalMinutes: 1));
+        var delayTester = new ThrowingProxyDelayTester();
+        var proxyPage = new ProxyPageViewModel(delayService: new ProxyDelayService(delayTester));
+        proxyPage.LoadConfig(new ProxyConfig(
+            [new ProxyGroup("Select", ProxyGroupTypes.Select, "Node", ["Node"])],
+            new Dictionary<string, ProxyNode>(StringComparer.Ordinal)
+            {
+                ["Node"] = new("Node", "ss", Server: "node.example", Port: 443),
+            }));
+        var coordinator = new SubscriptionAutoDelayCoordinator(subscriptionPage, proxyPage, () => now);
+
+        await coordinator.RunDueAsync();
+        now = now.AddMinutes(1);
+        await coordinator.RunDueAsync();
+        now = now.AddMinutes(1);
+        await coordinator.RunDueAsync();
+
+        Assert.Equal(2, delayTester.CallCount);
+    }
+
     [Fact(DisplayName = "Provider parser handles YAML merge and counts")]
     public void ProviderParserHandlesYamlMergeAndCounts()
     {
@@ -1542,6 +1592,16 @@ public sealed class SubscriptionBusinessTests
         }
     }
 
+    private sealed class FakeClipboardWriter : IClipboardWriter
+    {
+        public List<string> Texts { get; } = [];
+
+        public void WriteText(string text)
+        {
+            Texts.Add(text);
+        }
+    }
+
     private sealed class FakeLocalizationService : ILocalizationService
     {
         public AppLanguage CurrentLanguage { get; private set; } = AppLanguage.ZhHans;
@@ -1564,6 +1624,7 @@ public sealed class SubscriptionBusinessTests
                 "Subscriptions.Toast.ImportLocalSucceeded" => "本地订阅导入成功：{0}",
                 "Subscriptions.Toast.ImportRemoteFailed" => "远程订阅导入失败，请稍后重试",
                 "Subscriptions.Toast.ImportLocalFailed" => "本地订阅导入失败，请稍后重试",
+                "Subscriptions.Toast.LinkCopied" => "订阅链接已复制",
                 _ => key,
             };
         }
@@ -1663,6 +1724,17 @@ public sealed class SubscriptionBusinessTests
             var current = states[Math.Min(_index, states.Count - 1)];
             _index++;
             return Task.FromResult(current);
+        }
+    }
+
+    private sealed class ThrowingProxyDelayTester : IProxyDelayTester
+    {
+        public int CallCount { get; private set; }
+
+        public Task<int> TestDelayAsync(string proxyName, CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            throw new InvalidOperationException("delay backend offline");
         }
     }
 

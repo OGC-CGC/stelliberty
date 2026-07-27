@@ -50,10 +50,15 @@ public sealed class SubscriptionAutoDelayCoordinator
         try
         {
             await TickAsync();
-            _planner.CompleteRun(interval, _now());
+        }
+        catch (Exception exception)
+        {
+            // 定时器事件是 async void，异常必须在此拦截；失败按正常间隔进入下一周期。
+            AppLogger.Error(exception, "Subscription auto-delay test failed");
         }
         finally
         {
+            _planner.CompleteRun(interval, _now());
             _isRunning = false;
         }
     }

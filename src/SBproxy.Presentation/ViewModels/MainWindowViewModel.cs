@@ -52,6 +52,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private const long NavThrottleMs = 150;
     private const int CoreLogFlushBatchSize = 4;
     private const int ToastMessageMaxLength = 72;
+    private static readonly TimeSpan ToastDisplayDuration = TimeSpan.FromMilliseconds(1500);
+    // 与 ToastNotification.CloseDuration 联动，退场完成后再显示下一条。
+    private static readonly TimeSpan ToastCloseDuration = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan CoreLogFlushDelay = TimeSpan.FromMilliseconds(700);
     private static readonly TimeSpan ProxySelectionSyncInterval = TimeSpan.FromSeconds(2);
 
@@ -189,7 +192,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         ProxyPage = proxyPage ?? new ProxyPageViewModel(localization: localization);
         HomePage.PropertyChanged += OnHomePagePropertyChanged;
         // 初始化代理页出站模式和核心运行状态。
-        ProxyPage.SetOutboundMode(HomePage.CoreOutboundMode);
+        ProxyPage.SetOutboundMode(HomePage.OutboundMode);
         ProxyPage.SetCoreRunning(HomePage.IsCoreRunning);
         // 节点切换会关闭核心连接；无需耦合连接页即可清空本地连接行。
         ProxyPage.NodeSelectionClosedConnections += OnProxyNodeSelectionClosedConnections;
@@ -978,8 +981,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (e.PropertyName == nameof(HomePage.OutboundMode))
         {
-            ProxyPage.SetOutboundMode(HomePage.CoreOutboundMode);
-            PersistOutboundMode(HomePage.CoreOutboundMode);
+            ProxyPage.SetOutboundMode(HomePage.OutboundMode);
+            PersistOutboundMode(HomePage.OutboundMode);
         }
         else if (e.PropertyName == nameof(HomePage.IsCoreRunning))
         {
@@ -1116,8 +1119,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                     OnPropertyChanged(nameof(IsToastVisible));
                 });
 
-                // 每条 toast 显示 3 秒，保证可读性。
-                await Task.Delay(3000);
+                await Task.Delay(ToastDisplayDuration);
                 if (_isDisposed)
                 {
                     return;
@@ -1136,8 +1138,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                 }
                 if (hasMore)
                 {
-                    // toast 之间留 300 ms，避免退出和进入动画重叠。
-                    await Task.Delay(300);
+                    await Task.Delay(ToastCloseDuration);
                 }
             }
             catch (Exception ex)

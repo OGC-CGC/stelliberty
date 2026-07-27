@@ -2,6 +2,7 @@
 using System.Globalization;
 using Avalonia.Input.Platform;
 using SBproxy.Application.Subscriptions;
+using SBproxy.Domain.Subscriptions;
 using SBproxy.Presentation.ViewModels;
 
 namespace SBproxy.Desktop.Debug;
