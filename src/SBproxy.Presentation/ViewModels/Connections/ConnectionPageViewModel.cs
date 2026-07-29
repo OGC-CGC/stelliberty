@@ -4,6 +4,7 @@ using SBproxy.Domain.Connections;
 using SBproxy.Application.Localization;
 using SBproxy.Application.Proxies;
 using SBproxy.Domain.Proxies;
+using SBproxy.Presentation.Collections;
 using SBproxy.Presentation.Commands;
 using SBproxy.Presentation.Formatting;
 
@@ -34,7 +35,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     private IReadOnlyList<string> _detailLines = [];
     private string _detailText = string.Empty;
     private IReadOnlyList<ConnectionInfo> _filteredConnections = [];
-    private List<ConnectionRowViewModel> _visibleConnectionRows = [];
+    private readonly LazyRowList<ConnectionInfo, ConnectionRowViewModel> _visibleConnectionRows;
     private string _detailSummaryChain = string.Empty;
     private string _detailSummaryUpload = string.Empty;
     private string _detailSummaryDownload = string.Empty;
@@ -46,6 +47,8 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         _coreClient = coreClient;
         _localization = localization;
         _now = now ?? (() => DateTimeOffset.Now);
+        _visibleConnectionRows = new LazyRowList<ConnectionInfo, ConnectionRowViewModel>(
+            (connection, _) => new ConnectionRowViewModel(connection, _now()));
         if (_localization is not null)
         {
             _localization.LanguageChanged += OnLanguageChanged;
@@ -496,25 +499,24 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         _totalDownloadSpeed = _latestTrafficRate?.DownloadSpeed ?? downloadSpeed;
     }
 
-    // 缓存筛选行，让匹配的 Id 序列复用 VM 并保留滚动状态。
+    // 仅更新已经进入视口的行；未进入视口的行由虚拟化面板按需创建。
     private void RefreshFilteredConnections()
     {
-        _filteredConnections = _filter.Apply(_state.Connections, _filterLevel, _searchKeyword);
+        var filteredConnections = _filter.Apply(_state.Connections, _filterLevel, _searchKeyword);
         var now = _now();
-        if (ConnectionRowsMatch(_filteredConnections))
+        if (ConnectionRowsMatch(filteredConnections))
         {
-            for (var index = 0; index < _filteredConnections.Count; index++)
-            {
-                _visibleConnectionRows[index].Update(_filteredConnections[index], now);
-            }
-
-            return;
+            _filteredConnections = filteredConnections;
+            _visibleConnectionRows.UpdateInPlace(
+                filteredConnections,
+                (row, connection, _) => row.Update(connection, now));
         }
-
-        _visibleConnectionRows = _filteredConnections
-            .Select(connection => new ConnectionRowViewModel(connection, now))
-            .ToList();
-        OnPropertyChanged(nameof(FilteredConnectionRows));
+        else
+        {
+            _filteredConnections = filteredConnections;
+            _visibleConnectionRows.Replace(filteredConnections);
+            OnPropertyChanged(nameof(FilteredConnectionRows));
+        }
     }
 
     private bool ConnectionRowsMatch(IReadOnlyList<ConnectionInfo> connections)
@@ -526,7 +528,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
 
         for (var index = 0; index < connections.Count; index++)
         {
-            if (!string.Equals(_visibleConnectionRows[index].Id, connections[index].Id, StringComparison.Ordinal))
+            if (!string.Equals(_filteredConnections[index].Id, connections[index].Id, StringComparison.Ordinal))
             {
                 return false;
             }
@@ -611,9 +613,12 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DetailSummaryRule));
     }
 
+    public void ReleasePresentationRows() => _visibleConnectionRows.RecycleAll();
+
     public void Dispose()
     {
         _detailCloseReset.Cancel();
+        _visibleConnectionRows.Release();
         if (_localization is not null)
         {
             _localization.LanguageChanged -= OnLanguageChanged;

@@ -82,6 +82,128 @@ impl CoreApiClient {
         }
     }
 
+    pub async fn set_outbound_mode(&self, mode: &str) -> Result<()> {
+        let body = serde_json::json!({ "mode": mode }).to_string();
+        let (status, body) = self.request("PATCH", "/configs", Some(body)).await?;
+        if (200..300).contains(&status) {
+            Ok(())
+        } else {
+            Err(ApiError::Status(status, body).into())
+        }
+    }
+
+    pub async fn change_proxy(&self, group_name: &str, proxy_name: &str) -> Result<()> {
+        let group_name =
+            percent_encoding::utf8_percent_encode(group_name, percent_encoding::NON_ALPHANUMERIC);
+        let body = serde_json::json!({ "name": proxy_name }).to_string();
+        self.expect_success(
+            "PUT",
+            &format!("/proxies/{group_name}"),
+            Some(body),
+        )
+        .await
+    }
+
+    pub async fn clear_proxy_selection(&self, group_name: &str) -> Result<()> {
+        let group_name =
+            percent_encoding::utf8_percent_encode(group_name, percent_encoding::NON_ALPHANUMERIC);
+        self.expect_success("DELETE", &format!("/proxies/{group_name}"), None)
+            .await
+    }
+
+    pub async fn close_connections(&self, connection_id: Option<&str>) -> Result<()> {
+        let path = connection_id.map_or_else(
+            || "/connections".to_owned(),
+            |connection_id| {
+                let connection_id = percent_encoding::utf8_percent_encode(
+                    connection_id,
+                    percent_encoding::NON_ALPHANUMERIC,
+                );
+                format!("/connections/{connection_id}")
+            },
+        );
+        self.expect_success("DELETE", &path, None).await
+    }
+
+    pub async fn update_provider(&self, provider_type: &str, provider_name: &str) -> Result<()> {
+        let section = if provider_type.eq_ignore_ascii_case("rule") {
+            "rules"
+        } else {
+            "proxies"
+        };
+        let provider_name = percent_encoding::utf8_percent_encode(
+            provider_name,
+            percent_encoding::NON_ALPHANUMERIC,
+        );
+        self.expect_success(
+            "PUT",
+            &format!("/providers/{section}/{provider_name}"),
+            None,
+        )
+        .await
+    }
+
+    pub async fn test_delay(
+        &self,
+        proxy_name: &str,
+        provider_name: Option<&str>,
+        url: &str,
+        timeout_millis: u32,
+    ) -> Result<i64> {
+        let proxy_name =
+            percent_encoding::utf8_percent_encode(proxy_name, percent_encoding::NON_ALPHANUMERIC);
+        let url = percent_encoding::utf8_percent_encode(url, percent_encoding::NON_ALPHANUMERIC);
+        let path = if let Some(provider_name) = provider_name {
+            let provider_name = percent_encoding::utf8_percent_encode(
+                provider_name,
+                percent_encoding::NON_ALPHANUMERIC,
+            );
+            format!(
+                "/providers/proxies/{provider_name}/{proxy_name}/healthcheck?timeout={timeout_millis}&url={url}"
+            )
+        } else {
+            format!("/proxies/{proxy_name}/delay?timeout={timeout_millis}&url={url}")
+        };
+        let (status, body) = self.request("GET", &path, None).await?;
+        if !(200..300).contains(&status) {
+            return Err(ApiError::Status(status, body).into());
+        }
+        serde_json::from_str::<serde_json::Value>(&body)
+            .context("mihomo delay response is invalid")?
+            .get("delay")
+            .and_then(serde_json::Value::as_i64)
+            .context("mihomo delay response is missing delay")
+    }
+
+    pub async fn test_all_delays(&self, url: &str, timeout_millis: u32) -> Result<usize> {
+        let (status, body) = self.request("GET", "/proxies", None).await?;
+        if !(200..300).contains(&status) {
+            return Err(ApiError::Status(status, body).into());
+        }
+        let document: serde_json::Value =
+            serde_json::from_str(&body).context("mihomo proxy response is invalid")?;
+        let names = document
+            .get("proxies")
+            .and_then(serde_json::Value::as_object)
+            .map(|items| items.keys().cloned().collect::<Vec<_>>())
+            .unwrap_or_default();
+        let encoded_url =
+            percent_encoding::utf8_percent_encode(url, percent_encoding::NON_ALPHANUMERIC);
+        let mut tested = 0;
+        for name in names {
+            let encoded_name =
+                percent_encoding::utf8_percent_encode(&name, percent_encoding::NON_ALPHANUMERIC);
+            let path =
+                format!("/proxies/{encoded_name}/delay?timeout={timeout_millis}&url={encoded_url}");
+            if let Ok((status, _)) = self.request("GET", &path, None).await
+                && (200..300).contains(&status)
+            {
+                tested += 1;
+            }
+        }
+        Ok(tested)
+    }
+
     pub async fn stream_logs<F>(&self, level: &str, mut on_line: F) -> Result<()>
     where
         F: FnMut(String) + Send + 'static,
@@ -104,6 +226,15 @@ impl CoreApiClient {
         }
 
         Ok(())
+    }
+
+    async fn expect_success(&self, method: &str, path: &str, body: Option<String>) -> Result<()> {
+        let (status, response) = self.request(method, path, body).await?;
+        if (200..300).contains(&status) {
+            Ok(())
+        } else {
+            Err(ApiError::Status(status, response).into())
+        }
     }
 
     async fn request(

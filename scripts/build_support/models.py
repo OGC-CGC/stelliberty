@@ -6,6 +6,7 @@ class PlatformTarget:
     dotnet_runtime: str
     rust_target: str
     native_library: str
+    agent_binary: str
     service_binary: str
 
 

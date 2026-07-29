@@ -6,7 +6,7 @@ License:        Proprietary
 URL:            https://@APP_PACKAGE@.local
 BuildArch:      @RPM_ARCH@
 AutoReqProv:    no
-Requires:       fontconfig, libICE, libSM, libX11
+Requires:       fontconfig, gtk3, libayatana-appindicator-gtk3, libICE, libSM, libX11
 
 %description
 @APP_NAME@ provides desktop proxy management, subscriptions, rules,

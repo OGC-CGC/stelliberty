@@ -27,4 +27,14 @@ public sealed class AutoStartEntryBuilderTests
         Assert.Contains(@"<Command>C:\A&amp;B\sbproxy.exe</Command>", xml);
         Assert.DoesNotContain("<Arguments>", xml);
     }
+
+    [Fact(DisplayName = "Windows scheduled task XML can start only the User Agent")]
+    public void WindowsScheduledTaskXmlIncludesSilentStartArgument()
+    {
+        var xml = AutoStartEntryBuilder.WindowsScheduledTaskXml(
+            @"C:\Program Files\SBproxy\sbproxy.exe",
+            isSilentStartEnabled: true);
+
+        Assert.Contains("<Arguments>--silent-start</Arguments>", xml);
+    }
 }

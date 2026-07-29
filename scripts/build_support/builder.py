@@ -55,6 +55,7 @@ def build_output(metadata: AppMetadata, platform_name: str, configuration: str, 
         publish_dotnet(metadata, configuration, target, output_dir)
 
     copy_native_library(configuration, target, output_dir)
+    copy_agent_binary(configuration, target, output_dir)
     copy_service_binary(metadata, configuration, target, output_dir)
 
     with timed_step(f"Copy resource files {build_label}"):
@@ -120,6 +121,8 @@ def build_rust(metadata: AppMetadata, configuration: str, target: PlatformTarget
         str(RUST_WORKSPACE),
         "-p",
         "hub",
+        "-p",
+        "sbproxyrev_agent",
         "-p",
         "sbproxyrev_service",
         "--target",
@@ -196,6 +199,20 @@ def copy_native_library(configuration: str, target: PlatformTarget, output_dir: 
 
     output_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, output_dir / source.name)
+
+
+def copy_agent_binary(configuration: str, target: PlatformTarget, output_dir: Path) -> None:
+    profile = "release" if configuration == "release" else "debug"
+    source = ROOT / "target" / target.rust_target / profile / target.agent_binary
+    if not source.exists():
+        raise FileNotFoundError(f"User Agent binary not found: {source}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    destination = output_dir / target.agent_binary
+    shutil.copy2(source, destination)
+    if not target.dotnet_runtime.startswith("win"):
+        destination.chmod(0o755)
+
 
 def copy_service_binary(metadata: AppMetadata, configuration: str, target: PlatformTarget, output_dir: Path) -> None:
     profile = "release" if configuration == "release" else "debug"

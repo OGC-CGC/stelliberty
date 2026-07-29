@@ -3,8 +3,15 @@ using System.Collections.Specialized;
 
 namespace SBproxy.Presentation.Collections;
 
+public interface IRecyclableRowList
+{
+    void Recycle(int index);
+
+    void RecycleAll();
+}
+
 // 仅在索引访问时创建行，供虚拟化面板按当前视口实体化数据模型。
-public sealed class LazyRowList<TSource, TRow> : IList, IReadOnlyList<TRow>, INotifyCollectionChanged
+public sealed class LazyRowList<TSource, TRow> : IList, IReadOnlyList<TRow>, INotifyCollectionChanged, IRecyclableRowList
     where TRow : class
 {
     private readonly Func<TSource, int, TRow> _rowFactory;
@@ -44,6 +51,22 @@ public sealed class LazyRowList<TSource, TRow> : IList, IReadOnlyList<TRow>, INo
     }
 
     public void Release() => Replace([]);
+
+    public void Recycle(int index)
+    {
+        if (index >= 0 && index < _rows.Length)
+        {
+            _rows[index] = null;
+        }
+    }
+
+    public void RecycleAll()
+    {
+        if (_rows.Length > 0)
+        {
+            Array.Clear(_rows, 0, _rows.Length);
+        }
+    }
 
     public TRow? GetRealizedRow(int index)
         => index >= 0 && index < _rows.Length ? _rows[index] : null;

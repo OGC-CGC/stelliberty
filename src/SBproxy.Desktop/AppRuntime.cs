@@ -19,9 +19,16 @@ internal static class AppRuntime
     {
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
+        if (!args.Contains("--agent-ui", StringComparer.Ordinal))
+        {
+            RunLauncher(args);
+            return;
+        }
+
         using var singleInstance = new SingleInstanceService();
         if (!singleInstance.OwnsInstance)
         {
+            _ = AgentStartupCoordinator.ActivateUiAsync();
             return;
         }
 
@@ -36,6 +43,22 @@ internal static class AppRuntime
         {
             AppLogger.Error(exception, "App startup failed");
             throw;
+        }
+    }
+
+    private static void RunLauncher(string[] args)
+    {
+        AppLogger.Info("Delegating UI lifecycle to User Agent");
+        var silentStart = args.Contains("--silent-start", StringComparer.Ordinal);
+        var result = (silentStart
+                ? AgentStartupCoordinator.EnsureStartedAsync(CancellationToken.None)
+                : AgentStartupCoordinator.ActivateUiAsync(CancellationToken.None))
+            .GetAwaiter()
+            .GetResult();
+        if (!result.Ok)
+        {
+            var action = silentStart ? "start" : "activate the UI";
+            throw new InvalidOperationException($"User Agent could not {action}: {result.Message}");
         }
     }
 

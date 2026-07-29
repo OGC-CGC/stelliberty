@@ -35,6 +35,17 @@ public sealed class PageToViewConverter : IValueConverter
         return count;
     }
 
+    public bool ReleaseView(NavigationPage page, Control view)
+    {
+        if (!_views.TryGetValue(page, out var cachedView)
+            || !ReferenceEquals(cachedView, view))
+        {
+            return false;
+        }
+
+        return _views.Remove(page);
+    }
+
     public Control GetOrCreateView(NavigationPage page)
     {
         if (!_views.TryGetValue(page, out var view))

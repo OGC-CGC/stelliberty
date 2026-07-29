@@ -82,7 +82,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         SelectedRuntimeFallbackGenerator? runtimeFallbackGenerator = null,
         RuntimeConfigGenerator? runtimeConfigGenerator = null,
         ISelectedSubscriptionRuntimeStore? runtimeStore = null,
-        ICoreManager? coreManager = null,
+        IAgentClient? coreManager = null,
         AppSettings? initialSettings = null,
         IWindowEffectCapability? windowEffectCapability = null,
         INetworkConnectionProbe? networkConnectionProbe = null,
@@ -329,7 +329,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsToastVisible => _isToastVisible;
 
-    internal ICoreManager? CoreManager { get; }
+    internal IAgentClient? CoreManager { get; }
 
     internal IAppSettingsStore SettingsStore => _settingsStore;
 

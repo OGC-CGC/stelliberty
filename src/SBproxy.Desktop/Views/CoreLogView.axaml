@@ -146,7 +146,8 @@
                       ItemsSource="{Binding FilteredLogRows}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <VirtualizingStackPanel />
+              <controls:VirtualizingWrapPanel MinItemWidth="100000" ItemHeight="78"
+                                              ColumnSpacing="0" RowSpacing="0" EdgePadding="0" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>

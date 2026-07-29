@@ -42,15 +42,8 @@ namespace SBproxy.Desktop;
 
 public sealed partial class App : Avalonia.Application
 {
-    private readonly DesktopTrayService _trayService = new();
     private readonly MacOSApplicationMenuService _macOSApplicationMenuService = new();
-    private SessionEndCleanupService? _sessionEndCleanup;
-    private DispatcherTimer? _appUpdateAutoCheckTimer;
-    private DispatcherTimer? _subscriptionAutoDelayTimer;
-    private DispatcherTimer? _subscriptionAutoUpdateTimer;
     private DispatcherTimer? _homeRuntimeTimer;
-    private DispatcherTimer? _webDavBackupTimer;
-    private bool _isServiceModeCoreHostActive;
     private static readonly TimeSpan InitialServiceModeTunWaitTimeout = TimeSpan.FromSeconds(6);
     private static readonly TimeSpan InitialServiceModeStatusPollInterval = TimeSpan.FromMilliseconds(250);
 
@@ -73,65 +66,47 @@ public sealed partial class App : Avalonia.Application
             var platformDirectories = new DesktopPlatformDirectories();
             // 代理组图标磁盘缓存，进程重启后免重下。
             RemoteImageCache.Configure(Path.Combine(platformDirectories.AppDataDirectory, "icon-cache"));
-            var settingsStore = new JsonAppSettingsStore(platformDirectories);
+            var settingsStore = new AgentAppSettingsStore(AgentStartupCoordinator.PipeName);
             var settings = settingsStore.Load();
 #if DEBUG
             LogStartupTrace($"Settings loaded silent={settings.IsSilentStartEnabled} tun={settings.IsTunEnabled}", startupStartedAt);
 #endif
-            var updateChecker = new GitHubAppUpdateChecker(() => settingsStore.Load().AppUpdateChannel);
+            var updateChecker = new AgentAppUpdateChecker(
+                AgentStartupCoordinator.PipeName,
+                () => settingsStore.Load().AppUpdateChannel);
             var systemProxyPlatform = CurrentSystemProxyPlatform();
             IUwpLoopbackService uwpLoopbackService = OperatingSystem.IsWindows()
                 ? new WindowsUwpLoopbackService()
                 : new UnsupportedUwpLoopbackService();
             var systemProxyHostDetector = new NetworkInterfaceSystemProxyHostDetector();
-            ISystemProxyService systemProxyService = CreateSystemProxyService(
-                systemProxyPlatform,
-                platformDirectories.AppDataDirectory);
-            IServiceModeManager serviceModeManager = new DesktopServiceModeManager();
-            var coreProcessCleaner = new CoreProcessCleaner();
+            var agentSystemProxyService =
+                new AgentSystemProxyService(AgentStartupCoordinator.PipeName);
+            ISystemProxyService systemProxyService = agentSystemProxyService;
+            IServiceModeManager serviceModeManager = new AgentServiceModeManager(
+                AgentStartupCoordinator.PipeName);
             var networkConnectionProbe = new SystemNetworkConnectionProbe();
             var processPrivilegeProbe = new SystemProcessPrivilegeProbe();
             IAppBehaviorService appBehaviorService = CreateAppBehaviorService();
-            MainWindowViewModel? hotkeyViewModel = null;
-            IGlobalHotkeyService globalHotkeyService = CreateGlobalHotkeyService(action =>
-            {
-                switch (action)
-                {
-                    case GlobalHotkeyAction.ToggleWindow:
-                        _trayService.ToggleMainWindowVisibility();
-                        break;
-                    case GlobalHotkeyAction.ToggleSystemProxy:
-                        hotkeyViewModel?.HomePage.ToggleSystemProxyFromHotkey();
-                        break;
-                    case GlobalHotkeyAction.ToggleTun:
-                        hotkeyViewModel?.HomePage.ToggleTunFromHotkey();
-                        break;
-                }
-            });
+            IGlobalHotkeyService globalHotkeyService = new AgentGlobalHotkeyService();
             var initialLanguage = AppLanguageParser.Parse(settings.Language);
             var localization = new JsonLocalizationService(initialLanguage);
             LocalizationManager.Initialize(localization);
-            var subscriptionStore = new FileSubscriptionStore(platformDirectories.AppDataDirectory);
-            var subscriptionSelectionStore = new FileSubscriptionSelectionStore(platformDirectories.AppDataDirectory);
-            var proxySelectionStore = new FileProxySelectionStore(platformDirectories.AppDataDirectory);
-            var overrideStore = new FileOverrideStore(platformDirectories.AppDataDirectory);
-#if DEBUG
-            IRemoteOverrideDownloader remoteOverrideDownloader = new RemoteOverrideDownloader();
-#else
-            IRemoteOverrideDownloader remoteOverrideDownloader = new HttpRemoteOverrideDownloader();
-#endif
+            var subscriptionDataStore =
+                new AgentSubscriptionDataStore(AgentStartupCoordinator.PipeName);
+            ISubscriptionStore subscriptionStore = subscriptionDataStore;
+            ISubscriptionSelectionStore subscriptionSelectionStore = subscriptionDataStore;
+            IProxySelectionStore proxySelectionStore = subscriptionDataStore;
+            var overrideStore = new AgentOverrideStore(AgentStartupCoordinator.PipeName);
+            var sourceClient = new AgentSourceClient(AgentStartupCoordinator.PipeName);
+            IRemoteOverrideDownloader remoteOverrideDownloader = sourceClient;
             var overrideImporter = new OverrideImporter(overrideStore, remoteOverrideDownloader);
             var overrideUpdater = new OverrideUpdater(overrideStore, remoteOverrideDownloader);
             var overrideDeleter = new OverrideDeleter(overrideStore, subscriptionStore);
             var overrideSelectionUpdater = new SubscriptionOverrideSelectionUpdater(subscriptionStore, overrideStore);
             var localSubscriptionImporter = new LocalSubscriptionFileImporter(
                 new LocalSubscriptionImporter(subscriptionStore),
-                new FileLocalSubscriptionFileReader());
-#if DEBUG
-            IRemoteSubscriptionDownloader remoteSubscriptionDownloader = new RemoteSubscriptionDownloader(() => (settings.ProxyHost, settings.MixedPort));
-#else
-            IRemoteSubscriptionDownloader remoteSubscriptionDownloader = new HttpRemoteSubscriptionDownloader(() => (settings.ProxyHost, settings.MixedPort));
-#endif
+                sourceClient);
+            IRemoteSubscriptionDownloader remoteSubscriptionDownloader = sourceClient;
             var subscriptionContentDecryptor = new HubSubscriptionContentDecryptor();
             var remoteSubscriptionImporter = new RemoteSubscriptionImporter(
                 subscriptionStore,
@@ -141,7 +116,9 @@ public sealed partial class App : Avalonia.Application
                 subscriptionStore,
                 remoteSubscriptionDownloader,
                 contentDecryptor: subscriptionContentDecryptor);
-            var runtimeStore = new FileRuntimeConfigStore(platformDirectories.RuntimeDirectory);
+            var runtimeStore = new AgentRuntimeDataStore(
+                AgentStartupCoordinator.PipeName,
+                subscriptionSelectionStore);
             var selectedSubscriptionRuntimeGenerator = new SelectedSubscriptionRuntimeGenerator(
                 subscriptionStore,
                 subscriptionSelectionStore,
@@ -150,14 +127,16 @@ public sealed partial class App : Avalonia.Application
                 runtimeStore);
             var subscriptionDeleter = new SubscriptionDeleter(subscriptionStore, subscriptionSelectionStore, runtimeStore);
             // Provider 同步和状态读取始终走核心管道，保持 Debug 和 Release 路径一致。
-            var coreProviderClient = new PipeCoreProviderClient(HubStartupCoordinator.MihomoPipe);
+            var coreProviderClient = new AgentControlledProviderClient(
+                new PipeCoreProviderClient(AgentStartupCoordinator.MihomoPipe),
+                AgentStartupCoordinator.PipeName);
             var providerCatalogLoader = new SelectedSubscriptionProviderCatalogLoader(
                 subscriptionStore,
                 subscriptionSelectionStore,
                 new SubscriptionProviderParser(),
                 coreProviderClient,
                 coreProviderClient);
-            ISubscriptionProviderUploader subscriptionProviderUploader = new FileSubscriptionProviderUploader(platformDirectories.CoreDirectory);
+            ISubscriptionProviderUploader subscriptionProviderUploader = sourceClient;
             ISubscriptionFileOpener subscriptionFileOpener = new DesktopSubscriptionFileOpener(subscriptionStore.GetContentPath);
             IOverrideFileOpener overrideFileOpener = new DesktopOverrideFileOpener(overrideStore.GetContentPath);
             var clipboardWriter = new DesktopClipboardWriter(desktop);
@@ -182,45 +161,32 @@ public sealed partial class App : Avalonia.Application
                 overrideImporter,
                 overrideUpdater,
                 overrideDeleter,
-                new FileLocalOverrideFileReader(),
+                sourceClient,
                 overrideFileOpener,
                 localization);
 #if DEBUG
-            var pipeProxyCoreClient = new PipeCoreProxyClient(HubStartupCoordinator.MihomoPipe);
-            IProxyCoreClient proxyCoreClient = new ProxyCoreClient(pipeProxyCoreClient);
-            IProxyDelayTester proxyDelayTester = new PipeCoreProxyDelayTester(
-                HubStartupCoordinator.MihomoPipe,
-                () => settings.DelayTestUrl,
-                5000);
+            var pipeProxyCoreClient = new PipeCoreProxyClient(AgentStartupCoordinator.MihomoPipe);
+            IProxyCoreClient proxyCoreReader = new ProxyCoreClient(pipeProxyCoreClient);
 #else
 
-            IProxyCoreClient proxyCoreClient = new PipeCoreProxyClient(HubStartupCoordinator.MihomoPipe);
-            IProxyDelayTester proxyDelayTester = new PipeCoreProxyDelayTester(
-                HubStartupCoordinator.MihomoPipe,
+            IProxyCoreClient proxyCoreReader = new PipeCoreProxyClient(AgentStartupCoordinator.MihomoPipe);
+#endif
+            IProxyCoreClient proxyCoreClient = new AgentControlledProxyCoreClient(
+                proxyCoreReader,
+                AgentStartupCoordinator.PipeName);
+            IProxyDelayTester proxyDelayTester = new AgentProxyDelayTester(
+                AgentStartupCoordinator.PipeName,
                 () => settings.DelayTestUrl,
                 5000);
-#endif
 
             var initialServiceModeStatus = GetInitialServiceModeStatus(serviceModeManager, settings.IsTunEnabled);
 #if DEBUG
             LogStartupTrace($"Initial service status ready state={initialServiceModeStatus.State}", startupStartedAt);
 #endif
-            var coreManager = new SwitchableCoreManager(CreateCoreManager(initialServiceModeStatus, serviceModeManager));
-            var serviceModeSessionSwitcher = new ServiceModeSessionSwitcher(
-                serviceModeManager,
-                coreManager,
-                status => CreateCoreManager(status, serviceModeManager),
-                () => new IpcCoreManager(HubStartupCoordinator.PipeName),
-                HubStartupCoordinator.StopCoreAsync,
-                HubStartupCoordinator.ResumeCoreAsync,
-                (status, token) => StartCoreHostAsync(status, serviceModeManager, coreProcessCleaner, token),
-                isActive => _isServiceModeCoreHostActive = isActive);
-            var coreUpdater = new MihomoCoreUpdater(DesktopApplicationLayout.CoreBinaryPath, coreManager);
+            var coreManager = new AgentIpcClient(AgentStartupCoordinator.PipeName);
+            var coreUpdater = new AgentCoreUpdater(AgentStartupCoordinator.PipeName);
             var connectionPage = new ConnectionPageViewModel(proxyCoreClient, localization: localization);
-            var proxyConfigSource = new FileRuntimeProxyConfigSource(
-                platformDirectories.RuntimeDirectory,
-                platformDirectories.CoreDirectory,
-                subscriptionSelectionStore);
+            var proxyConfigSource = runtimeStore;
             var proxyConfigParser = new ProxyConfigParser();
             var proxyConfigLoader = new ProxyConfigLoader(
                 proxyConfigSource,
@@ -268,14 +234,14 @@ public sealed partial class App : Avalonia.Application
                 },
                 isPresentationActive: false);
             var rulePage = new RulePageViewModel(new RuleListLoader(
-                new FileRuntimeRuleConfigSource(platformDirectories.RuntimeDirectory, subscriptionSelectionStore),
+                runtimeStore,
                 new RuleParser(),
                 () => true),
                 localization);
             var coreLogPage = new CoreLogPageViewModel(localization: localization);
-            var dataBackupService = new FileDataBackupService(platformDirectories.AppDataDirectory);
-            var webDavBackupStore = new WebDavBackupStore();
-            var webDavDataBackupService = new WebDavDataBackupService(dataBackupService, webDavBackupStore);
+            var dataBackupService = new AgentDataManagementService(
+                AgentStartupCoordinator.PipeName);
+            var webDavDataBackupService = dataBackupService;
             var viewModel = new MainWindowViewModel(
                 settingsStore,
                 localization,
@@ -292,7 +258,7 @@ public sealed partial class App : Avalonia.Application
                 systemProxyHostDetector: systemProxyHostDetector,
                 systemProxyService: systemProxyService,
                 serviceModeManager: serviceModeManager,
-                isServiceModeCoreHostActive: () => _isServiceModeCoreHostActive,
+                isServiceModeCoreHostActive: () => settingsStore.Load().IsTunEnabled,
                 systemProxyRequestFactory: () => SystemProxyApplicationRequest.Build(settingsStore.Load(), systemProxyPlatform),
                 appBehaviorService: appBehaviorService,
                 globalHotkeyService: globalHotkeyService,
@@ -311,25 +277,15 @@ public sealed partial class App : Avalonia.Application
                 initialServiceModeStatus: initialServiceModeStatus,
                 systemPlatform: systemProxyPlatform,
                 clipboardWriter: clipboardWriter,
-                serviceModeSessionActivator: serviceModeSessionSwitcher.ActivateAsync,
-                serviceModeSessionDeactivator: serviceModeSessionSwitcher.DeactivateAsync,
+                serviceModeSessionActivator: token => AgentStartupCoordinator.SetTunHostAsync(true, token),
+                serviceModeSessionDeactivator: token => AgentStartupCoordinator.SetTunHostAsync(false, token),
                 appLogReader: new FileAppLogReader(DesktopApplicationLayout.RunningLogFilePath),
                 appLogExporter: new FileAppLogExporter(DesktopApplicationLayout.RunningLogFilePath));
-            hotkeyViewModel = viewModel;
+            viewModel.HomePage.ApplySystemProxyState(agentSystemProxyService.IsEnabled());
 #if DEBUG
             LogStartupTrace("Main view model created", startupStartedAt);
 #endif
-            var autoUpdateScheduler = new AppUpdateAutoCheckScheduler(updateChecker, settingsStore.Load, settingsStore.Save, () => DateTimeOffset.Now);
-            var autoUpdateRunner = new AppUpdateAutoCheckRunner(autoUpdateScheduler, viewModel.Update.ApplyAutoCheckResult);
-            var subscriptionAutoUpdate = new SubscriptionAutoUpdateCoordinator(
-                new SubscriptionAutoUpdateRunner(subscriptionStore, new SubscriptionAutoUpdatePlanner(), subscriptionUpdater),
-                subscriptionPage,
-                () => DateTimeOffset.Now);
-            _ = RunAppUpdateCheckAsync(() => autoUpdateRunner.RunStartupCheckAsync());
-            StartAppUpdateAutoCheckTimer(autoUpdateRunner);
-            StartSubscriptionAutoDelayTimer(viewModel);
             StartHomeRuntimeTimer(viewModel);
-            StartWebDavBackupTimer(viewModel);
             var mainWindow = new MainWindow(settingsStore, settings)
             {
                 DataContext = viewModel
@@ -338,18 +294,8 @@ public sealed partial class App : Avalonia.Application
             LogStartupTrace("Main window constructed and bound", startupStartedAt);
 #endif
 
-            var shouldStartHidden = ShouldStartHidden(settings);
-            if (shouldStartHidden)
-            {
-                // 静默启动没有首个可见窗口，退出必须来自托盘或调试命令。
-                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                mainWindow.ScheduleHiddenMemoryRelease();
-                AppLogger.Info("Silent start enabled; main window stays hidden");
-            }
-            else
-            {
-                desktop.MainWindow = mainWindow;
-            }
+            // 进入 --agent-ui 就代表 Agent 已明确要求显示 UI；静默自启动只启动 Agent。
+            desktop.MainWindow = mainWindow;
 
             var isMacOSShutdownScheduled = false;
             desktop.ShutdownRequested += (_, args) =>
@@ -376,25 +322,36 @@ public sealed partial class App : Avalonia.Application
             desktop.Exit += (_, _) =>
             {
                 StopBackgroundServices();
-                viewModel.HomePage.DisableSystemProxyOnShutdown();
+                AgentStartupCoordinator.UnregisterUiAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
                 _macOSApplicationMenuService.Dispose();
-                _trayService.Dispose();
                 globalHotkeyService.Dispose();
-                _sessionEndCleanup?.Dispose();
-                _sessionEndCleanup = null;
                 viewModel.Dispose();
-                DisposeOwnedServices(serviceModeSessionSwitcher, coreManager, proxyCoreClient, proxyDelayTester, coreProviderClient, webDavBackupStore);
-                HubBootstrap.Shutdown();
+                runtimeStore.Dispose();
+                sourceClient.Dispose();
+                overrideStore.Dispose();
+                subscriptionDataStore.Dispose();
+                settingsStore.Dispose();
+                DisposeOwnedServices(coreManager, proxyCoreClient, proxyDelayTester, coreProviderClient, coreUpdater, updateChecker, dataBackupService, serviceModeManager);
             };
-            // 兜底系统关机/注销：用户未主动退出时同步清理系统代理，避免残留失效端口。
-            _sessionEndCleanup = new SessionEndCleanupService(viewModel.HomePage.DisableSystemProxyOnShutdown);
-            _sessionEndCleanup.Start();
-            _trayService.Attach(desktop, mainWindow, viewModel, localization);
+            _ = AgentStartupCoordinator.RegisterUiAsync(
+                () => Dispatcher.UIThread.Post(() => ShowMainWindow(desktop, mainWindow)),
+                () => Dispatcher.UIThread.Post(() =>
+                {
+                    mainWindow.RequestShutdown();
+                    desktop.TryShutdown(0);
+                }),
+                version => Dispatcher.UIThread.Post(() =>
+                    viewModel.Update.ApplyAutoCheckResult(new AppUpdateAutoCheckResult(
+                        true,
+                        true,
+                        $"New version available: {version}"))));
             _macOSApplicationMenuService.Attach(
                 localization,
                 () =>
                 {
-                    _trayService.ShowMainWindow();
+                    ShowMainWindow(desktop, mainWindow);
                     if (viewModel.CurrentPage != SBproxy.Presentation.ViewModels.NavigationPage.Settings)
                     {
                         viewModel.ShowSettingsCommand.Execute(null);
@@ -403,10 +360,15 @@ public sealed partial class App : Avalonia.Application
                 },
                 () =>
                 {
-                    _trayService.ShowMainWindow();
+                    ShowMainWindow(desktop, mainWindow);
                     viewModel.ShowSettingsCommand.Execute(null);
                 },
-                _trayService.RequestExit);
+                () =>
+                {
+                    _ = AgentStartupCoordinator.ExitApplicationAsync();
+                    mainWindow.RequestShutdown();
+                    desktop.TryShutdown(0);
+                });
             foreach (var (action, gesture) in new[]
             {
                 (GlobalHotkeyAction.ToggleWindow, settings.WindowToggleHotkey),
@@ -433,9 +395,9 @@ public sealed partial class App : Avalonia.Application
 #if DEBUG
                     LogStartupTrace("Background startup dispatch entered", startupStartedAt);
 #endif
-                    _ = InitializeSubscriptionServicesAsync(subscriptionPage, subscriptionAutoUpdate);
+                    _ = subscriptionPage.InitializeAsync();
                     _ = overridePage.InitializeAsync();
-                    _ = StartCoreServicesAsync(initialServiceModeStatus, serviceModeManager, coreProcessCleaner, coreManager, viewModel, proxyPage, rulePage, proxySelectionRestorer);
+                    _ = StartCoreServicesAsync(coreManager, viewModel, proxyPage, rulePage, proxySelectionRestorer);
                 },
                 DispatcherPriority.Background);
 #if DEBUG
@@ -446,18 +408,9 @@ public sealed partial class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static bool ShouldStartHidden(AppSettings settings)
-    {
-        return settings.IsSilentStartEnabled;
-    }
-
     private void StopBackgroundServices()
     {
-        StopTimer(ref _appUpdateAutoCheckTimer);
-        StopTimer(ref _subscriptionAutoDelayTimer);
-        StopTimer(ref _subscriptionAutoUpdateTimer);
         StopTimer(ref _homeRuntimeTimer);
-        StopTimer(ref _webDavBackupTimer);
     }
 
     private static void StopTimer(ref DispatcherTimer? timer)
@@ -491,11 +444,27 @@ public sealed partial class App : Avalonia.Application
         }
     }
 
+    private static void ShowMainWindow(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        MainWindow window)
+    {
+        MacOSDockVisibilityService.SetVisible(true);
+        if (desktop.MainWindow is null)
+        {
+            desktop.MainWindow = window;
+        }
+        desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
+        var wasMinimized = window.WindowState == WindowState.Minimized;
+        window.Show();
+        if (wasMinimized)
+        {
+            window.WindowState = WindowState.Normal;
+        }
+        window.Activate();
+    }
+
     private async Task StartCoreServicesAsync(
-        ServiceModeStatus initialServiceModeStatus,
-        IServiceModeManager serviceModeManager,
-        CoreProcessCleaner coreProcessCleaner,
-        SwitchableCoreManager coreManager,
+        AgentIpcClient coreManager,
         MainWindowViewModel viewModel,
         ProxyPageViewModel proxyPage,
         RulePageViewModel rulePage,
@@ -503,20 +472,7 @@ public sealed partial class App : Avalonia.Application
     {
         try
         {
-            var bootstrap = await StartCoreHostAsync(
-                initialServiceModeStatus,
-                serviceModeManager,
-                coreProcessCleaner,
-                CancellationToken.None);
-            if (bootstrap.Ok)
-            {
-                await coreManager.EnsureReadyAsync(CancellationToken.None);
-            }
-            else
-            {
-                AppLogger.Warning($"Core host startup failed: {bootstrap.Message}");
-                viewModel.ShowErrorToast(LocalizationManager.Translate("Common.Error.CoreStartupFailed"));
-            }
+            await coreManager.ConnectAsync(CancellationToken.None);
         }
         catch (Exception exception)
         {
@@ -559,46 +515,6 @@ public sealed partial class App : Avalonia.Application
         {
             AppLogger.Warning($"Startup rule list refresh failed: {exception.Message}");
         }
-    }
-
-    private async Task<BootstrapResult> StartCoreHostAsync(
-        ServiceModeStatus initialServiceModeStatus,
-        IServiceModeManager serviceModeManager,
-        CoreProcessCleaner coreProcessCleaner,
-        CancellationToken cancellationToken)
-    {
-        if (initialServiceModeStatus.IsRunning)
-        {
-            var serviceCleanup = coreProcessCleaner.CleanupForServiceMode(initialServiceModeStatus);
-            if (!serviceCleanup.IsSuccess)
-            {
-                AppLogger.Warning(serviceCleanup.Message);
-                return BootstrapResult.Failure(serviceCleanup.Message);
-            }
-
-            var result = await serviceModeManager.StartCoreHostAsync(
-                HubStartupCoordinator.CreateServiceModeCoreHostRequest(),
-                cancellationToken);
-            if (result.IsSuccess)
-            {
-                AppLogger.Info("Service-mode core started");
-                return BootstrapResult.Success(result.Message);
-            }
-
-            _isServiceModeCoreHostActive = false;
-            AppLogger.Warning($"Service-mode core startup failed; core is unavailable: {result.Message}");
-            return BootstrapResult.Failure(result.Message);
-        }
-
-        _isServiceModeCoreHostActive = false;
-        var cleanup = coreProcessCleaner.CleanupForNormalMode(initialServiceModeStatus);
-        if (!cleanup.IsSuccess)
-        {
-            AppLogger.Warning(cleanup.Message);
-            return BootstrapResult.Failure(cleanup.Message);
-        }
-
-        return await HubStartupCoordinator.EnsureStartedAsync();
     }
 
     private static ServiceModeStatus GetInitialServiceModeStatus(IServiceModeManager serviceModeManager, bool waitForTunService)
@@ -675,77 +591,6 @@ public sealed partial class App : Avalonia.Application
     }
 #endif
 
-    private ICoreManager CreateCoreManager(ServiceModeStatus initialServiceModeStatus, IServiceModeManager serviceModeManager)
-    {
-        if (initialServiceModeStatus.IsRunning)
-        {
-            return new ServiceModeCoreManager(
-                serviceModeManager,
-                HubStartupCoordinator.MihomoPipe,
-                HubStartupCoordinator.WriteServiceModeActiveConfig,
-                isActive => _isServiceModeCoreHostActive = isActive);
-        }
-
-        return new IpcCoreManager(HubStartupCoordinator.PipeName);
-    }
-
-    private void StartAppUpdateAutoCheckTimer(AppUpdateAutoCheckRunner runner)
-    {
-        _appUpdateAutoCheckTimer = new DispatcherTimer
-        {
-            // 每 30 分钟检查更新，避免频繁访问发布 API。
-            Interval = TimeSpan.FromMinutes(30)
-        };
-        _appUpdateAutoCheckTimer.Tick += async (_, _) => await RunAppUpdateCheckAsync(() => runner.RunDueCheckAsync());
-        _appUpdateAutoCheckTimer.Start();
-        AppLogger.Info("Scheduled app update checks started");
-    }
-
-    private static async Task RunAppUpdateCheckAsync(Func<Task<AppUpdateAutoCheckResult>> check)
-    {
-        try
-        {
-            await check();
-        }
-        catch (Exception exception)
-        {
-            AppLogger.Warning($"App update scheduler failed: {exception.Message}");
-        }
-    }
-
-    private void StartSubscriptionAutoDelayTimer(MainWindowViewModel viewModel)
-    {
-        _subscriptionAutoDelayTimer = new DispatcherTimer
-        {
-            // 自动延迟测试按到期时间检查，不强制固定频率探测。
-            Interval = TimeSpan.FromMinutes(1)
-        };
-        _subscriptionAutoDelayTimer.Tick += async (_, _) => await viewModel.SubscriptionAutoDelay.RunDueAsync();
-        _subscriptionAutoDelayTimer.Start();
-        AppLogger.Info("Subscription auto-delay scheduler started");
-    }
-
-    private async Task InitializeSubscriptionServicesAsync(
-        SubscriptionPageViewModel subscriptionPage,
-        SubscriptionAutoUpdateCoordinator autoUpdate)
-    {
-        await subscriptionPage.InitializeAsync();
-        await autoUpdate.RunStartupAsync();
-        StartSubscriptionAutoUpdateTimer(autoUpdate);
-    }
-
-    private void StartSubscriptionAutoUpdateTimer(SubscriptionAutoUpdateCoordinator autoUpdate)
-    {
-        _subscriptionAutoUpdateTimer = new DispatcherTimer
-        {
-            // 最小更新间隔为分钟，按一分钟粒度检查到期订阅。
-            Interval = TimeSpan.FromMinutes(1)
-        };
-        _subscriptionAutoUpdateTimer.Tick += async (_, _) => await autoUpdate.RunDueAsync();
-        _subscriptionAutoUpdateTimer.Start();
-        AppLogger.Info("Subscription auto-update scheduler started");
-    }
-
     private void StartHomeRuntimeTimer(MainWindowViewModel viewModel)
     {
         _homeRuntimeTimer = new DispatcherTimer
@@ -756,19 +601,6 @@ public sealed partial class App : Avalonia.Application
         _homeRuntimeTimer.Tick += (_, _) => viewModel.OnHomeRuntimeTick();
         _homeRuntimeTimer.Start();
         AppLogger.Info("Home runtime refresh started");
-    }
-
-    private void StartWebDavBackupTimer(MainWindowViewModel viewModel)
-    {
-        _webDavBackupTimer = new DispatcherTimer
-        {
-            // 定时备份按到期时间检查，避免频繁访问 WebDAV 服务。
-            Interval = TimeSpan.FromMinutes(10)
-        };
-        _webDavBackupTimer.Tick += async (_, _) => await viewModel.DataManagement.CreateScheduledWebDavBackupAsync();
-        _webDavBackupTimer.Start();
-        _ = viewModel.DataManagement.CreateScheduledWebDavBackupAsync();
-        AppLogger.Info("WebDAV backup scheduler started");
     }
 
     private static SystemProxyPlatform CurrentSystemProxyPlatform()
@@ -791,18 +623,6 @@ public sealed partial class App : Avalonia.Application
         return SystemProxyPlatform.Other;
     }
 
-    private static ISystemProxyService CreateSystemProxyService(SystemProxyPlatform platform, string appDataDirectory)
-    {
-        return platform switch
-        {
-            SystemProxyPlatform.Windows => new WindowsSystemProxyService(appDataDirectory),
-            SystemProxyPlatform.MacOS => new MacOSSystemProxyService(appDataDirectory),
-            SystemProxyPlatform.Linux => new LinuxSystemProxyService(appDataDirectory),
-            SystemProxyPlatform.Other => new UnsupportedSystemProxyService(),
-            _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, "Unknown system proxy platform")
-        };
-    }
-
     private static IAppBehaviorService CreateAppBehaviorService()
     {
         if (OperatingSystem.IsWindows())
@@ -823,10 +643,4 @@ public sealed partial class App : Avalonia.Application
         return new UnsupportedAppBehaviorService();
     }
 
-    private static IGlobalHotkeyService CreateGlobalHotkeyService(Action<GlobalHotkeyAction> activated)
-    {
-        return OperatingSystem.IsWindows()
-            ? new WindowsGlobalHotkeyService(activated)
-            : new UnsupportedGlobalHotkeyService(activated);
-    }
 }

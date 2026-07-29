@@ -3,7 +3,7 @@ using SBproxy.Domain.CoreLogs;
 
 namespace SBproxy.Application.Runtime;
 
-public interface ICoreManager
+public interface IAgentClient
 {
     event EventHandler<CoreSnapshot>? StateChanged;
 

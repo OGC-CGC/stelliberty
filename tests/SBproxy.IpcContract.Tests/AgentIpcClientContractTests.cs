@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SBproxy.IpcContract.Tests;
 
-public sealed class IpcCoreManagerContractTests
+public sealed class AgentIpcClientContractTests
 {
     [Fact(DisplayName = "GetSnapshotAsync uses the status method and parses the snapshot contract")]
     public async Task GetSnapshotAsyncUsesStatusMethodAndParsesSnapshotContract()
@@ -20,7 +20,7 @@ public sealed class IpcCoreManagerContractTests
                 ? Success(request, new { state = "running", pid = 321, external_controller = "pipe://mihomo", last_error = (string?)null })
                 : Error(request, "contract.unexpected_method", Method(request));
         });
-        await using var manager = new IpcCoreManager(server.PipeName);
+        await using var manager = new AgentIpcClient(server.PipeName);
 
         var snapshot = await manager.GetSnapshotAsync(CancellationToken.None);
 
@@ -42,7 +42,7 @@ public sealed class IpcCoreManagerContractTests
                 ? Success(request, new { mode = "reload", pid = 654 })
                 : Error(request, "contract.unexpected_method", Method(request));
         });
-        await using var manager = new IpcCoreManager(server.PipeName);
+        await using var manager = new AgentIpcClient(server.PipeName);
 
         var result = await manager.ApplyConfigAsync(
             new CoreApplyConfigRequest("test-data/runtime/selected.yaml", "sub-1"),
@@ -66,7 +66,7 @@ public sealed class IpcCoreManagerContractTests
                 ? Error(request, "core.yaml_invalid", "bad yaml")
                 : Error(request, "contract.unexpected_method", Method(request));
         });
-        await using var manager = new IpcCoreManager(server.PipeName);
+        await using var manager = new AgentIpcClient(server.PipeName);
 
         var exception = await Assert.ThrowsAsync<IpcRemoteException>(() => manager.ApplyConfigAsync(
             new CoreApplyConfigRequest("bad.yaml", "sub-1"),
@@ -88,7 +88,7 @@ public sealed class IpcCoreManagerContractTests
                 _ => Error(request, "contract.unexpected_method", Method(request)),
             };
         });
-        await using var manager = new IpcCoreManager(server.PipeName);
+        await using var manager = new AgentIpcClient(server.PipeName);
 
         await manager.RestartAsync(CancellationToken.None);
 

@@ -56,9 +56,12 @@ jobs:
             curl \
             desktop-file-utils \
             libfontconfig1 \
+            libgtk-3-dev \
             libice6 \
+            libayatana-appindicator3-dev \
             libsm6 \
             libx11-6 \
+            libx11-dev \
             rpm \
             unzip \
             zip \

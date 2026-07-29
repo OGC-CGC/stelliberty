@@ -2,6 +2,7 @@ using System.Windows.Input;
 using SBproxy.Application.Localization;
 using SBproxy.Application.Rules;
 using SBproxy.Domain.Rules;
+using SBproxy.Presentation.Collections;
 using SBproxy.Presentation.Commands;
 
 namespace SBproxy.Presentation.ViewModels;
@@ -13,7 +14,7 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
     private readonly ILocalizationService? _localization;
     private IReadOnlyList<RuleItem> _rules = [];
     private IReadOnlyList<RuleItem> _filteredRules = [];
-    private IReadOnlyList<RuleRowViewModel> _filteredRuleRows = [];
+    private readonly LazyRowList<RuleItem, RuleRowViewModel> _filteredRuleRows;
     private string _searchKeyword = string.Empty;
     private RuleTypeBucket _typeBucket = RuleTypeBucket.All;
     private bool _isCoreRunning = true;
@@ -23,6 +24,8 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
     {
         _loader = loader;
         _localization = localization;
+        _filteredRuleRows = new LazyRowList<RuleItem, RuleRowViewModel>(
+            (rule, index) => new RuleRowViewModel(index + 1, rule, _localization));
         if (_localization is not null)
         {
             _localization.LanguageChanged += OnLanguageChanged;
@@ -162,20 +165,21 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsOtherRulesSelected));
     }
 
-    // 筛选结果缓存为快照，避免属性访问重复分配整表行模型。
+    // 筛选结果保留轻量数据快照，行模型由虚拟化面板按视口创建。
     private void RebuildFilteredRows()
     {
         _filteredRules = _search
             .Filter(_rules, _searchKeyword)
             .Where(rule => MatchesBucket(rule.Type, _typeBucket))
             .ToList();
-        _filteredRuleRows = _filteredRules
-            .Select((rule, index) => new RuleRowViewModel(index + 1, rule, _localization))
-            .ToList();
+        _filteredRuleRows.Replace(_filteredRules);
     }
+
+    public void ReleasePresentationRows() => _filteredRuleRows.RecycleAll();
 
     public void Dispose()
     {
+        _filteredRuleRows.Release();
         if (_localization is not null)
         {
             _localization.LanguageChanged -= OnLanguageChanged;

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "native/agent",
     "native/hub",
     "native/service",
     "native/features_test",

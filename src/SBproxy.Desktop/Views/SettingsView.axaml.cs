@@ -15,7 +15,6 @@ public sealed partial class SettingsView : UserControl
     private SettingsPageViewModel? _settings;
     private readonly PagePointeroverSuppressor _pointeroverSuppressor;
     private readonly Dictionary<SettingsSubPage, Vector> _scrollOffsets = new();
-    private readonly Dictionary<SettingsSubPage, Control> _subPageViews = new();
     private SettingsSubPage _currentSubPage;
     private long _subPageAnimationVersion;
     private bool _isAttached;
@@ -121,14 +120,14 @@ public sealed partial class SettingsView : UserControl
 
     private void ShowSubPage(SettingsSubPage page)
     {
-        // 子页按需创建并缓存，避免快速往返时重建整棵视觉树。
-        if (!_subPageViews.TryGetValue(page, out var view))
+        if (SettingsContentPanel.Content is Control previousView)
         {
-            view = CreateSubPage(page);
-            _subPageViews[page] = view;
+            previousView.DataContext = null;
+            SettingsContentPanel.Content = null;
         }
 
-        SettingsContentPanel.Content = view;
+        // 仅保留当前设置子页；滚动状态单独保存，不持有已离开的视觉树。
+        SettingsContentPanel.Content = CreateSubPage(page);
         SettingsContentPanel.UpdateLayout();
     }
 
@@ -229,6 +228,11 @@ public sealed partial class SettingsView : UserControl
         _isAttached = false;
         _subPageAnimationVersion++;
         RestoreSubPageVisualState();
+        if (SettingsContentPanel.Content is Control currentView)
+        {
+            currentView.DataContext = null;
+        }
+
         SettingsContentPanel.Content = null;
         if (_settings is not null)
         {

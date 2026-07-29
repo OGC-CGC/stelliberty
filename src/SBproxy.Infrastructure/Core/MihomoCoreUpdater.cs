@@ -9,7 +9,7 @@ using SBproxy.Application.Runtime;
 
 namespace SBproxy.Infrastructure.Core;
 
-public sealed class MihomoCoreUpdater(string coreExecutablePath, ICoreManager coreManager) : ICoreUpdater
+public sealed class MihomoCoreUpdater(string coreExecutablePath, IAgentClient coreManager) : ICoreUpdater
 {
     private static readonly string GithubUrlPrefix = Environment.GetEnvironmentVariable("NETPROXY_GITHUB") ?? "";
     private static readonly string LatestReleaseUrl = $"{GithubUrlPrefix}https://api.github.com/repos/MetaCubeX/mihomo/releases/latest";

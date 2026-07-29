@@ -172,6 +172,18 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
         RaiseHomeStateChanged();
     }
 
+    public void ApplySystemProxyState(bool isEnabled)
+    {
+        if (_isSystemProxyEnabled == isEnabled)
+        {
+            return;
+        }
+
+        _isSystemProxyEnabled = isEnabled;
+        _hasEnabledSystemProxy = isEnabled;
+        RaiseHomeStateChanged();
+    }
+
     public void ApplyOutboundMode(OutboundMode mode)
     {
         if (_outboundMode == mode)

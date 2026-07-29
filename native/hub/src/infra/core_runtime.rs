@@ -66,6 +66,27 @@ fn broadcast_core_log(events: &broadcast::Sender<Outgoing>, line: String) {
     });
 }
 
+fn required_string<'a>(
+    params: &'a serde_json::Value,
+    name: &str,
+) -> std::result::Result<&'a str, ErrorBody> {
+    params
+        .get(name)
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| ErrorBody {
+            code: "core.invalid_params".into(),
+            message: format!("params is missing {name}"),
+        })
+}
+
+fn core_api_error(error: anyhow::Error) -> ErrorBody {
+    ErrorBody {
+        code: "core.api_failed".into(),
+        message: format!("{error:#}"),
+    }
+}
+
 fn spawn_core_log_stream(
     api: CoreApiClient,
     events: broadcast::Sender<Outgoing>,
@@ -486,6 +507,110 @@ impl MethodHandler for CoreRuntime {
                     .unwrap_or("")
                     .to_string();
                 self.apply_config(PathBuf::from(path), sub_id).await
+            }
+            "core.set_outbound_mode" => {
+                let mode = params
+                    .get("mode")
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(|| ErrorBody {
+                        code: "hub.internal".into(),
+                        message: "params is missing mode".into(),
+                    })?;
+                if !matches!(mode, "rule" | "global" | "direct") {
+                    return Err(ErrorBody {
+                        code: "hub.internal".into(),
+                        message: format!("invalid outbound mode: {mode}"),
+                    });
+                }
+                let _lifecycle = self.lifecycle.lock().await;
+                self.api
+                    .set_outbound_mode(mode)
+                    .await
+                    .map_err(|error| ErrorBody {
+                        code: "core.api_failed".into(),
+                        message: format!("{error:#}"),
+                    })?;
+                Ok(serde_json::json!({}))
+            }
+            "core.change_proxy" => {
+                let group_name = required_string(&params, "group_name")?;
+                let proxy_name = required_string(&params, "proxy_name")?;
+                let _lifecycle = self.lifecycle.lock().await;
+                self.api
+                    .change_proxy(group_name, proxy_name)
+                    .await
+                    .map_err(core_api_error)?;
+                Ok(serde_json::json!({}))
+            }
+            "core.clear_proxy_selection" => {
+                let group_name = required_string(&params, "group_name")?;
+                let _lifecycle = self.lifecycle.lock().await;
+                self.api
+                    .clear_proxy_selection(group_name)
+                    .await
+                    .map_err(core_api_error)?;
+                Ok(serde_json::json!({}))
+            }
+            "core.close_connections" => {
+                let connection_id = params
+                    .get("connection_id")
+                    .and_then(serde_json::Value::as_str)
+                    .filter(|value| !value.is_empty());
+                let _lifecycle = self.lifecycle.lock().await;
+                self.api
+                    .close_connections(connection_id)
+                    .await
+                    .map_err(core_api_error)?;
+                Ok(serde_json::json!({}))
+            }
+            "core.update_provider" => {
+                let provider_type = required_string(&params, "provider_type")?;
+                let provider_name = required_string(&params, "provider_name")?;
+                let _lifecycle = self.lifecycle.lock().await;
+                self.api
+                    .update_provider(provider_type, provider_name)
+                    .await
+                    .map_err(core_api_error)?;
+                Ok(serde_json::json!({}))
+            }
+            "core.test_delay" => {
+                let proxy_name = required_string(&params, "proxy_name")?;
+                let provider_name = params
+                    .get("provider_name")
+                    .and_then(serde_json::Value::as_str)
+                    .filter(|value| !value.is_empty());
+                let url = params
+                    .get("url")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("https://www.gstatic.com/generate_204");
+                let timeout = params
+                    .get("timeout")
+                    .and_then(serde_json::Value::as_u64)
+                    .and_then(|value| u32::try_from(value).ok())
+                    .unwrap_or(5_000);
+                let _lifecycle = self.lifecycle.lock().await;
+                let delay = self
+                    .api
+                    .test_delay(proxy_name, provider_name, url, timeout)
+                    .await
+                    .map_err(core_api_error)?;
+                Ok(serde_json::json!({ "delay": delay }))
+            }
+            "core.test_all_delays" => {
+                let url = params
+                    .get("url")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("https://www.gstatic.com/generate_204");
+                let _lifecycle = self.lifecycle.lock().await;
+                let count = self
+                    .api
+                    .test_all_delays(url, 5_000)
+                    .await
+                    .map_err(|error| ErrorBody {
+                        code: "core.api_failed".into(),
+                        message: format!("{error:#}"),
+                    })?;
+                Ok(serde_json::json!({ "tested": count }))
             }
             other => Err(ErrorBody {
                 code: "hub.internal".into(),

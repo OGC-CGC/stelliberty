@@ -788,7 +788,7 @@ public sealed class MainWindowShellTests
         ConnectionPageViewModel? connectionPage = null,
         RulePageViewModel? rulePage = null,
         IProxyCoreClient? homeProxyClient = null,
-        ICoreManager? coreManager = null,
+        IAgentClient? coreManager = null,
         SubscriptionPageViewModel? subscriptionPage = null,
         OverridePageViewModel? overridePage = null,
         SelectedRuntimeFallbackGenerator? runtimeFallbackGenerator = null,
@@ -1090,7 +1090,7 @@ public sealed class MainWindowShellTests
         }
     }
 
-    private sealed class FakeCoreManager : ICoreManager, IDisposable
+    private sealed class FakeCoreManager : IAgentClient, IDisposable
     {
         public event EventHandler<CoreSnapshot>? StateChanged;
 

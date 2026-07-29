@@ -8,6 +8,7 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.VisualTree;
+using SBproxy.Presentation.Collections;
 
 namespace SBproxy.Desktop.Controls;
 
@@ -278,6 +279,16 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel
         if (!_realized.Remove(index, out var container))
             return;
 
+        if (container is ContentPresenter contentPresenter)
+        {
+            contentPresenter.Content = null;
+        }
+
+        if (ItemsControl?.ItemsSource is IRecyclableRowList recyclableRows)
+        {
+            recyclableRows.Recycle(index);
+        }
+
         var recycleKey = container.GetValue(RecycleKeyProperty);
         if (recycleKey is null)
         {
@@ -310,12 +321,19 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel
 
     protected override void OnItemsControlChanged(ItemsControl? oldValue)
     {
+        var recyclableRows = oldValue?.ItemsSource as IRecyclableRowList;
         _recycleCandidates.Clear();
         _recycleCandidates.AddRange(_realized.Keys);
         foreach (var index in _recycleCandidates)
         {
             if (_realized.Remove(index, out var container))
             {
+                if (container is ContentPresenter presenter)
+                {
+                    presenter.Content = null;
+                }
+
+                recyclableRows?.Recycle(index);
                 RemoveInternalChild(container);
             }
         }
@@ -323,7 +341,15 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel
         foreach (var pool in _recyclePool.Values)
         {
             while (pool.Count > 0)
-                RemoveInternalChild(pool.Pop());
+            {
+                var container = pool.Pop();
+                if (container is ContentPresenter presenter)
+                {
+                    presenter.Content = null;
+                }
+
+                RemoveInternalChild(container);
+            }
         }
 
         _recyclePool.Clear();

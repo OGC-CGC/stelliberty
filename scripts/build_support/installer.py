@@ -818,6 +818,7 @@ def merge_macos_info_plist(info_plist_path: Path, partial_info_plist: Path) -> N
 def set_macos_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:
     executable_paths = [
         install_dir / metadata.app_name,
+        install_dir / target.agent_binary,
         install_dir / "data" / "core" / "clash-mihomo-core",
         install_dir / "data" / "service" / "update" / service_binary_name(metadata, target),
     ]
@@ -852,6 +853,7 @@ def macos_min_system(platform_name: str) -> str:
 def set_linux_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:
     executable_paths = [
         install_dir / metadata.app_name,
+        install_dir / target.agent_binary,
         install_dir / "data" / "core" / "clash-mihomo-core",
         install_dir / "data" / "service" / "update" / service_binary_name(metadata, target),
     ]

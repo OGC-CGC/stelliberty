@@ -2,6 +2,7 @@ using System.Windows.Input;
 using SBproxy.Application.CoreLogs;
 using SBproxy.Domain.CoreLogs;
 using SBproxy.Application.Localization;
+using SBproxy.Presentation.Collections;
 using SBproxy.Presentation.Commands;
 
 namespace SBproxy.Presentation.ViewModels;
@@ -11,7 +12,9 @@ public sealed class CoreLogPageViewModel : ViewModelBase, IDisposable
     private readonly CoreLogFilter _filter = new();
     private readonly CoreLogReducer _reducer = new();
     private readonly ILocalizationService? _localization;
+    private readonly LazyRowList<CoreLogMessage, CoreLogRowViewModel> _filteredLogRows;
     private CoreLogState _state = CoreLogState.Initial;
+    private IReadOnlyList<CoreLogMessage> _filteredLogs = [];
     private bool _isCoreRunning = true;
 
     public event EventHandler? LogsCleared;
@@ -19,6 +22,8 @@ public sealed class CoreLogPageViewModel : ViewModelBase, IDisposable
     public CoreLogPageViewModel(ILocalizationService? localization = null)
     {
         _localization = localization;
+        _filteredLogRows = new LazyRowList<CoreLogMessage, CoreLogRowViewModel>(
+            (log, index) => new CoreLogRowViewModel(index + 1, log, _localization));
         if (_localization is not null)
         {
             _localization.LanguageChanged += OnLanguageChanged;
@@ -34,12 +39,9 @@ public sealed class CoreLogPageViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<CoreLogMessage> Logs => _state.Logs;
 
-    public IReadOnlyList<CoreLogMessage> FilteredLogs => _filter.Apply(_state.Logs, _state.FilterLevel, _state.SearchKeyword);
+    public IReadOnlyList<CoreLogMessage> FilteredLogs => _filteredLogs;
 
-    public IReadOnlyList<CoreLogRowViewModel> FilteredLogRows => FilteredLogs
-        .Reverse()
-        .Select((log, index) => new CoreLogRowViewModel(index + 1, log, _localization))
-        .ToList();
+    public IReadOnlyList<CoreLogRowViewModel> FilteredLogRows => _filteredLogRows;
 
     public int TotalLogCount => Logs.Count;
 
@@ -150,6 +152,8 @@ public sealed class CoreLogPageViewModel : ViewModelBase, IDisposable
 
     private void RaiseLogStateChanged()
     {
+        _filteredLogs = _filter.Apply(_state.Logs, _state.FilterLevel, _state.SearchKeyword);
+        _filteredLogRows.Replace(_filteredLogs.Reverse().ToList());
         OnPropertyChanged(nameof(Logs));
         OnPropertyChanged(nameof(FilteredLogs));
         OnPropertyChanged(nameof(FilteredLogRows));
@@ -172,8 +176,11 @@ public sealed class CoreLogPageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(EmptyText));
     }
 
+    public void ReleasePresentationRows() => _filteredLogRows.RecycleAll();
+
     public void Dispose()
     {
+        _filteredLogRows.Release();
         if (_localization is not null)
         {
             _localization.LanguageChanged -= OnLanguageChanged;

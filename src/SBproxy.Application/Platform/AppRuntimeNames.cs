@@ -22,6 +22,10 @@ public static class AppRuntimeNames
         ? $"{FileToken(ServiceAppName)}_service.exe"
         : $"{FileToken(ServiceAppName)}_service";
 
+    public static string AgentBinaryName => OperatingSystem.IsWindows()
+        ? $"{FileToken(ServiceAppName)}_agent.exe"
+        : $"{FileToken(ServiceAppName)}_agent";
+
     public static string ServiceInstalledBinaryStem => $"{FileToken(ServiceAppName)}_service_host{FileDevSuffix}";
 
     public static string CoreLockPrefix => $".{FileToken(AppMetadata.Name)}-core-";

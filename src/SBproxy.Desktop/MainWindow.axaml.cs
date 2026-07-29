@@ -258,7 +258,7 @@ public sealed partial class MainWindow : Window
         }
 
         CancelPendingPageTransition();
-        foreach (var other in _pageHosts.Values)
+        foreach (var (otherPage, other) in _pageHosts)
         {
             DeactivatePageHost(other);
             other.Transitions = null;
@@ -268,6 +268,10 @@ public sealed partial class MainWindow : Window
             other.RenderTransform = PageTransition.EnterFromTransform;
             // 非当前页退出布局，避免多棵视觉树持续参与 Measure。
             other.IsVisible = false;
+            if (otherPage != page)
+            {
+                ReleasePageHostContent(otherPage, other);
+            }
         }
 
         EnsurePageLoaded(page);
@@ -449,6 +453,7 @@ public sealed partial class MainWindow : Window
         else if (previousHost is not null && !ReferenceEquals(previousHost, nextHost))
         {
             HidePageHost(previousHost);
+            ReleasePageHostContent(previousHost);
         }
 
         nextHost.Transitions = PageTransition.CreateEnterTransitions();
@@ -468,6 +473,7 @@ public sealed partial class MainWindow : Window
 
         DeactivatePageHost(pendingHost);
         HidePageHost(pendingHost);
+        ReleasePageHostContent(pendingHost);
         _pendingPageHost = null;
     }
 
@@ -485,6 +491,7 @@ public sealed partial class MainWindow : Window
             }
 
             HidePageHost(host);
+            ReleasePageHostContent(host);
         };
         timer.Start();
     }
@@ -772,15 +779,20 @@ public sealed partial class MainWindow : Window
     protected override void OnClosing(WindowClosingEventArgs args)
     {
         _windowStateService.SaveNow();
+        var closeUiWithoutAgent =
+            DataContext is MainWindowViewModel viewModel
+            && viewModel.AppBehavior.IsMinimizeToTrayEnabled;
         if (!_isShutdownRequested
             && args.CloseReason == WindowCloseReason.WindowClosing
-            && DataContext is MainWindowViewModel { AppBehavior.IsMinimizeToTrayEnabled: true })
+            && !closeUiWithoutAgent)
         {
-            args.Cancel = true;
-            ClearTitleBarHoverState();
-            // 先取消关闭按钮红色效果，等界面更新两次再隐藏，避免恢复窗口时闪红。
-            RequestAnimationFrame(OnTitleBarStateClearedFrame);
-            return;
+            var result = AgentStartupCoordinator.ExitApplicationAsync(CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            if (!result.Ok)
+            {
+                AppLogger.Warning($"User Agent overall exit request failed: {result.Message}");
+            }
         }
 
         base.OnClosing(args);
@@ -809,49 +821,76 @@ public sealed partial class MainWindow : Window
         base.OnClosed(e);
     }
 
-    private void ClearPageHostContents()
+    private int ClearPageHostContents()
     {
-        foreach (var host in _pageHosts.Values)
+        var releasedCount = 0;
+        foreach (var (page, host) in _pageHosts)
         {
-            if (host.Content is Control pageContent)
+            releasedCount += ReleasePageHostContent(page, host) ? 1 : 0;
+        }
+
+        return releasedCount;
+    }
+
+    private void ReleasePageHostContent(ContentControl host)
+    {
+        foreach (var (page, candidate) in _pageHosts)
+        {
+            if (ReferenceEquals(candidate, host))
             {
-                if (pageContent is IPageContentLifecycle lifecycle)
-                {
-                    lifecycle.ReleasePageContent();
-                }
-
-                pageContent.DataContext = null;
+                ReleasePageHostContent(page, host);
+                return;
             }
-
-            host.Content = null;
         }
     }
 
-    private void CapturePageScrollOffsets()
+    private bool ReleasePageHostContent(AppNavigationPage page, ContentControl host)
     {
-        _pageScrollOffsets.Clear();
-        foreach (var (page, host) in _pageHosts)
+        if (host.Content is not Control pageContent)
         {
-            if (page == AppNavigationPage.Settings || host.Content is not Control content)
-            {
-                continue;
-            }
-
-            var offsets = content.GetVisualDescendants()
-                .OfType<ScrollViewer>()
-                .Select(scrollViewer => (Id: AutomationProperties.GetAutomationId(scrollViewer), scrollViewer.Offset))
-                .Where(item => !string.IsNullOrWhiteSpace(item.Id) && (item.Offset.X > 0 || item.Offset.Y > 0))
-                .ToDictionary(item => item.Id!, item => item.Offset, StringComparer.Ordinal);
-            if (offsets.Count > 0)
-            {
-                _pageScrollOffsets[page] = offsets;
-            }
+            return false;
         }
 
-        if (_pageHosts.TryGetValue(AppNavigationPage.Settings, out var settingsHost)
-            && settingsHost.Content is SettingsView settingsView)
+        CapturePageScrollOffset(page, pageContent);
+        if (pageContent is IPageContentLifecycle lifecycle)
         {
-            _settingsScrollOffsets = settingsView.CaptureScrollOffsets();
+            lifecycle.ReleasePageContent();
+        }
+
+        pageContent.DataContext = null;
+        host.Content = null;
+        if (TryGetPageConverter(out var converter))
+        {
+            converter.ReleaseView(page, pageContent);
+        }
+
+        return true;
+    }
+
+    private void CapturePageScrollOffset(AppNavigationPage page, Control content)
+    {
+        if (page == AppNavigationPage.Settings)
+        {
+            if (content is SettingsView settingsView)
+            {
+                _settingsScrollOffsets = settingsView.CaptureScrollOffsets();
+            }
+
+            return;
+        }
+
+        var offsets = content.GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Select(scrollViewer => (Id: AutomationProperties.GetAutomationId(scrollViewer), scrollViewer.Offset))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id) && (item.Offset.X > 0 || item.Offset.Y > 0))
+            .ToDictionary(item => item.Id!, item => item.Offset, StringComparer.Ordinal);
+        if (offsets.Count > 0)
+        {
+            _pageScrollOffsets[page] = offsets;
+        }
+        else
+        {
+            _pageScrollOffsets.Remove(page);
         }
     }
 
@@ -950,13 +989,11 @@ public sealed partial class MainWindow : Window
 #if DEBUG
         _hiddenMemoryBeforeRelease = GetPrivateMemorySize();
 #endif
-        CapturePageScrollOffsets();
         _visiblePageHost = null;
-        ClearPageHostContents();
-        var releasedViewCount = 0;
+        var releasedViewCount = ClearPageHostContents();
         if (TryGetPageConverter(out var converter))
         {
-            releasedViewCount = converter.ClearCache();
+            releasedViewCount += converter.ClearCache();
         }
 
         _pageViewsReleasedWhileHidden = releasedViewCount > 0;

@@ -7,13 +7,13 @@ using SBproxy.Application.Runtime;
 
 namespace SBproxy.Infrastructure.Core;
 
-public sealed class IpcCoreManager : ICoreManager, IDisposable, IAsyncDisposable
+public sealed class AgentIpcClient : IAgentClient, IDisposable, IAsyncDisposable
 {
     private readonly JsonRpcPipeClient _client;
     private readonly CoreLogParser _coreLogParser = new();
     private readonly SemaphoreSlim _connectLock = new(1, 1);
     private CoreSnapshot _last = new(CoreState.Unavailable, null, string.Empty, null);
-    private bool _isConnected;
+    private volatile bool _isConnected;
     private bool _isDisposed;
     // mihomo 重启后会短暂繁忙；重试覆盖连续应用配置。
     private const int ApplyConfigMaxAttempts = 20;
@@ -25,10 +25,11 @@ public sealed class IpcCoreManager : ICoreManager, IDisposable, IAsyncDisposable
 
     public event EventHandler<CoreLogMessage>? CoreLogReceived;
 
-    public IpcCoreManager(string pipeName)
+    public AgentIpcClient(string pipeName)
     {
         _client = new JsonRpcPipeClient(pipeName);
         _client.EventReceived += OnEvent;
+        _client.ConnectionClosed += OnConnectionClosed;
     }
 
     public async Task ConnectAsync(CancellationToken cancellationToken)
@@ -178,7 +179,7 @@ public sealed class IpcCoreManager : ICoreManager, IDisposable, IAsyncDisposable
     private async Task EnsureConnectedAsync(CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
-        if (_isConnected)
+        if (_isConnected && _client.IsConnected)
         {
             return;
         }
@@ -186,7 +187,7 @@ public sealed class IpcCoreManager : ICoreManager, IDisposable, IAsyncDisposable
         await _connectLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (_isConnected)
+            if (_isConnected && _client.IsConnected)
             {
                 return;
             }
@@ -221,6 +222,23 @@ public sealed class IpcCoreManager : ICoreManager, IDisposable, IAsyncDisposable
         }
         // 事件帧不带 external_controller，所以保留上一次完整值。
         var snapshot = ParseSnapshotPartial(ev.Data, _last.ExternalController);
+        _last = snapshot;
+        StateChanged?.Invoke(this, snapshot);
+    }
+
+    private void OnConnectionClosed(object? sender, EventArgs args)
+    {
+        _isConnected = false;
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        var snapshot = new CoreSnapshot(
+            CoreState.Unavailable,
+            null,
+            _last.ExternalController,
+            "User Agent connection was closed.");
         _last = snapshot;
         StateChanged?.Invoke(this, snapshot);
     }
@@ -289,6 +307,7 @@ public sealed class IpcCoreManager : ICoreManager, IDisposable, IAsyncDisposable
 
         _isDisposed = true;
         _client.EventReceived -= OnEvent;
+        _client.ConnectionClosed -= OnConnectionClosed;
         _client.Dispose();
         _connectLock.Dispose();
     }
@@ -302,6 +321,7 @@ public sealed class IpcCoreManager : ICoreManager, IDisposable, IAsyncDisposable
 
         _isDisposed = true;
         _client.EventReceived -= OnEvent;
+        _client.ConnectionClosed -= OnConnectionClosed;
         await _client.DisposeAsync().ConfigureAwait(false);
         _connectLock.Dispose();
     }

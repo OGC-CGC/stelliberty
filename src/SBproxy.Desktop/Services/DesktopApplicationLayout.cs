@@ -26,6 +26,8 @@ internal static class DesktopApplicationLayout
 
     public static string CoreBinaryPath => Path.Combine(CoreDirectory, CoreBinaryName);
 
+    public static string AgentBinaryPath => Path.Combine(BaseDirectory, AppRuntimeNames.AgentBinaryName);
+
     public static string ServiceDirectory => Path.Combine(AppDataDirectory, PathConventions.ServiceSubdirectory);
 
     public static string ServiceUpdateDirectory => Path.Combine(InstallDataDirectory, PathConventions.ServiceSubdirectory, PathConventions.ServiceUpdateSubdirectory);
@@ -46,7 +48,7 @@ internal static class DesktopApplicationLayout
 
     private static string ServiceBinaryName => AppRuntimeNames.ServiceBinaryName;
 
-    private static string ServiceInstalledBinaryName => OperatingSystem.IsWindows()
+    public static string ServiceInstalledBinaryName => OperatingSystem.IsWindows()
         ? $"{PathConventions.ServiceInstalledBinaryStem}.exe"
         : PathConventions.ServiceInstalledBinaryStem;
 

@@ -6,7 +6,7 @@ namespace SBproxy.Desktop.Debug;
 
 internal static class CoreStatusFormatter
 {
-    public static async Task<string> FormatAsync(ICoreManager coreManager)
+    public static async Task<string> FormatAsync(IAgentClient coreManager)
     {
         var snapshot = await coreManager.GetSnapshotAsync();
         return JsonSerializer.Serialize(new
