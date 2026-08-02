@@ -21,7 +21,7 @@ internal static class AppRuntime
 
         if (!args.Contains("--agent-ui", StringComparer.Ordinal))
         {
-            RunLauncher(args);
+            RunLauncher();
             return;
         }
 
@@ -46,19 +46,16 @@ internal static class AppRuntime
         }
     }
 
-    private static void RunLauncher(string[] args)
+    private static void RunLauncher()
     {
-        AppLogger.Info("Delegating UI lifecycle to User Agent");
-        var silentStart = args.Contains("--silent-start", StringComparer.Ordinal);
-        var result = (silentStart
-                ? AgentStartupCoordinator.EnsureStartedAsync(CancellationToken.None)
-                : AgentStartupCoordinator.ActivateUiAsync(CancellationToken.None))
+        AppLogger.Info("Requesting UI activation from User Agent");
+        var result = AgentStartupCoordinator.ActivateUiAsync(CancellationToken.None)
             .GetAwaiter()
             .GetResult();
         if (!result.Ok)
         {
-            var action = silentStart ? "start" : "activate the UI";
-            throw new InvalidOperationException($"User Agent could not {action}: {result.Message}");
+            throw new InvalidOperationException(
+                $"User Agent could not activate the UI: {result.Message}");
         }
     }
 

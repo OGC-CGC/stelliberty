@@ -4,14 +4,16 @@ use std::process::Command;
 use anyhow::{Context, Result, bail};
 
 use crate::settings::AgentSettings;
+use crate::storage::file_write_atomic;
 
-pub fn set_enabled(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> Result<()> {
+/// 用途：根据当前平台启用或停用系统代理。
+pub fn proxy_set(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> Result<()> {
     #[cfg(target_os = "macos")]
-    return set_macos(user_data_dir, settings, enabled);
+    return proxy_macos_set(user_data_dir, settings, enabled);
     #[cfg(target_os = "linux")]
-    return set_linux(settings, enabled);
+    return proxy_linux_set(settings, enabled);
     #[cfg(target_os = "windows")]
-    return set_windows(user_data_dir, settings, enabled);
+    return proxy_windows_set(user_data_dir, settings, enabled);
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     {
         let _ = (user_data_dir, settings, enabled);
@@ -19,7 +21,8 @@ pub fn set_enabled(user_data_dir: &Path, settings: &AgentSettings, enabled: bool
     }
 }
 
-fn run(program: &str, arguments: &[&str]) -> Result<String> {
+/// 用途：执行系统代理配置命令并统一处理输出和错误。
+fn proxy_command(program: &str, arguments: &[&str]) -> Result<String> {
     let output = Command::new(program)
         .args(arguments)
         .output()
@@ -32,8 +35,9 @@ fn run(program: &str, arguments: &[&str]) -> Result<String> {
 }
 
 #[cfg(target_os = "macos")]
-fn set_macos(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> Result<()> {
-    let output = run("/usr/sbin/networksetup", &["-listallnetworkservices"])?;
+/// 用途：通过 networksetup 更新 macOS 系统代理。
+fn proxy_macos_set(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> Result<()> {
+    let output = proxy_command("/usr/sbin/networksetup", &["-listallnetworkservices"])?;
     let services = output
         .lines()
         .map(str::trim)
@@ -49,19 +53,19 @@ fn set_macos(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> R
                 "-setsocksfirewallproxystate",
                 "-setautoproxystate",
             ] {
-                run("/usr/sbin/networksetup", &[kind, service, "off"])?;
+                proxy_command("/usr/sbin/networksetup", &[kind, service, "off"])?;
             }
             continue;
         }
         if settings.is_pac_mode_enabled {
             let pac_path = user_data_dir.join("pac.txt");
-            std::fs::write(&pac_path, &settings.pac_script)?;
+            file_write_atomic(&pac_path, settings.pac_script.as_bytes())?;
             let url = format!("file://{}", pac_path.to_string_lossy());
-            run(
+            proxy_command(
                 "/usr/sbin/networksetup",
                 &["-setautoproxyurl", service, &url],
             )?;
-            run(
+            proxy_command(
                 "/usr/sbin/networksetup",
                 &["-setautoproxystate", service, "on"],
             )?;
@@ -72,7 +76,7 @@ fn set_macos(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> R
                 "-setsecurewebproxy",
                 "-setsocksfirewallproxy",
             ] {
-                run(
+                proxy_command(
                     "/usr/sbin/networksetup",
                     &[kind, service, &settings.proxy_host, &port],
                 )?;
@@ -82,7 +86,7 @@ fn set_macos(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> R
                 "-setsecurewebproxystate",
                 "-setsocksfirewallproxystate",
             ] {
-                run("/usr/sbin/networksetup", &[kind, service, "on"])?;
+                proxy_command("/usr/sbin/networksetup", &[kind, service, "on"])?;
             }
         }
         let bypass = settings
@@ -97,19 +101,20 @@ fn set_macos(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> R
         } else {
             arguments.extend(bypass);
         }
-        run("/usr/sbin/networksetup", &arguments)?;
+        proxy_command("/usr/sbin/networksetup", &arguments)?;
     }
     Ok(())
 }
 
 #[cfg(target_os = "linux")]
-fn set_linux(settings: &AgentSettings, enabled: bool) -> Result<()> {
+/// 用途：选择桌面环境后更新 Linux 系统代理。
+fn proxy_linux_set(settings: &AgentSettings, enabled: bool) -> Result<()> {
     let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
     if desktop.to_ascii_uppercase().contains("KDE") {
-        return set_kde(settings, enabled);
+        return proxy_kde_set(settings, enabled);
     }
     if !enabled {
-        run(
+        proxy_command(
             "gsettings",
             &["set", "org.gnome.system.proxy", "mode", "none"],
         )?;
@@ -119,7 +124,7 @@ fn set_linux(settings: &AgentSettings, enabled: bool) -> Result<()> {
         bail!("PAC mode requires a desktop-specific Linux proxy backend")
     }
     let port = settings.mixed_port.to_string();
-    run(
+    proxy_command(
         "gsettings",
         &["set", "org.gnome.system.proxy", "mode", "manual"],
     )?;
@@ -131,7 +136,7 @@ fn set_linux(settings: &AgentSettings, enabled: bool) -> Result<()> {
         .map(|value| format!("'{}'", value.replace('\'', "\\'")))
         .collect::<Vec<_>>()
         .join(", ");
-    run(
+    proxy_command(
         "gsettings",
         &[
             "set",
@@ -145,23 +150,24 @@ fn set_linux(settings: &AgentSettings, enabled: bool) -> Result<()> {
         "org.gnome.system.proxy.https",
         "org.gnome.system.proxy.socks",
     ] {
-        run("gsettings", &["set", schema, "host", &settings.proxy_host])?;
-        run("gsettings", &["set", schema, "port", &port])?;
+        proxy_command("gsettings", &["set", schema, "host", &settings.proxy_host])?;
+        proxy_command("gsettings", &["set", schema, "port", &port])?;
     }
     Ok(())
 }
 
 #[cfg(target_os = "linux")]
-fn set_kde(settings: &AgentSettings, enabled: bool) -> Result<()> {
-    let writer = if command_exists("kwriteconfig6") {
+/// 用途：通过 KDE 配置命令更新桌面代理。
+fn proxy_kde_set(settings: &AgentSettings, enabled: bool) -> Result<()> {
+    let writer = if command_is_available("kwriteconfig6") {
         "kwriteconfig6"
-    } else if command_exists("kwriteconfig5") {
+    } else if command_is_available("kwriteconfig5") {
         "kwriteconfig5"
     } else {
         bail!("no supported KDE proxy configuration command was found")
     };
     let write = |key: &str, value: &str| {
-        run(
+        proxy_command(
             writer,
             &[
                 "--file",
@@ -189,8 +195,8 @@ fn set_kde(settings: &AgentSettings, enabled: bool) -> Result<()> {
         write("NoProxyFor", &settings.system_proxy_bypass)?;
     }
     for qdbus in ["qdbus6", "qdbus-qt6", "qdbus", "qdbus-qt5"] {
-        if command_exists(qdbus) {
-            let _ = run(
+        if command_is_available(qdbus) {
+            let _ = proxy_command(
                 qdbus,
                 &[
                     "org.kde.kded6",
@@ -205,7 +211,8 @@ fn set_kde(settings: &AgentSettings, enabled: bool) -> Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-fn command_exists(command: &str) -> bool {
+/// 用途：判断指定系统命令是否可用。
+fn command_is_available(command: &str) -> bool {
     Command::new("which")
         .arg(command)
         .status()
@@ -213,10 +220,11 @@ fn command_exists(command: &str) -> bool {
 }
 
 #[cfg(target_os = "windows")]
-fn set_windows(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> Result<()> {
+/// 用途：通过当前用户注册表更新 Windows 系统代理。
+fn proxy_windows_set(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) -> Result<()> {
     let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
     if !enabled {
-        run(
+        proxy_command(
             "reg",
             &[
                 "add",
@@ -230,15 +238,15 @@ fn set_windows(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) ->
                 "/f",
             ],
         )?;
-        run("reg", &["delete", key, "/v", "AutoConfigURL", "/f"]).ok();
-        refresh_windows_proxy();
+        proxy_command("reg", &["delete", key, "/v", "AutoConfigURL", "/f"]).ok();
+        proxy_windows_refresh();
         return Ok(());
     }
     if settings.is_pac_mode_enabled {
         let pac_path = user_data_dir.join("pac.txt");
-        std::fs::write(&pac_path, &settings.pac_script)?;
+        file_write_atomic(&pac_path, settings.pac_script.as_bytes())?;
         let url = format!("file:///{}", pac_path.to_string_lossy().replace('\\', "/"));
-        run(
+        proxy_command(
             "reg",
             &[
                 "add",
@@ -252,7 +260,7 @@ fn set_windows(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) ->
                 "/f",
             ],
         )?;
-        run(
+        proxy_command(
             "reg",
             &[
                 "add",
@@ -268,7 +276,7 @@ fn set_windows(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) ->
         )?;
     } else {
         let endpoint = format!("{}:{}", settings.proxy_host, settings.mixed_port);
-        run(
+        proxy_command(
             "reg",
             &[
                 "add",
@@ -282,7 +290,7 @@ fn set_windows(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) ->
                 "/f",
             ],
         )?;
-        run(
+        proxy_command(
             "reg",
             &[
                 "add",
@@ -296,8 +304,8 @@ fn set_windows(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) ->
                 "/f",
             ],
         )?;
-        run("reg", &["delete", key, "/v", "AutoConfigURL", "/f"]).ok();
-        run(
+        proxy_command("reg", &["delete", key, "/v", "AutoConfigURL", "/f"]).ok();
+        proxy_command(
             "reg",
             &[
                 "add",
@@ -312,16 +320,18 @@ fn set_windows(user_data_dir: &Path, settings: &AgentSettings, enabled: bool) ->
             ],
         )?;
     }
-    refresh_windows_proxy();
+    proxy_windows_refresh();
     Ok(())
 }
 
 #[cfg(target_os = "windows")]
-fn refresh_windows_proxy() {
+/// 用途：通知 WinINet 当前用户的代理设置已经变化。
+fn proxy_windows_refresh() {
     const INTERNET_OPTION_SETTINGS_CHANGED: u32 = 39;
     const INTERNET_OPTION_REFRESH: u32 = 37;
     #[link(name = "wininet")]
     unsafe extern "system" {
+        /// 用途：通知 WinINet 刷新当前用户的互联网设置。
         fn InternetSetOptionW(
             internet: *mut std::ffi::c_void,
             option: u32,

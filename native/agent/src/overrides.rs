@@ -3,12 +3,17 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
 
+use crate::storage::{entity_id_validate, file_write_atomic, json_read_or_default};
+
+/// 用途：管理用户覆盖配置的列表、内容文件及排序。
 pub struct OverrideStore {
     directory: PathBuf,
     list_path: PathBuf,
 }
 
+/// 用途：提供覆盖配置实体、内容和排序的一致持久化接口。
 impl OverrideStore {
+    /// 用途：根据用户数据目录创建覆盖配置存储。
     pub fn new(user_data_dir: &Path) -> Self {
         Self {
             directory: user_data_dir.join("overrides"),
@@ -16,10 +21,12 @@ impl OverrideStore {
         }
     }
 
+    /// 用途：读取并校验全部覆盖配置实体。
     pub fn list(&self) -> Result<Vec<Value>> {
-        let document = read_json_or_default(
+        let document = json_read_or_default(
             &self.list_path,
             serde_json::json!({ "Overrides": [] }),
+            "override",
         )?;
         document
             .get("Overrides")
@@ -27,12 +34,13 @@ impl OverrideStore {
             .context("override list must contain an Overrides array")?
             .iter()
             .cloned()
-            .map(validate_profile)
+            .map(profile_validate)
             .collect()
     }
 
+    /// 用途：新增或替换覆盖配置实体及其内容文件。
     pub fn save(&self, profile: Value, content: &str) -> Result<()> {
-        let profile = validate_profile(profile)?;
+        let profile = profile_validate(profile)?;
         let id = profile_id(&profile)?.to_owned();
         let new_path = self.content_path_for_profile(&profile)?;
         let mut profiles = self.list()?;
@@ -41,7 +49,7 @@ impl OverrideStore {
             .position(|candidate| profile_id(candidate).ok() == Some(id.as_str()));
         let old_path = index
             .and_then(|index| self.content_path_for_profile(&profiles[index]).ok());
-        atomic_write(&new_path, content.as_bytes())?;
+        file_write_atomic(&new_path, content.as_bytes())?;
         if let Some(index) = index {
             profiles[index] = profile;
         } else {
@@ -51,20 +59,22 @@ impl OverrideStore {
         if let Some(old_path) = old_path
             && old_path != new_path
         {
-            remove_if_exists(&old_path)?;
+            file_remove_if_exists(&old_path)?;
         }
         Ok(())
     }
 
+    /// 用途：按调用方给出的完整列表保存覆盖配置顺序。
     pub fn reorder(&self, profiles: &[Value]) -> Result<()> {
         let profiles = profiles
             .iter()
             .cloned()
-            .map(validate_profile)
+            .map(profile_validate)
             .collect::<Result<Vec<_>>>()?;
         self.write_list(&profiles)
     }
 
+    /// 用途：读取指定覆盖配置的文本内容。
     pub fn read_content(&self, id: &str) -> Result<String> {
         let profile = self.find(id)?;
         let path = self.content_path_for_profile(&profile)?;
@@ -72,13 +82,15 @@ impl OverrideStore {
             .with_context(|| format!("failed to read override content: {}", path.display()))
     }
 
+    /// 用途：返回指定覆盖配置的内容文件路径。
     pub fn content_path(&self, id: &str) -> Result<PathBuf> {
         let profile = self.find(id)?;
         self.content_path_for_profile(&profile)
     }
 
+    /// 用途：删除覆盖配置实体及其内容文件。
     pub fn delete(&self, id: &str) -> Result<()> {
-        validate_id(id)?;
+        entity_id_validate(id, "override")?;
         let mut profiles = self.list()?;
         let Some(index) = profiles
             .iter()
@@ -88,17 +100,19 @@ impl OverrideStore {
         };
         let profile = profiles.remove(index);
         self.write_list(&profiles)?;
-        remove_if_exists(&self.content_path_for_profile(&profile)?)
+        file_remove_if_exists(&self.content_path_for_profile(&profile)?)
     }
 
+    /// 用途：按标识查找并返回覆盖配置实体。
     fn find(&self, id: &str) -> Result<Value> {
-        validate_id(id)?;
+        entity_id_validate(id, "override")?;
         self.list()?
             .into_iter()
             .find(|profile| profile_id(profile).ok() == Some(id))
             .with_context(|| format!("override not found: {id}"))
     }
 
+    /// 用途：根据覆盖配置格式计算对应内容文件路径。
     fn content_path_for_profile(&self, profile: &Value) -> Result<PathBuf> {
         let id = profile_id(profile)?;
         let extension = match profile.get("Format") {
@@ -112,15 +126,17 @@ impl OverrideStore {
         Ok(self.directory.join(format!("{id}.{extension}")))
     }
 
+    /// 用途：原子保存覆盖配置列表文档。
     fn write_list(&self, profiles: &[Value]) -> Result<()> {
-        atomic_write(
+        file_write_atomic(
             &self.list_path,
             &serde_json::to_vec_pretty(&serde_json::json!({ "Overrides": profiles }))?,
         )
     }
 }
 
-fn validate_profile(profile: Value) -> Result<Value> {
+/// 用途：校验覆盖配置实体的结构和标识。
+fn profile_validate(profile: Value) -> Result<Value> {
     if !profile.is_object() {
         bail!("override must be an object");
     }
@@ -128,73 +144,18 @@ fn validate_profile(profile: Value) -> Result<Value> {
     Ok(profile)
 }
 
+/// 用途：提取并校验覆盖配置实体标识。
 fn profile_id(profile: &Value) -> Result<&str> {
     let id = profile
         .get("Id")
         .and_then(Value::as_str)
         .context("override is missing Id")?;
-    validate_id(id)?;
+    entity_id_validate(id, "override")?;
     Ok(id)
 }
 
-fn validate_id(id: &str) -> Result<()> {
-    if id.is_empty()
-        || !id
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
-    {
-        bail!("override id contains invalid characters");
-    }
-    Ok(())
-}
-
-fn read_json_or_default(path: &Path, default: Value) -> Result<Value> {
-    let content = match std::fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(default),
-        Err(error) => {
-            return Err(error).with_context(|| format!("failed to read {}", path.display()));
-        }
-    };
-    match serde_json::from_str(&content) {
-        Ok(document) => Ok(document),
-        Err(error) => {
-            let backup = path.with_extension("json.corrupt");
-            remove_if_exists(&backup)?;
-            if let Err(backup_error) = std::fs::rename(path, &backup) {
-                tracing::warn!(
-                    "failed to back up corrupt override state {}: {backup_error}",
-                    path.display()
-                );
-            }
-            tracing::warn!("invalid override state {} was reset: {error}", path.display());
-            Ok(default)
-        }
-    }
-}
-
-fn atomic_write(path: &Path, content: &[u8]) -> Result<()> {
-    let parent = path.parent().context("override path has no parent")?;
-    std::fs::create_dir_all(parent)
-        .with_context(|| format!("failed to create override directory: {}", parent.display()))?;
-    let temporary = path.with_extension("agent.tmp");
-    std::fs::write(&temporary, content)
-        .with_context(|| format!("failed to write temporary override: {}", temporary.display()))?;
-    if let Err(error) = std::fs::rename(&temporary, path) {
-        if path.exists() {
-            std::fs::remove_file(path)
-                .with_context(|| format!("failed to replace override: {}", path.display()))?;
-            std::fs::rename(&temporary, path)
-                .with_context(|| format!("failed to install override: {}", path.display()))?;
-        } else {
-            return Err(error)
-                .with_context(|| format!("failed to install override: {}", path.display()));
-        }
-    }
-    Ok(())
-}
-
-fn remove_if_exists(path: &Path) -> Result<()> {
+/// 用途：删除文件，并将文件不存在视为成功。
+fn file_remove_if_exists(path: &Path) -> Result<()> {
     match std::fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),

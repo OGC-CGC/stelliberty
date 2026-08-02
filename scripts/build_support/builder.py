@@ -42,7 +42,7 @@ def build_output(metadata: AppMetadata, platform_name: str, configuration: str, 
     build_label = f"{platform_name} {display_configuration(configuration)}"
 
     with timed_step(f"Check running output app {build_label}"):
-        close_running_output_app(metadata, output_dir)
+        close_running_output_app(metadata, target, output_dir)
 
     if clean:
         with timed_step(f"Clean output directory {build_label}"):
@@ -131,7 +131,16 @@ def build_rust(metadata: AppMetadata, configuration: str, target: PlatformTarget
     if configuration == "release":
         command.append("--release")
 
-    env = {"SBPROXY_APP_NAME": "sbproxyrev", "SBPROXY_APP_VERSION": metadata.version}
+    env = {
+        "SBPROXY_APP_NAME": "sbproxyrev",
+        "SBPROXY_APP_VERSION": metadata.version,
+        "SBPROXY_BUNDLE_IDENTIFIER": (
+            f"com.{metadata.app_name.lower()}.{metadata.app_name.lower()}"
+            f"{'.dev' if configuration == 'dev' else ''}"
+        ),
+        "SBPROXY_PIPE_PREFIX": metadata.app_name.lower(),
+        "SBPROXY_UI_BINARY": metadata.app_name,
+    }
     if configuration == "release":
         env.update(release_path_remap_env())
 

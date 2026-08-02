@@ -3,12 +3,12 @@ using SBproxy.Application.Platform;
 using SBproxy.Desktop.Services;
 using SBproxy.Infrastructure.Core;
 using SBproxy.Native.Hub;
-using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace SBproxy.Desktop;
 
-// 只编排普通模式 User Agent；启动配置策略归 Application。
+// UI 只连接并控制已经运行的 User Agent。
 internal static class AgentStartupCoordinator
 {
 #if DEBUG
@@ -21,10 +21,7 @@ internal static class AgentStartupCoordinator
 #endif
 
     private const int ProtocolVersion = 2;
-    private static readonly SemaphoreSlim StartGate = new(1, 1);
     private static readonly SemaphoreSlim UiSessionGate = new(1, 1);
-    private static readonly TimeSpan ConnectRetryDelay = TimeSpan.FromMilliseconds(100);
-    private static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(10);
     private static JsonRpcPipeClient? _uiSession;
     private static Action? _activateUi;
     private static Action? _shutdownUi;
@@ -32,53 +29,15 @@ internal static class AgentStartupCoordinator
 
     public static async Task<BootstrapResult> EnsureStartedAsync(CancellationToken cancellationToken = default)
     {
-        await StartGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var connected = await TryConnectAndStartCoreAsync(cancellationToken).ConfigureAwait(false);
-            if (connected is not null)
-            {
-                return connected;
-            }
-
-            var options = CreateBootstrapOptions();
-            var bootstrapPath = Path.Combine(
-                options.UserDataDir,
-                "runtime",
-                "_agent_bootstrap.yaml");
-            var launched = LaunchAgent(options, bootstrapPath);
-            if (!launched.Ok)
-            {
-                return launched;
-            }
-
-            using var startupTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            startupTimeout.CancelAfter(StartupTimeout);
-            while (!startupTimeout.IsCancellationRequested)
-            {
-                var result = await TryConnectAndStartCoreAsync(startupTimeout.Token).ConfigureAwait(false);
-                if (result is not null)
-                {
-                    return result;
-                }
-
-                await Task.Delay(ConnectRetryDelay, startupTimeout.Token).ConfigureAwait(false);
-            }
-
-            return BootstrapResult.Failure("User Agent startup timed out.");
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            return BootstrapResult.Failure("User Agent startup timed out.");
+            return connected ?? BootstrapResult.Failure("User Agent is not running.");
         }
         catch (Exception exception)
         {
-            AppLogger.Warning($"User Agent startup failed: {exception.Message}");
+            AppLogger.Warning($"User Agent connection failed: {exception.Message}");
             return BootstrapResult.Failure(exception.Message);
-        }
-        finally
-        {
-            StartGate.Release();
         }
     }
 
@@ -223,62 +182,6 @@ internal static class AgentStartupCoordinator
         return SendCoreCommandAsync("agent.exit_application", cancellationToken);
     }
 
-    public static BootstrapOptions CreateBootstrapOptions()
-    {
-        return new BootstrapOptions(
-            PipeName: PipeName,
-            MihomoPath: DesktopApplicationLayout.CoreBinaryPath,
-            DataCoreDir: DesktopApplicationLayout.CoreDirectory,
-            UserDataDir: DesktopApplicationLayout.AppDataDirectory,
-            MihomoPipe: MihomoPipe,
-            BootstrapYaml: string.Empty);
-    }
-
-    private static BootstrapResult LaunchAgent(BootstrapOptions options, string bootstrapPath)
-    {
-        if (!File.Exists(DesktopApplicationLayout.AgentBinaryPath))
-        {
-            return BootstrapResult.Failure(
-                $"User Agent executable was not found: {DesktopApplicationLayout.AgentBinaryPath}");
-        }
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = DesktopApplicationLayout.AgentBinaryPath,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WorkingDirectory = AppContext.BaseDirectory,
-        };
-        AddOption(startInfo, "--endpoint", options.PipeName);
-        AddOption(startInfo, "--mihomo-path", options.MihomoPath);
-        AddOption(startInfo, "--data-core-dir", options.DataCoreDir);
-        AddOption(startInfo, "--user-data-dir", options.UserDataDir);
-        AddOption(startInfo, "--mihomo-endpoint", options.MihomoPipe);
-        AddOption(startInfo, "--bootstrap-yaml-path", bootstrapPath);
-        AddOption(startInfo, "--ui-path", Environment.ProcessPath ?? throw new InvalidOperationException(
-            "The current UI executable path is unavailable."));
-        AddOption(startInfo, "--service-path", DesktopApplicationLayout.ServiceInstalledBinaryPath);
-        AddOption(startInfo, "--service-update-path", DesktopApplicationLayout.ServiceCommandBinaryPath);
-        AddOption(startInfo, "--install-data-dir", DesktopApplicationLayout.InstallDataDirectory);
-        AddOption(startInfo, "--app-version", AppMetadata.Version);
-
-        var process = Process.Start(startInfo);
-        if (process is null)
-        {
-            return BootstrapResult.Failure("User Agent process could not be created.");
-        }
-
-        AppLogger.Info($"User Agent launched: pid={process.Id}");
-        process.Dispose();
-        return BootstrapResult.Success();
-    }
-
-    private static void AddOption(ProcessStartInfo startInfo, string name, string value)
-    {
-        startInfo.ArgumentList.Add(name);
-        startInfo.ArgumentList.Add(value);
-    }
-
     private static async Task<BootstrapResult?> TryConnectAndStartCoreAsync(CancellationToken cancellationToken)
     {
         try
@@ -365,13 +268,22 @@ internal static class AgentStartupCoordinator
     {
         return OperatingSystem.IsWindows()
             ? $@"\\.\pipe\{name}"
-            : Path.Combine(Path.GetTempPath(), $"{name}.sock");
+            : Path.Combine(PrivateIpcDirectory(), $"{name}.sock");
     }
 
     private static string BuildAgentEndpoint(string name)
     {
         return OperatingSystem.IsWindows()
             ? name
-            : Path.Combine(Path.GetTempPath(), $"{name}.sock");
+            : Path.Combine(PrivateIpcDirectory(), $"{name}.sock");
     }
+
+    private static string PrivateIpcDirectory()
+        => UnixIpcDirectory(GetEuid());
+
+    internal static string UnixIpcDirectory(uint effectiveUserId)
+        => $"/tmp/{AppMetadata.PipePrefix}-ipc-{effectiveUserId}";
+
+    [DllImport("libc", EntryPoint = "geteuid")]
+    private static extern uint GetEuid();
 }

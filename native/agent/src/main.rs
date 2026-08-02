@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -9,9 +9,18 @@ use anyhow::{Context, Result, bail};
 use fs2::FileExt;
 use hub::infra::core_api::CoreApiClient;
 use hub::infra::core_runtime::CoreRuntime;
-use hub::infra::ipc::{ErrorBody, IpcServer, MethodHandler, Outgoing};
+use hub::infra::ipc::{ConnectionId, ErrorBody, IpcServer, MethodHandler, Outgoing};
 use hub::infra::paths::HubPaths;
+#[cfg(unix)]
+use interprocess::local_socket::{GenericFilePath, ToFsName};
+#[cfg(windows)]
+use interprocess::local_socket::{GenericNamespaced, ToNsName};
+use interprocess::local_socket::{
+    tokio::Stream as TokioIpcStream,
+    traits::tokio::Stream as TokioStreamExt,
+};
 use serde::{Deserialize, Serialize};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::{Mutex, broadcast, mpsc};
 
 mod background;
@@ -21,13 +30,16 @@ mod runtime_files;
 mod settings;
 mod service_manager;
 mod sources;
+mod storage;
 mod subscriptions;
 mod system_proxy;
 mod tray;
 mod updates;
 
+/// 用途：定义 Agent 与 UI/其他进程之间 IPC 协议的版本号。
 const PROTOCOL_VERSION: u32 = 2;
 
+/// 用途：保存启动 Agent 所需的路径、端点和运行参数。
 #[derive(Debug)]
 struct AgentOptions {
     endpoint: String,
@@ -41,8 +53,10 @@ struct AgentOptions {
     service_update_path: PathBuf,
     install_data_dir: PathBuf,
     app_version: String,
+    silent_start: bool,
 }
 
+/// 用途：记录 Agent 的持久化运行状态。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 struct AgentState {
@@ -51,7 +65,9 @@ struct AgentState {
     system_proxy_enabled: bool,
 }
 
+/// 用途：提供持久化 Agent 状态的默认值。
 impl Default for AgentState {
+    /// 用途：提供 Agent 的默认运行状态。
     fn default() -> Self {
         Self {
             desired_running: true,
@@ -61,17 +77,21 @@ impl Default for AgentState {
     }
 }
 
+/// 用途：负责从磁盘加载和原子保存 Agent 状态。
 struct AgentStateStore {
     path: PathBuf,
 }
 
+/// 用途：提供 Agent 状态的加载和原子保存接口。
 impl AgentStateStore {
+    /// 用途：根据用户数据目录创建状态存储。
     fn new(user_data_dir: &Path) -> Self {
         Self {
             path: user_data_dir.join("runtime").join("agent-state.json"),
         }
     }
 
+    /// 用途：读取持久化状态，读取失败时回退到默认值。
     fn load(&self) -> AgentState {
         let Ok(content) = std::fs::read_to_string(&self.path) else {
             return AgentState::default();
@@ -85,37 +105,79 @@ impl AgentStateStore {
         }
     }
 
+    /// 用途：将 Agent 状态序列化并安全写入磁盘。
     fn save(&self, state: &AgentState) -> Result<()> {
-        let parent = self
-            .path
-            .parent()
-            .context("agent state path has no parent directory")?;
-        std::fs::create_dir_all(parent).context("failed to create agent state directory")?;
-        let temporary_path = self.path.with_extension("json.tmp");
         let content =
             serde_json::to_vec_pretty(state).context("failed to serialize agent state")?;
-        std::fs::write(&temporary_path, content)
-            .context("failed to write temporary agent state")?;
-        if let Err(error) = std::fs::rename(&temporary_path, &self.path) {
-            if self.path.exists() {
-                std::fs::remove_file(&self.path)
-                    .context("failed to replace previous agent state")?;
-                std::fs::rename(&temporary_path, &self.path)
-                    .context("failed to install new agent state")?;
-            } else {
-                return Err(error).context("failed to install new agent state");
-            }
-        }
-        Ok(())
+        storage::file_write_atomic(&self.path, &content)
     }
 }
 
+/// 用途：在 Agent 状态缺少有效运行配置路径时，从当前订阅的既有配置恢复。
+fn state_runtime_path_recover(
+    user_data_dir: &Path,
+    state_store: &AgentStateStore,
+    subscription_store: &subscriptions::SubscriptionStore,
+    state: &mut AgentState,
+) -> Result<bool> {
+    if state
+        .runtime_yaml_path
+        .as_deref()
+        .is_some_and(Path::is_file)
+    {
+        return Ok(false);
+    }
+
+    let Some(subscription_id) = subscription_store.current_subscription_id()? else {
+        return Ok(false);
+    };
+    storage::entity_id_validate(&subscription_id, "subscription")?;
+    if matches!(subscription_id.as_str(), "." | "..") {
+        bail!("subscription id contains invalid path components");
+    }
+
+    let runtime_yaml_path = user_data_dir
+        .join("runtime")
+        .join(&subscription_id)
+        .join("runtime.yaml");
+    let content = match std::fs::read_to_string(&runtime_yaml_path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!(
+                    "failed to read recoverable runtime config: {}",
+                    runtime_yaml_path.display()
+                )
+            });
+        }
+    };
+    let yaml: serde_yaml_ng::Value = serde_yaml_ng::from_str(&content)
+        .with_context(|| format!("runtime config is invalid: {}", runtime_yaml_path.display()))?;
+    if !yaml.is_mapping() {
+        bail!(
+            "runtime config root must be a mapping: {}",
+            runtime_yaml_path.display()
+        );
+    }
+
+    state.runtime_yaml_path = Some(runtime_yaml_path.clone());
+    state_store.save(state)?;
+    tracing::info!(
+        "recovered Agent runtime config from selected subscription: {}",
+        runtime_yaml_path.display()
+    );
+    Ok(true)
+}
+
+/// 用途：聚合 Agent 的核心运行时、状态、IPC 连接和各类存储。
 struct AgentHandler {
     core: Arc<CoreRuntime>,
     state: Arc<Mutex<AgentState>>,
     state_store: Arc<AgentStateStore>,
     shutdown_tx: mpsc::Sender<()>,
     events: broadcast::Sender<Outgoing>,
+    active_connections: Mutex<HashSet<ConnectionId>>,
     ui: Mutex<UiState>,
     settings: Arc<Mutex<settings::SettingsStore>>,
     subscriptions: Arc<Mutex<subscriptions::SubscriptionStore>>,
@@ -133,42 +195,47 @@ struct AgentHandler {
     maintenance: Mutex<()>,
 }
 
+/// 用途：维护 UI 子进程及其 IPC 注册信息。
 struct UiState {
     path: PathBuf,
     child: Option<Child>,
-    registered_pid: Option<u32>,
+    registration: Option<UiRegistration>,
     pending_activation: bool,
 }
 
+/// 用途：标识已注册 UI 的连接和进程。
+#[derive(Debug, Clone, Copy)]
+struct UiRegistration {
+    connection_id: ConnectionId,
+    pid: u32,
+}
+
+/// 用途：提供 Agent 本地业务操作及 UI 生命周期协调能力。
 impl AgentHandler {
-    async fn switch_tun(&self, enabled: bool) -> std::result::Result<(), ErrorBody> {
-        if enabled {
-            let source = self
-                .state
-                .lock()
-                .await
-                .runtime_yaml_path
-                .clone()
-                .unwrap_or_else(|| self.bootstrap_yaml_path.clone());
-            let active = self
-                .user_data_dir
-                .join("runtime")
-                .join("_agent_service_active.yaml");
-            write_tun_config(&source, &active, true).map_err(internal_error)?;
-            self.core.stop_core().await.map_err(internal_error)?;
-            if let Err(error) = start_service_core(
-                &self.service_path,
-                &self.mihomo_path,
-                &self.data_core_dir,
-                &active,
-            ) {
-                let _ = self.core.start_core().await;
-                return Err(internal_error(error));
-            }
-        } else {
-            run_service_command(&self.service_path, "stop-core", None).map_err(internal_error)?;
-            self.core.start_core().await.map_err(internal_error)?;
-        }
+    /// 用途：启用或停用 TUN，并协调核心服务的切换。
+    async fn tun_switch(&self, enabled: bool) -> std::result::Result<(), ErrorBody> {
+        let source = self
+            .state
+            .lock()
+            .await
+            .runtime_yaml_path
+            .clone()
+            .unwrap_or_else(|| self.bootstrap_yaml_path.clone());
+        let active = self
+            .user_data_dir
+            .join("runtime")
+            .join("_agent_service_active.yaml");
+        tun_core_switch(
+            enabled,
+            &self.service_path,
+            &self.mihomo_path,
+            &self.data_core_dir,
+            &source,
+            &active,
+            &self.core,
+        )
+        .await
+        .map_err(internal_error)?;
         self.settings
             .lock()
             .await
@@ -177,7 +244,8 @@ impl AgentHandler {
         Ok(())
     }
 
-    async fn update_state(
+    /// 用途：更新并持久化 Agent 的期望运行状态及配置路径。
+    async fn state_update(
         &self,
         desired_running: bool,
         runtime_yaml_path: Option<PathBuf>,
@@ -190,14 +258,18 @@ impl AgentHandler {
         self.state_store.save(&state).map_err(internal_error)
     }
 
-    async fn activate_ui(&self) -> std::result::Result<serde_json::Value, ErrorBody> {
+    /// 用途：请求已注册的 UI 激活自身，必要时返回激活模式。
+    async fn ui_activate(&self) -> std::result::Result<serde_json::Value, ErrorBody> {
         let mut ui = self.ui.lock().await;
-        if ui.registered_pid.is_some() {
-            let _ = self.events.send(Outgoing::Event {
-                event: "ui.activate_requested".into(),
-                data: serde_json::json!({}),
-            });
-            return Ok(serde_json::json!({ "mode": "activate" }));
+        if let Some(registration) = ui.registration {
+            if ui_child_is_valid(&mut ui, registration.pid) {
+                let _ = self.events.send(Outgoing::Event {
+                    event: "ui.activate_requested".into(),
+                    data: serde_json::json!({}),
+                });
+                return Ok(serde_json::json!({ "mode": "activate" }));
+            }
+            ui.registration = None;
         }
 
         if let Some(child) = ui.child.as_mut() {
@@ -230,10 +302,212 @@ impl AgentHandler {
         ui.pending_activation = true;
         Ok(serde_json::json!({ "mode": "spawn", "pid": pid }))
     }
+
+    /// 用途：校验 UI 子进程并登记其 IPC 连接。
+    async fn ui_register(
+        &self,
+        connection_id: ConnectionId,
+        params: &serde_json::Value,
+    ) -> std::result::Result<serde_json::Value, ErrorBody> {
+        let pid = params
+            .get("pid")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|value| u32::try_from(value).ok())
+            .ok_or_else(|| ErrorBody {
+                code: "ui.invalid_registration".into(),
+                message: "params is missing a valid pid".into(),
+            })?;
+        let should_activate = {
+            let active_connections = self.active_connections.lock().await;
+            if !active_connections.contains(&connection_id) {
+                return Err(ErrorBody {
+                    code: "ui.connection_closed".into(),
+                    message: "UI registration connection is already closed".into(),
+                });
+            }
+            let mut ui = self.ui.lock().await;
+            if !ui_child_is_valid(&mut ui, pid) {
+                return Err(ErrorBody {
+                    code: "ui.invalid_registration".into(),
+                    message: "UI process was not started by this User Agent".into(),
+                });
+            }
+            ui.registration = Some(UiRegistration { connection_id, pid });
+            std::mem::take(&mut ui.pending_activation)
+        };
+        if should_activate {
+            let _ = self.events.send(Outgoing::Event {
+                event: "ui.activate_requested".into(),
+                data: serde_json::json!({}),
+            });
+        }
+        let update_version = std::fs::read_to_string(
+            self.user_data_dir.join("runtime").join("agent-update.json"),
+        )
+        .ok()
+        .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
+        .and_then(|document| {
+            document
+                .get("version")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        });
+        Ok(serde_json::json!({
+            "activate": should_activate,
+            "update_version": update_version,
+        }))
+    }
+
+    /// 用途：移除指定连接对应的 UI 注册信息。
+    async fn ui_unregister(
+        &self,
+        connection_id: ConnectionId,
+        params: &serde_json::Value,
+    ) -> serde_json::Value {
+        let pid = params
+            .get("pid")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|value| u32::try_from(value).ok());
+        let mut ui = self.ui.lock().await;
+        if ui.registration.is_some_and(|registration| {
+            registration.connection_id == connection_id && Some(registration.pid) == pid
+        }) {
+            ui.registration = None;
+        }
+        serde_json::json!({})
+    }
+
+    /// 用途：关闭并清理已断开的 UI 连接。
+    async fn ui_connection_close(&self, connection_id: ConnectionId) {
+        let mut ui = self.ui.lock().await;
+        if !ui
+            .registration
+            .is_some_and(|registration| registration.connection_id == connection_id)
+        {
+            return;
+        }
+        ui.registration = None;
+        if let Some(mut child) = ui.child.take()
+            && child.try_wait().ok().flatten().is_none()
+        {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        ui.pending_activation = false;
+    }
+}
+
+/// 用途：检查 UI 子进程是否仍然有效，并清理失效进程。
+fn ui_child_is_valid(ui: &mut UiState, pid: u32) -> bool {
+    let Some(child) = ui.child.as_mut() else {
+        return false;
+    };
+    if child.id() != pid {
+        return false;
+    }
+    let running = match child.try_wait() {
+        Ok(None) => true,
+        Ok(Some(_)) | Err(_) => {
+            ui.child = None;
+            false
+        }
+    };
+    if !running {
+        return false;
+    }
+    let expected = std::fs::canonicalize(&ui.path).ok();
+    let actual = process_executable_path(pid)
+        .and_then(|path| std::fs::canonicalize(path).ok());
+    if expected
+        .as_ref()
+        .zip(actual.as_ref())
+        .is_some_and(|(expected, actual)| same_executable_path(expected, actual))
+    {
+        return true;
+    }
+    if let Some(mut child) = ui.child.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    false
+}
+
+#[cfg(windows)]
+/// 用途：读取 Windows 进程对应的可执行文件路径。
+fn process_executable_path(pid: u32) -> Option<PathBuf> {
+    use windows_sys::Win32::Foundation::{CloseHandle, FALSE};
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
+    };
+
+    let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid) };
+    if process.is_null() {
+        return None;
+    }
+    let mut buffer = vec![0_u16; 32_768];
+    let mut length = u32::try_from(buffer.len()).ok()?;
+    let succeeded =
+        unsafe { QueryFullProcessImageNameW(process, 0, buffer.as_mut_ptr(), &mut length) } != 0;
+    unsafe {
+        CloseHandle(process);
+    }
+    if !succeeded {
+        return None;
+    }
+    buffer.truncate(usize::try_from(length).ok()?);
+    Some(PathBuf::from(String::from_utf16(&buffer).ok()?))
+}
+
+#[cfg(target_os = "linux")]
+/// 用途：读取 Linux 进程对应的可执行文件路径。
+fn process_executable_path(pid: u32) -> Option<PathBuf> {
+    std::fs::read_link(format!("/proc/{pid}/exe")).ok()
+}
+
+#[cfg(target_os = "macos")]
+/// 用途：读取 macOS 进程对应的可执行文件路径。
+fn process_executable_path(pid: u32) -> Option<PathBuf> {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let mut buffer = vec![0_u8; libc::PROC_PIDPATHINFO_MAXSIZE as usize];
+    let length = unsafe {
+        libc::proc_pidpath(
+            i32::try_from(pid).ok()?,
+            buffer.as_mut_ptr().cast(),
+            u32::try_from(buffer.len()).ok()?,
+        )
+    };
+    if length <= 0 {
+        return None;
+    }
+    buffer.truncate(usize::try_from(length).ok()?);
+    Some(PathBuf::from(OsString::from_vec(buffer)))
+}
+
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+/// 用途：在不支持的平台上返回未知的进程可执行文件路径。
+fn process_executable_path(_pid: u32) -> Option<PathBuf> {
+    None
+}
+
+#[cfg(windows)]
+/// 用途：以 Windows 不区分大小写的规则比较可执行文件路径。
+fn same_executable_path(left: &Path, right: &Path) -> bool {
+    left.to_string_lossy()
+        .eq_ignore_ascii_case(&right.to_string_lossy())
+}
+
+#[cfg(not(windows))]
+/// 用途：按当前平台路径规则比较可执行文件路径。
+fn same_executable_path(left: &Path, right: &Path) -> bool {
+    left == right
 }
 
 #[async_trait::async_trait]
+/// 用途：将 Agent 业务能力接入共享 IPC 方法处理接口。
 impl MethodHandler for AgentHandler {
+    /// 用途：分发 IPC 请求并返回对应的 Agent 操作结果。
     async fn handle(
         &self,
         method: &str,
@@ -766,13 +1040,13 @@ impl MethodHandler for AgentHandler {
                     .and_then(serde_json::Value::as_str)
                     .unwrap_or("Direct");
                 let settings = self.settings.lock().await.load().map_err(internal_error)?;
-                sources::download(source_location, user_agent, proxy_mode, &settings)
+                sources::source_download(source_location, user_agent, proxy_mode, &settings)
                     .await
                     .map_err(internal_error)
             }
             "sources.local.get" => {
                 let path = required_string_param(&params, "path", "sources.invalid_path")?;
-                let content = sources::read_local(path).map_err(internal_error)?;
+                let content = sources::source_read_local(path).map_err(internal_error)?;
                 Ok(serde_json::json!({ "content": content }))
             }
             "sources.provider.upload" => {
@@ -788,7 +1062,7 @@ impl MethodHandler for AgentHandler {
                 )?;
                 let source_path =
                     required_string_param(&params, "source_path", "sources.invalid_source_path")?;
-                sources::upload_provider(
+                sources::provider_upload(
                     &self.data_core_dir,
                     vehicle_type,
                     provider_path,
@@ -801,7 +1075,7 @@ impl MethodHandler for AgentHandler {
                     .get("channel")
                     .and_then(serde_json::Value::as_str)
                     .unwrap_or("stable");
-                updates::check_app_update(
+                updates::app_update_check(
                     &self.app_version,
                     channel,
                     &format!("Shadioium/{}", self.app_version),
@@ -811,7 +1085,7 @@ impl MethodHandler for AgentHandler {
             }
             "core.update" => {
                 let _maintenance = self.maintenance.lock().await;
-                let current = updates::download_latest_core(
+                let current = updates::core_download_latest(
                     &self.mihomo_path,
                     &format!("Shadioium/{}", self.app_version),
                 )
@@ -834,7 +1108,7 @@ impl MethodHandler for AgentHandler {
                     }));
                 }
                 let restart = if tun_enabled {
-                    run_service_command(&self.service_path, "restart-core", None)
+                    service_manager::service_command(&self.service_path, "restart-core", None)
                         .map(|_| serde_json::json!({}))
                         .map_err(internal_error)
                 } else {
@@ -843,9 +1117,14 @@ impl MethodHandler for AgentHandler {
                         .await
                 };
                 if let Err(error) = restart {
-                    let _ = updates::restore_core(&self.mihomo_path);
+                    let _ = updates::core_restore(&self.mihomo_path);
                     if tun_enabled {
-                        let _ = run_service_command(&self.service_path, "restart-core", None);
+                        let _ =
+                            service_manager::service_command(
+                                &self.service_path,
+                                "restart-core",
+                                None,
+                            );
                     } else {
                         let _ = self
                             .core
@@ -877,9 +1156,14 @@ impl MethodHandler for AgentHandler {
                     }
                 }
                 if !running {
-                    let _ = updates::restore_core(&self.mihomo_path);
+                    let _ = updates::core_restore(&self.mihomo_path);
                     if tun_enabled {
-                        let _ = run_service_command(&self.service_path, "restart-core", None);
+                        let _ =
+                            service_manager::service_command(
+                                &self.service_path,
+                                "restart-core",
+                                None,
+                            );
                     } else {
                         let _ = self
                             .core
@@ -892,7 +1176,7 @@ impl MethodHandler for AgentHandler {
                         "message": "Core update failed: new core failed to start",
                     }));
                 }
-                let _ = updates::delete_core_backup(&self.mihomo_path);
+                let _ = updates::core_backup_delete(&self.mihomo_path);
                 Ok(serde_json::json!({
                     "status": "Updated",
                     "version": version,
@@ -905,7 +1189,7 @@ impl MethodHandler for AgentHandler {
                     .get("path")
                     .and_then(serde_json::Value::as_str)
                     .filter(|value| !value.trim().is_empty());
-                let path = backups::create(&self.user_data_dir, destination)
+                let path = backups::backup_create(&self.user_data_dir, destination)
                     .map_err(internal_error)?;
                 Ok(serde_json::json!({
                     "success": true,
@@ -923,12 +1207,12 @@ impl MethodHandler for AgentHandler {
                     .get("mode")
                     .and_then(serde_json::Value::as_str)
                     == Some("Merge");
-                let message = backups::restore(&self.user_data_dir, source, merge)
+                let message = backups::backup_restore(&self.user_data_dir, source, merge)
                     .map_err(internal_error)?;
                 Ok(serde_json::json!({ "success": true, "message": message }))
             }
             "backups.webdav.test" => {
-                let settings = parse_webdav_settings(&params)?;
+                let settings = webdav_settings_parse(&params)?;
                 backups::webdav_test(
                     &settings,
                     &format!("Shadioium/{}", self.app_version),
@@ -941,7 +1225,7 @@ impl MethodHandler for AgentHandler {
                 }))
             }
             "backups.webdav.list" => {
-                let settings = parse_webdav_settings(&params)?;
+                let settings = webdav_settings_parse(&params)?;
                 let entries = backups::webdav_list(
                     &settings,
                     &format!("Shadioium/{}", self.app_version),
@@ -952,7 +1236,7 @@ impl MethodHandler for AgentHandler {
             }
             "backups.webdav.create" => {
                 let _maintenance = self.maintenance.lock().await;
-                let settings = parse_webdav_settings(&params)?;
+                let settings = webdav_settings_parse(&params)?;
                 backups::webdav_create(
                     &self.user_data_dir,
                     &settings,
@@ -967,7 +1251,7 @@ impl MethodHandler for AgentHandler {
             }
             "backups.webdav.restore" => {
                 let _maintenance = self.maintenance.lock().await;
-                let settings = parse_webdav_settings(&params)?;
+                let settings = webdav_settings_parse(&params)?;
                 let file_name = params
                     .get("file_name")
                     .and_then(serde_json::Value::as_str)
@@ -989,7 +1273,7 @@ impl MethodHandler for AgentHandler {
             }
             "backups.webdav.delete" => {
                 let _maintenance = self.maintenance.lock().await;
-                let settings = parse_webdav_settings(&params)?;
+                let settings = webdav_settings_parse(&params)?;
                 let file_name = required_string_param(
                     &params,
                     "file_name",
@@ -1007,10 +1291,10 @@ impl MethodHandler for AgentHandler {
                     "message": "WebDAV backup deleted",
                 }))
             }
-            "service.status" => Ok(service_manager::status(&self.service_path)),
+            "service.status" => Ok(service_manager::service_status(&self.service_path)),
             "service.install" => {
                 let _maintenance = self.maintenance.lock().await;
-                let message = service_manager::install(
+                let message = service_manager::service_install(
                     &self.service_update_path,
                     &self.service_path,
                     &self.install_data_dir,
@@ -1024,7 +1308,7 @@ impl MethodHandler for AgentHandler {
             }
             "service.uninstall" => {
                 let _maintenance = self.maintenance.lock().await;
-                let message = service_manager::uninstall(
+                let message = service_manager::service_uninstall(
                     &self.service_path,
                     &self.service_update_path,
                 )
@@ -1041,7 +1325,7 @@ impl MethodHandler for AgentHandler {
                 )?;
                 let config_path =
                     required_string_param(&params, "config_path", "service.invalid_config_path")?;
-                let output = start_service_core(
+                let output = service_core_start(
                     &self.service_path,
                     Path::new(mihomo_path),
                     Path::new(data_core_dir),
@@ -1051,17 +1335,20 @@ impl MethodHandler for AgentHandler {
                 Ok(service_operation_result(output))
             }
             "service.stop_core" => {
-                let output = run_service_command(&self.service_path, "stop-core", None)
+                let output =
+                    service_manager::service_command(&self.service_path, "stop-core", None)
                     .map_err(internal_error)?;
                 Ok(service_operation_result(output))
             }
             "service.restart_core" => {
-                let output = run_service_command(&self.service_path, "restart-core", None)
+                let output =
+                    service_manager::service_command(&self.service_path, "restart-core", None)
                     .map_err(internal_error)?;
                 Ok(service_operation_result(output))
             }
             "service.heartbeat" => {
-                let output = run_service_command(&self.service_path, "heartbeat", None)
+                let output =
+                    service_manager::service_command(&self.service_path, "heartbeat", None)
                     .map_err(internal_error)?;
                 Ok(service_operation_result(output))
             }
@@ -1074,7 +1361,7 @@ impl MethodHandler for AgentHandler {
                 if system_proxy_enabled {
                     let settings = self.settings.lock().await.load().unwrap_or_default();
                     if let Err(error) =
-                        system_proxy::set_enabled(&self.user_data_dir, &settings, false)
+                        system_proxy::proxy_set(&self.user_data_dir, &settings, false)
                     {
                         tracing::warn!("failed to disable system proxy during exit: {error:#}");
                     } else {
@@ -1098,7 +1385,7 @@ impl MethodHandler for AgentHandler {
                         code: "agent.invalid_tun_state".into(),
                         message: "params is missing enabled".into(),
                     })?;
-                self.switch_tun(enabled).await?;
+                self.tun_switch(enabled).await?;
                 Ok(serde_json::json!({}))
             }
             "agent.set_system_proxy" => {
@@ -1142,61 +1429,18 @@ impl MethodHandler for AgentHandler {
                         })
                         .unwrap_or_default();
                 }
-                system_proxy::set_enabled(&self.user_data_dir, &settings, enabled)
+                system_proxy::proxy_set(&self.user_data_dir, &settings, enabled)
                     .map_err(internal_error)?;
                 let mut state = self.state.lock().await;
                 state.system_proxy_enabled = enabled;
                 self.state_store.save(&state).map_err(internal_error)?;
                 Ok(serde_json::json!({ "enabled": enabled }))
             }
-            "ui.activate" => self.activate_ui().await,
-            "ui.register" => {
-                let pid = params
-                    .get("pid")
-                    .and_then(serde_json::Value::as_u64)
-                    .and_then(|value| u32::try_from(value).ok())
-                    .ok_or_else(|| ErrorBody {
-                        code: "ui.invalid_registration".into(),
-                        message: "params is missing a valid pid".into(),
-                    })?;
-                let should_activate = {
-                    let mut ui = self.ui.lock().await;
-                    ui.registered_pid = Some(pid);
-                    std::mem::take(&mut ui.pending_activation)
-                };
-                if should_activate {
-                    let _ = self.events.send(Outgoing::Event {
-                        event: "ui.activate_requested".into(),
-                        data: serde_json::json!({}),
-                    });
-                }
-                let update_version = std::fs::read_to_string(
-                    self.user_data_dir.join("runtime").join("agent-update.json"),
-                )
-                .ok()
-                .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
-                .and_then(|document| {
-                    document
-                        .get("version")
-                        .and_then(serde_json::Value::as_str)
-                        .map(str::to_owned)
-                });
-                Ok(serde_json::json!({
-                    "activate": should_activate,
-                    "update_version": update_version,
-                }))
-            }
-            "ui.unregister" => {
-                let pid = params
-                    .get("pid")
-                    .and_then(serde_json::Value::as_u64)
-                    .and_then(|value| u32::try_from(value).ok());
-                let mut ui = self.ui.lock().await;
-                if pid.is_none() || ui.registered_pid == pid {
-                    ui.registered_pid = None;
-                }
-                Ok(serde_json::json!({}))
-            }
+            "ui.activate" => self.ui_activate().await,
+            "ui.register" | "ui.unregister" => Err(ErrorBody {
+                code: "ui.connection_required".into(),
+                message: "UI registration requires a tracked IPC connection".into(),
+            }),
             "core.status" if tun_enabled => {
                 service_core_snapshot(&self.service_path, &self.mihomo_endpoint)
                     .map_err(internal_error)
@@ -1224,27 +1468,28 @@ impl MethodHandler for AgentHandler {
                     .user_data_dir
                     .join("runtime")
                     .join("_agent_service_active.yaml");
-                write_tun_config(&source, &active, true).map_err(internal_error)?;
-                let output = start_service_core(
+                tun_config_write(&source, &active).map_err(internal_error)?;
+                let output = service_core_start(
                     &self.service_path,
                     &self.mihomo_path,
                     &self.data_core_dir,
                     &active,
                 )
                 .map_err(internal_error)?;
-                Ok(serde_json::json!({ "pid": parse_pid(&output) }))
+                Ok(serde_json::json!({ "pid": pid_parse(&output) }))
             }
             "core.stop" if tun_enabled => {
-                run_service_command(&self.service_path, "stop-core", None)
+                service_manager::service_command(&self.service_path, "stop-core", None)
                     .map_err(internal_error)?;
-                self.update_state(false, None).await?;
+                self.state_update(false, None).await?;
                 Ok(serde_json::json!({}))
             }
             "core.restart" if tun_enabled => {
-                let output = run_service_command(&self.service_path, "restart-core", None)
+                let output =
+                    service_manager::service_command(&self.service_path, "restart-core", None)
                     .map_err(internal_error)?;
-                self.update_state(true, None).await?;
-                Ok(serde_json::json!({ "pid": parse_pid(&output) }))
+                self.state_update(true, None).await?;
+                Ok(serde_json::json!({ "pid": pid_parse(&output) }))
             }
             "core.apply_config" if tun_enabled => {
                 let source = params
@@ -1259,30 +1504,30 @@ impl MethodHandler for AgentHandler {
                     .user_data_dir
                     .join("runtime")
                     .join("_agent_service_active.yaml");
-                write_tun_config(&source, &active, true).map_err(internal_error)?;
-                let output = start_service_core(
+                tun_config_write(&source, &active).map_err(internal_error)?;
+                let output = service_core_start(
                     &self.service_path,
                     &self.mihomo_path,
                     &self.data_core_dir,
                     &active,
                 )
                 .map_err(internal_error)?;
-                self.update_state(true, Some(source)).await?;
-                Ok(serde_json::json!({ "mode": "restart", "pid": parse_pid(&output) }))
+                self.state_update(true, Some(source)).await?;
+                Ok(serde_json::json!({ "mode": "restart", "pid": pid_parse(&output) }))
             }
             "core.start" => {
                 let result = self.core.handle(method, params).await?;
-                self.update_state(true, None).await?;
+                self.state_update(true, None).await?;
                 Ok(result)
             }
             "core.stop" => {
                 let result = self.core.handle(method, params).await?;
-                self.update_state(false, None).await?;
+                self.state_update(false, None).await?;
                 Ok(result)
             }
             "core.restart" => {
                 let result = self.core.handle(method, params).await?;
-                self.update_state(true, None).await?;
+                self.state_update(true, None).await?;
                 Ok(result)
             }
             "core.apply_config" => {
@@ -1291,14 +1536,41 @@ impl MethodHandler for AgentHandler {
                     .and_then(|value| value.as_str())
                     .map(PathBuf::from);
                 let result = self.core.handle(method, params).await?;
-                self.update_state(true, runtime_yaml_path).await?;
+                self.state_update(true, runtime_yaml_path).await?;
                 Ok(result)
             }
             _ => self.core.handle(method, params).await,
         }
     }
+
+    /// 用途：分发依赖连接身份的 UI 请求或普通 IPC 请求。
+    async fn handle_connection(
+        &self,
+        connection_id: ConnectionId,
+        method: &str,
+        params: serde_json::Value,
+    ) -> std::result::Result<serde_json::Value, ErrorBody> {
+        match method {
+            "ui.register" => self.ui_register(connection_id, &params).await,
+            "ui.unregister" => Ok(self.ui_unregister(connection_id, &params).await),
+            _ => self.handle(method, params).await,
+        }
+    }
+
+    /// 用途：登记新建立的 IPC 连接。
+    async fn connection_opened(&self, connection_id: ConnectionId) {
+        self.active_connections.lock().await.insert(connection_id);
+    }
+
+    /// 用途：移除已断开的 IPC 连接并清理关联 UI。
+    async fn connection_closed(&self, connection_id: ConnectionId) {
+        let mut active_connections = self.active_connections.lock().await;
+        active_connections.remove(&connection_id);
+        self.ui_connection_close(connection_id).await;
+    }
 }
 
+/// 用途：将内部错误转换为 IPC 可传输的错误体。
 fn internal_error(error: impl std::fmt::Display) -> ErrorBody {
     ErrorBody {
         code: "agent.internal".into(),
@@ -1306,6 +1578,7 @@ fn internal_error(error: impl std::fmt::Display) -> ErrorBody {
     }
 }
 
+/// 用途：从 JSON 参数中读取必需的字符串字段。
 fn required_string_param<'a>(
     params: &'a serde_json::Value,
     name: &str,
@@ -1321,7 +1594,8 @@ fn required_string_param<'a>(
         })
 }
 
-fn parse_webdav_settings(
+/// 用途：解析 WebDAV 配置参数并校验必需字段。
+fn webdav_settings_parse(
     params: &serde_json::Value,
 ) -> std::result::Result<backups::WebDavSettings, ErrorBody> {
     serde_json::from_value(
@@ -1339,6 +1613,7 @@ fn parse_webdav_settings(
     })
 }
 
+/// 用途：构造服务操作的统一 JSON 返回值。
 fn service_operation_result(message: String) -> serde_json::Value {
     serde_json::json!({
         "type": "Succeeded",
@@ -1350,10 +1625,18 @@ fn service_operation_result(message: String) -> serde_json::Value {
     })
 }
 
+/// 启动 Agent。
 fn main() -> Result<()> {
-    init_tracing();
-    let options = parse_options()?;
-    tray::run(move |command_rx, desktop_proxy| {
+    tracing_init();
+    let options = agent_options_parse()?;
+
+    // 防止多个 agent 实例运行
+    if agent_exists(&options)? {
+        return Ok(());
+    }
+
+    // 启动托盘
+    tray::tray_run(move |command_rx, desktop_proxy| {
         let runtime = match tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -1365,30 +1648,41 @@ fn main() -> Result<()> {
                 return;
             }
         };
-        if let Err(error) = runtime.block_on(run(options, command_rx, desktop_proxy.clone())) {
+        if let Err(error) =
+            runtime.block_on(agent_run(options, command_rx, desktop_proxy.clone()))
+        {
             tracing::error!("User Agent stopped with an error: {error:#}");
         }
         let _ = desktop_proxy.send_event(tray::DesktopEvent::BackendStopped);
     })
 }
 
-async fn run(
+/// 用途：初始化 Agent 的运行时、IPC 服务和后台任务。
+async fn agent_run(
     options: AgentOptions,
     mut command_rx: mpsc::UnboundedReceiver<tray::AgentCommand>,
     desktop_proxy: tao::event_loop::EventLoopProxy<tray::DesktopEvent>,
 ) -> Result<()> {
     let runtime_dir = options.user_data_dir.join("runtime");
     std::fs::create_dir_all(&runtime_dir).context("failed to create runtime directory")?;
-    let _instance_lock = acquire_instance_lock(&runtime_dir)?;
+    ipc_directory_prepare(&options)?;
+    let _instance_lock = instance_lock_acquire(&runtime_dir)?;
 
     let state_store = Arc::new(AgentStateStore::new(&options.user_data_dir));
-    let state = state_store.load();
+    let mut state = state_store.load();
+    let subscriptions = subscriptions::SubscriptionStore::new(&options.user_data_dir);
+    if let Err(error) = state_runtime_path_recover(
+        &options.user_data_dir,
+        &state_store,
+        &subscriptions,
+        &mut state,
+    ) {
+        tracing::warn!("failed to recover Agent runtime config: {error:#}");
+    }
     let settings_store = Arc::new(Mutex::new(settings::SettingsStore::new(
         &options.user_data_dir,
     )));
-    let subscription_store = Arc::new(Mutex::new(subscriptions::SubscriptionStore::new(
-        &options.user_data_dir,
-    )));
+    let subscription_store = Arc::new(Mutex::new(subscriptions));
     let override_store = Arc::new(Mutex::new(overrides::OverrideStore::new(
         &options.user_data_dir,
     )));
@@ -1397,7 +1691,7 @@ async fn run(
         &options.data_core_dir,
     )));
     let initial_settings = settings_store.lock().await.load().unwrap_or_default();
-    let bootstrap_yaml = load_startup_yaml(&options, &state, &initial_settings)?;
+    let bootstrap_yaml = startup_yaml_load(&options, &state, &initial_settings)?;
     let paths = HubPaths::new(
         options.user_data_dir.clone(),
         options.mihomo_path.clone(),
@@ -1423,10 +1717,11 @@ async fn run(
         state_store,
         shutdown_tx: agent_shutdown_tx,
         events: events_tx.clone(),
+        active_connections: Mutex::new(HashSet::new()),
         ui: Mutex::new(UiState {
             path: options.ui_path.clone(),
             child: None,
-            registered_pid: None,
+            registration: None,
             pending_activation: false,
         }),
         settings: settings_store.clone(),
@@ -1448,17 +1743,17 @@ async fn run(
     let (server, _, server_shutdown_tx) = IpcServer::with_events(handler, events_tx.clone());
     let endpoint = options.endpoint.clone();
     let mut server_task = tokio::spawn(async move { server.serve(&endpoint).await });
-    let supervisor_task = tokio::spawn(supervise_core(
+    let supervisor_task = tokio::spawn(core_supervise(
         core.clone(),
         shared_state.clone(),
         events_rx,
     ));
-    let service_log_task = tokio::spawn(supervise_service_core_logs(
+    let service_log_task = tokio::spawn(service_core_logs_supervise(
         options.mihomo_endpoint.clone(),
         settings_store.clone(),
         events_tx.clone(),
     ));
-    let service_state_task = tokio::spawn(supervise_service_core_state(
+    let service_state_task = tokio::spawn(service_core_state_supervise(
         options.service_path.clone(),
         settings_store.clone(),
         events_tx.clone(),
@@ -1479,7 +1774,7 @@ async fn run(
         core_running: false,
         system_proxy_enabled: state.system_proxy_enabled,
         tun_enabled: initial_settings.is_tun_enabled,
-        outbound_mode: parse_outbound_mode(&initial_settings.outbound_mode),
+        outbound_mode: outbound_mode_parse(&initial_settings.outbound_mode),
     };
     let _ = desktop_proxy.send_event(tray::DesktopEvent::StateChanged(tray_state.clone()));
     let _ = desktop_proxy.send_event(tray::DesktopEvent::HotKeysChanged([
@@ -1509,23 +1804,34 @@ async fn run(
         }
     });
 
-    if state.desired_running {
-        let startup = if initial_settings.is_tun_enabled {
-            switch_tun_host(true, &options, &shared_state, &core).await
-        } else {
-            core.start_core().await
-        };
-        if let Err(error) = startup {
-            tracing::error!("initial core startup failed: {error:#}");
-        } else if initial_settings.is_tun_enabled {
+    let startup = if initial_settings.is_tun_enabled {
+        tun_host_switch(true, &options, &shared_state, &core).await
+    } else {
+        core.start_core().await
+    };
+    if let Err(error) = startup {
+        tracing::error!("initial core startup failed: {error:#}");
+    } else {
+        agent_handler.state_update(true, None).await.map_err(|error| {
+            anyhow::anyhow!("failed to persist initial core state: {}", error.message)
+        })?;
+        if initial_settings.is_tun_enabled {
             tray_state.core_running = true;
             let _ = desktop_proxy.send_event(tray::DesktopEvent::StateChanged(tray_state.clone()));
+        }
+        if !options.silent_start {
+            agent_handler
+                .ui_activate()
+                .await
+                .map_err(|error| {
+                    anyhow::anyhow!("initial UI activation failed: {}", error.message)
+                })?;
         }
     }
 
     loop {
         tokio::select! {
-            signal = shutdown_signal() => {
+            signal = shutdown_signal_wait() => {
                 signal.context("failed to listen for agent shutdown signal")?;
                 break;
             }
@@ -1534,7 +1840,7 @@ async fn run(
                 match settings_store.lock().await.reload_if_changed() {
                     Ok(Some(changed)) => {
                         if changed.is_tun_enabled != tray_state.tun_enabled {
-                            if let Err(error) = switch_tun_host(
+                            if let Err(error) = tun_host_switch(
                                 changed.is_tun_enabled,
                                 &options,
                                 &shared_state,
@@ -1550,7 +1856,7 @@ async fn run(
                         } else {
                             pending_tun_switch = None;
                         }
-                        tray_state.outbound_mode = parse_outbound_mode(&changed.outbound_mode);
+                        tray_state.outbound_mode = outbound_mode_parse(&changed.outbound_mode);
                         let _ = desktop_proxy.send_event(
                             tray::DesktopEvent::StateChanged(tray_state.clone())
                         );
@@ -1567,7 +1873,7 @@ async fn run(
                     }
                     Ok(None) => {
                         if let Some(enabled) = pending_tun_switch {
-                            if let Err(error) = switch_tun_host(
+                            if let Err(error) = tun_host_switch(
                                 enabled,
                                 &options,
                                 &shared_state,
@@ -1588,16 +1894,16 @@ async fn run(
                 }
             }
             _ = service_heartbeat.tick() => {
-                send_service_heartbeat(&options.service_path);
+                service_heartbeat_send(&options.service_path);
             }
             command = command_rx.recv() => {
                 match command {
                     Some(tray::AgentCommand::ActivateUi) => {
-                        let _ = agent_handler.activate_ui().await;
+                        let _ = agent_handler.ui_activate().await;
                     }
                     Some(tray::AgentCommand::RestartCore) => {
                         if tray_state.tun_enabled {
-                            if let Err(error) = run_service_command(
+                            if let Err(error) = service_manager::service_command(
                                 &options.service_path,
                                 "restart-core",
                                 None,
@@ -1610,7 +1916,7 @@ async fn run(
                     }
                     Some(tray::AgentCommand::CopyTerminal(shell)) => {
                         let settings = settings_store.lock().await.load().unwrap_or_default();
-                        if let Err(error) = copy_terminal_proxy(shell, &settings) {
+                        if let Err(error) = terminal_proxy_copy(shell, &settings) {
                             tracing::warn!("failed to copy terminal proxy command: {error:#}");
                         }
                     }
@@ -1638,7 +1944,7 @@ async fn run(
                     Some(tray::AgentCommand::ToggleSystemProxy) => {
                         let enabled = !tray_state.system_proxy_enabled;
                         let settings = settings_store.lock().await.load().unwrap_or_default();
-                        match system_proxy::set_enabled(&options.user_data_dir, &settings, enabled) {
+                        match system_proxy::proxy_set(&options.user_data_dir, &settings, enabled) {
                             Ok(()) => {
                                 tray_state.system_proxy_enabled = enabled;
                                 let mut state = shared_state.lock().await;
@@ -1655,7 +1961,7 @@ async fn run(
                     }
                     Some(tray::AgentCommand::ToggleTun) => {
                         let enabled = !tray_state.tun_enabled;
-                        match switch_tun_host(
+                        match tun_host_switch(
                             enabled,
                             &options,
                             &shared_state,
@@ -1681,6 +1987,18 @@ async fn run(
                             Err(error) => tracing::warn!("failed to switch TUN host: {error:#}"),
                         }
                     }
+                    #[cfg(windows)]
+                    Some(tray::AgentCommand::SessionEnding(completed)) => {
+                        host_state_cleanup(
+                            &options,
+                            &settings_store,
+                            &shared_state,
+                            &agent_handler.state_store,
+                            &core,
+                        ).await;
+                        let _ = completed.send(());
+                        break;
+                    }
                     Some(tray::AgentCommand::ExitApplication) | None => {
                         let _ = agent_handler.events.send(Outgoing::Event {
                             event: "ui.shutdown_requested".into(),
@@ -1697,37 +2015,59 @@ async fn run(
         }
     }
 
-    let current_settings = settings_store.lock().await.load().unwrap_or_default();
-    if shared_state.lock().await.system_proxy_enabled {
-        if let Err(error) =
-            system_proxy::set_enabled(&options.user_data_dir, &current_settings, false)
-        {
-            tracing::warn!("failed to disable system proxy during shutdown: {error:#}");
-        } else {
-            let mut state = shared_state.lock().await;
-            state.system_proxy_enabled = false;
-            if let Err(error) = agent_handler.state_store.save(&state) {
-                tracing::warn!("failed to persist system proxy shutdown state: {error:#}");
-            }
-        }
-    }
-    if current_settings.is_tun_enabled
-        && let Err(error) = run_service_command(&options.service_path, "stop-core", None)
-    {
-        tracing::warn!("failed to stop service core during exit: {error:#}");
-    }
-    let _ = core.stop_core().await;
+    host_state_cleanup(
+        &options,
+        &settings_store,
+        &shared_state,
+        &agent_handler.state_store,
+        &core,
+    )
+    .await;
     supervisor_task.abort();
     service_log_task.abort();
     service_state_task.abort();
     tray_state_task.abort();
     background_task.abort();
     let _ = server_shutdown_tx.send(()).await;
-    cleanup_endpoint(&options.endpoint);
+    endpoint_cleanup(&options.endpoint);
     Ok(())
 }
 
-async fn shutdown_signal() -> Result<()> {
+/// 用途：清理宿主状态文件、子进程和临时运行数据。
+async fn host_state_cleanup(
+    options: &AgentOptions,
+    settings_store: &Arc<Mutex<settings::SettingsStore>>,
+    shared_state: &Arc<Mutex<AgentState>>,
+    state_store: &AgentStateStore,
+    core: &CoreRuntime,
+) {
+    let current_settings = settings_store.lock().await.load().unwrap_or_default();
+    if shared_state.lock().await.system_proxy_enabled {
+        if let Err(error) =
+            system_proxy::proxy_set(&options.user_data_dir, &current_settings, false)
+        {
+            tracing::warn!("failed to disable system proxy during shutdown: {error:#}");
+        } else {
+            let mut state = shared_state.lock().await;
+            state.system_proxy_enabled = false;
+            if let Err(error) = state_store.save(&state) {
+                tracing::warn!("failed to persist system proxy shutdown state: {error:#}");
+            }
+        }
+    }
+    if current_settings.is_tun_enabled
+        && let Err(error) =
+            service_manager::service_command(&options.service_path, "stop-core", None)
+    {
+        tracing::warn!("failed to stop service core during exit: {error:#}");
+    }
+    if let Err(error) = core.stop_core().await {
+        tracing::warn!("failed to stop normal core during shutdown: {error:#}");
+    }
+}
+
+/// 用途：等待操作系统发出的退出信号。
+async fn shutdown_signal_wait() -> Result<()> {
     #[cfg(unix)]
     {
         let mut terminate =
@@ -1746,7 +2086,8 @@ async fn shutdown_signal() -> Result<()> {
     }
 }
 
-async fn supervise_core(
+/// 用途：持续监督核心进程并在需要时恢复运行。
+async fn core_supervise(
     core: Arc<CoreRuntime>,
     state: Arc<Mutex<AgentState>>,
     mut events: broadcast::Receiver<Outgoing>,
@@ -1771,7 +2112,8 @@ async fn supervise_core(
     }
 }
 
-async fn supervise_service_core_logs(
+/// 用途：持续转发服务核心日志到 Agent 日志系统。
+async fn service_core_logs_supervise(
     endpoint: String,
     settings: Arc<Mutex<settings::SettingsStore>>,
     events: broadcast::Sender<Outgoing>,
@@ -1803,7 +2145,8 @@ async fn supervise_service_core_logs(
     }
 }
 
-async fn supervise_service_core_state(
+/// 用途：监督服务核心状态并同步 Agent 状态。
+async fn service_core_state_supervise(
     service_path: PathBuf,
     settings: Arc<Mutex<settings::SettingsStore>>,
     events: broadcast::Sender<Outgoing>,
@@ -1853,7 +2196,8 @@ async fn supervise_service_core_state(
     }
 }
 
-fn load_startup_yaml(
+/// 用途：选择并加载启动时应使用的 YAML 配置。
+fn startup_yaml_load(
     options: &AgentOptions,
     state: &AgentState,
     settings: &settings::AgentSettings,
@@ -1890,7 +2234,8 @@ fn load_startup_yaml(
     Ok(content)
 }
 
-fn acquire_instance_lock(runtime_dir: &Path) -> Result<File> {
+/// 用途：获取 Agent 单实例锁，防止重复运行。
+fn instance_lock_acquire(runtime_dir: &Path) -> Result<File> {
     let lock_path = runtime_dir.join("agent.lock");
     let file = OpenOptions::new()
         .create(true)
@@ -1904,50 +2249,296 @@ fn acquire_instance_lock(runtime_dir: &Path) -> Result<File> {
     Ok(file)
 }
 
-fn parse_options() -> Result<AgentOptions> {
-    let mut values = HashMap::new();
-    let mut arguments = std::env::args().skip(1);
-    while let Some(name) = arguments.next() {
-        if !name.starts_with("--") {
-            bail!("unexpected argument: {name}");
+/// 用途：创建 IPC 所需的目录并清理残留端点。
+fn ipc_directory_prepare(options: &AgentOptions) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = Path::new(&options.endpoint)
+            .parent()
+            .context("Unix Agent IPC endpoint has no parent directory")?;
+        for endpoint in [&options.endpoint, &options.mihomo_endpoint] {
+            if Path::new(endpoint).parent() != Some(directory) {
+                bail!(
+                    "Unix IPC endpoints must use the same private directory: {endpoint}"
+                );
+            }
         }
-        let value = arguments
-            .next()
-            .with_context(|| format!("missing value for {name}"))?;
-        values.insert(name, value);
+        match std::fs::symlink_metadata(&directory) {
+            Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
+                bail!(
+                    "private IPC path is not a directory: {}",
+                    directory.display()
+                );
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                std::fs::create_dir(&directory).with_context(|| {
+                    format!(
+                        "failed to create private IPC directory: {}",
+                        directory.display()
+                    )
+                })?;
+            }
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!(
+                        "failed to inspect private IPC directory: {}",
+                        directory.display()
+                    )
+                });
+            }
+        }
+        std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700))
+            .with_context(|| {
+                format!(
+                    "failed to protect private IPC directory: {}",
+                    directory.display()
+                )
+            })?;
     }
+    #[cfg(not(unix))]
+    {
+        let _ = options;
+    }
+    Ok(())
+}
+
+/// 用途：检查是否已有 Agent 实例在运行。
+fn agent_exists(options: &AgentOptions) -> Result<bool> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("failed to create existing Agent probe runtime")?;
+    match runtime.block_on(async {
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            agent_request_forward(options),
+        )
+        .await
+    }) {
+        Ok(result) => result,
+        Err(_) => Ok(false),
+    }
+}
+
+/// 用途：将请求异步转发给已运行的 Agent 实例。
+async fn agent_request_forward(options: &AgentOptions) -> Result<bool> {
+    #[cfg(unix)]
+    let name = options
+        .endpoint
+        .as_str()
+        .to_fs_name::<GenericFilePath>()
+        .context("failed to convert existing Agent Unix socket name")?;
+    #[cfg(windows)]
+    let name = options
+        .endpoint
+        .as_str()
+        .to_ns_name::<GenericNamespaced>()
+        .context("failed to convert existing Agent pipe name")?;
+    let stream = match TokioIpcStream::connect(name).await {
+        Ok(stream) => stream,
+        Err(_) => return Ok(false),
+    };
+    let (reader, mut writer) = stream.split();
+    let mut reader = BufReader::new(reader);
+    agent_request_send(&mut reader, &mut writer, "startup-core", "core.start").await?;
+    if !options.silent_start {
+        agent_request_send(&mut reader, &mut writer, "startup-ui", "ui.activate").await?;
+    }
+    Ok(true)
+}
+
+/// 用途：通过 IPC 发送请求并读取响应。
+async fn agent_request_send<R, W>(
+    reader: &mut R,
+    writer: &mut W,
+    id: &str,
+    method: &str,
+) -> Result<()>
+where
+    R: AsyncBufRead + Unpin,
+    W: AsyncWrite + Unpin,
+{
+    let request = serde_json::json!({
+        "id": id,
+        "method": method,
+        "params": {},
+    });
+    writer
+        .write_all(serde_json::to_string(&request)?.as_bytes())
+        .await
+        .context("failed to write existing Agent request")?;
+    writer
+        .write_all(b"\n")
+        .await
+        .context("failed to finish existing Agent request")?;
+
+    let mut line = String::new();
+    loop {
+        line.clear();
+        if reader
+            .read_line(&mut line)
+            .await
+            .context("failed to read existing Agent response")?
+            == 0
+        {
+            bail!("existing Agent closed the startup request");
+        }
+        let response: serde_json::Value =
+            serde_json::from_str(line.trim_end()).context("existing Agent response is invalid")?;
+        if response.get("id").and_then(serde_json::Value::as_str) != Some(id) {
+            continue;
+        }
+        if let Some(error) = response.get("error") {
+            bail!("existing Agent rejected {method}: {error}");
+        }
+        return Ok(());
+    }
+}
+
+/// 用途：构造当前平台默认的 Agent 启动选项。
+fn agent_options_default() -> Result<AgentOptions> {
+    let executable = std::env::current_exe().context("failed to resolve Agent executable path")?;
+    let base_dir = executable
+        .parent()
+        .context("Agent executable path has no parent directory")?
+        .to_path_buf();
+    let install_data_dir = base_dir.join("data");
+    let user_data_dir = user_data_dir_default(&base_dir, &install_data_dir)?;
+    let runtime_dir = user_data_dir.join("runtime");
+    let pipe_prefix = option_env!("SBPROXY_PIPE_PREFIX").unwrap_or("sbproxy");
+    let channel = if cfg!(debug_assertions) { "dev" } else { "prod" };
+    let endpoint_name = format!("{pipe_prefix}_agent_{channel}");
+    let mihomo_name = format!("{pipe_prefix}_mihomo_{channel}");
+    #[cfg(windows)]
+    let endpoint = endpoint_name;
+    #[cfg(unix)]
+    let endpoint = ipc_directory_unix(pipe_prefix)
+        .join(format!("{endpoint_name}.sock"))
+        .to_string_lossy()
+        .into_owned();
+    #[cfg(windows)]
+    let mihomo_endpoint = format!(r"\\.\pipe\{mihomo_name}");
+    #[cfg(unix)]
+    let mihomo_endpoint = ipc_directory_unix(pipe_prefix)
+        .join(format!("{mihomo_name}.sock"))
+        .to_string_lossy()
+        .into_owned();
+    let binary_suffix = if cfg!(windows) { ".exe" } else { "" };
+    let service_stem = option_env!("SBPROXY_APP_NAME").unwrap_or("sbproxyrev");
+    let service_installed_suffix = if cfg!(debug_assertions) { "_dev" } else { "" };
+    let ui_stem = option_env!("SBPROXY_UI_BINARY").unwrap_or("sbproxy");
 
     Ok(AgentOptions {
-        endpoint: required_value(&mut values, "--endpoint")?,
-        mihomo_path: PathBuf::from(required_value(&mut values, "--mihomo-path")?),
-        data_core_dir: PathBuf::from(required_value(&mut values, "--data-core-dir")?),
-        user_data_dir: PathBuf::from(required_value(&mut values, "--user-data-dir")?),
-        mihomo_endpoint: required_value(&mut values, "--mihomo-endpoint")?,
-        bootstrap_yaml_path: PathBuf::from(required_value(&mut values, "--bootstrap-yaml-path")?),
-        ui_path: PathBuf::from(required_value(&mut values, "--ui-path")?),
-        service_path: PathBuf::from(required_value(&mut values, "--service-path")?),
-        service_update_path: PathBuf::from(required_value(
-            &mut values,
-            "--service-update-path",
-        )?),
-        install_data_dir: PathBuf::from(required_value(&mut values, "--install-data-dir")?),
-        app_version: required_value(&mut values, "--app-version")?,
+        endpoint,
+        mihomo_path: install_data_dir
+            .join("core")
+            .join(format!("clash-mihomo-core{binary_suffix}")),
+        data_core_dir: install_data_dir.join("core"),
+        user_data_dir: user_data_dir.clone(),
+        mihomo_endpoint,
+        bootstrap_yaml_path: runtime_dir.join("_agent_bootstrap.yaml"),
+        ui_path: base_dir.join(format!("{ui_stem}{binary_suffix}")),
+        service_path: user_data_dir
+            .join("service")
+            .join(format!(
+                "{service_stem}_service_host{service_installed_suffix}{binary_suffix}"
+            )),
+        service_update_path: install_data_dir
+            .join("service")
+            .join("update")
+            .join(format!("{service_stem}_service{binary_suffix}")),
+        install_data_dir,
+        app_version: option_env!("SBPROXY_APP_VERSION")
+            .unwrap_or(env!("CARGO_PKG_VERSION"))
+            .to_owned(),
+        silent_start: false,
     })
 }
 
-fn required_value(values: &mut HashMap<String, String>, name: &str) -> Result<String> {
-    values
-        .remove(name)
-        .with_context(|| format!("missing required option: {name}"))
+#[cfg(unix)]
+/// 用途：计算 Unix 平台 IPC 目录路径。
+fn ipc_directory_unix(pipe_prefix: &str) -> PathBuf {
+    // SAFETY: geteuid has no side effects and returns the current process effective user ID.
+    let effective_uid = unsafe { libc::geteuid() };
+    PathBuf::from("/tmp").join(format!("{pipe_prefix}-ipc-{effective_uid}"))
 }
 
-fn init_tracing() {
+/// 用途：根据平台目录推导用户数据目录。
+fn user_data_dir_default(base_dir: &Path, install_data_dir: &Path) -> Result<PathBuf> {
+    #[cfg(target_os = "linux")]
+    if let Some(configured) = std::env::var_os("PORTABLE_APP_DATA_DIR") {
+        let configured = PathBuf::from(configured);
+        return if configured.is_absolute() {
+            Ok(configured)
+        } else {
+            Ok(std::env::current_dir()
+                .context("failed to resolve current directory")?
+                .join(configured))
+        };
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(bundle_dir) = bundle_dir_macos(base_dir) {
+            let identifier = option_env!("SBPROXY_BUNDLE_IDENTIFIER").unwrap_or(
+                if cfg!(debug_assertions) {
+                    "com.sbproxy.sbproxy.dev"
+                } else {
+                    "com.sbproxy.sbproxy"
+                },
+            );
+            if bundle_dir.starts_with("/Applications") {
+                if let Some(home) = std::env::var_os("HOME") {
+                    return Ok(PathBuf::from(home)
+                        .join("Library")
+                        .join("Application Support")
+                        .join(identifier));
+                }
+            } else if let Some(bundle_parent) = bundle_dir.parent() {
+                return Ok(bundle_parent.join(format!("{identifier}.data")));
+            }
+        }
+    }
+
+    let _ = base_dir;
+    Ok(install_data_dir.to_path_buf())
+}
+
+#[cfg(target_os = "macos")]
+/// 用途：查找 macOS 应用包目录。
+fn bundle_dir_macos(base_dir: &Path) -> Option<&Path> {
+    let contents = base_dir.parent()?;
+    let bundle = contents.parent()?;
+    (base_dir.file_name()? == "MacOS"
+        && contents.file_name()? == "Contents"
+        && bundle.extension().is_some_and(|extension| extension == "app"))
+    .then_some(bundle)
+}
+
+/// 用途：解析命令行参数为 Agent 启动选项。
+fn agent_options_parse() -> Result<AgentOptions> {
+    let mut options = agent_options_default()?;
+    for argument in std::env::args().skip(1) {
+        match argument.as_str() {
+            "--silent-start" => options.silent_start = true,
+            _ => bail!("unexpected argument: {argument}"),
+        }
+    }
+    Ok(options)
+}
+
+/// 用途：初始化结构化日志输出。
+fn tracing_init() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
     let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
 }
 
-fn cleanup_endpoint(endpoint: &str) {
+/// 用途：删除指定 IPC 端点及其残留文件。
+fn endpoint_cleanup(endpoint: &str) {
     #[cfg(unix)]
     {
         let _ = std::fs::remove_file(endpoint);
@@ -1958,7 +2549,8 @@ fn cleanup_endpoint(endpoint: &str) {
     }
 }
 
-fn parse_outbound_mode(value: &str) -> tray::OutboundMode {
+/// 用途：将字符串形式的出站模式解析为枚举值。
+fn outbound_mode_parse(value: &str) -> tray::OutboundMode {
     match value.to_ascii_lowercase().as_str() {
         "global" => tray::OutboundMode::Global,
         "direct" => tray::OutboundMode::Direct,
@@ -1966,6 +2558,7 @@ fn parse_outbound_mode(value: &str) -> tray::OutboundMode {
     }
 }
 
+/// 用途：返回出站模式的稳定字符串名称。
 fn outbound_mode_name(mode: tray::OutboundMode) -> &'static str {
     match mode {
         tray::OutboundMode::Rule => "Rule",
@@ -1974,7 +2567,8 @@ fn outbound_mode_name(mode: tray::OutboundMode) -> &'static str {
     }
 }
 
-fn copy_terminal_proxy(
+/// 用途：复制终端代理配置到目标运行环境。
+fn terminal_proxy_copy(
     shell: tray::TerminalShell,
     settings: &settings::AgentSettings,
 ) -> Result<()> {
@@ -2012,7 +2606,8 @@ fn copy_terminal_proxy(
     Ok(())
 }
 
-fn send_service_heartbeat(service_path: &Path) {
+/// 用途：向服务发送心跳，维持服务端状态同步。
+fn service_heartbeat_send(service_path: &Path) {
     if !service_path.is_file() {
         return;
     }
@@ -2029,49 +2624,72 @@ fn send_service_heartbeat(service_path: &Path) {
     }
 }
 
-async fn switch_tun_host(
+/// 用途：处理宿主侧的 TUN 切换请求。
+async fn tun_host_switch(
     enabled: bool,
     options: &AgentOptions,
     state: &Arc<Mutex<AgentState>>,
     core: &Arc<CoreRuntime>,
 ) -> Result<()> {
-    if enabled {
-        if !options.service_path.is_file() {
-            bail!(
-                "service executable was not found: {}",
-                options.service_path.display()
-            );
-        }
-        let source = state
-            .lock()
-            .await
-            .runtime_yaml_path
-            .clone()
-            .unwrap_or_else(|| options.bootstrap_yaml_path.clone());
-        let active = options
-            .user_data_dir
-            .join("runtime")
-            .join("_agent_service_active.yaml");
-        write_tun_config(&source, &active, true)?;
-        core.stop_core().await?;
-        if let Err(error) = start_service_core(
-            &options.service_path,
-            &options.mihomo_path,
-            &options.data_core_dir,
-            &active,
-        ) {
-            let _ = core.start_core().await;
-            return Err(error);
-        }
+    let source = state
+        .lock()
+        .await
+        .runtime_yaml_path
+        .clone()
+        .unwrap_or_else(|| options.bootstrap_yaml_path.clone());
+    let active = options
+        .user_data_dir
+        .join("runtime")
+        .join("_agent_service_active.yaml");
+    tun_core_switch(
+        enabled,
+        &options.service_path,
+        &options.mihomo_path,
+        &options.data_core_dir,
+        &source,
+        &active,
+        core,
+    )
+    .await
+}
+
+/// 用途：执行 IPC 与托盘共用的 TUN 核心切换操作。
+async fn tun_core_switch(
+    enabled: bool,
+    service_path: &Path,
+    mihomo_path: &Path,
+    data_core_dir: &Path,
+    source: &Path,
+    active: &Path,
+    core: &CoreRuntime,
+) -> Result<()> {
+    if !enabled {
+        service_manager::service_command(service_path, "stop-core", None)?;
+        core.start_core().await?;
         return Ok(());
     }
-
-    run_service_command(&options.service_path, "stop-core", None)?;
-    core.start_core().await?;
+    if !service_path.is_file() {
+        bail!(
+            "service executable was not found: {}",
+            service_path.display()
+        );
+    }
+    tun_config_write(source, active)?;
+    core.stop_core().await?;
+    if let Err(error) = service_core_start(
+        service_path,
+        mihomo_path,
+        data_core_dir,
+        active,
+    ) {
+        let _ = core.start_core().await;
+        return Err(error);
+    }
     Ok(())
 }
 
-fn write_tun_config(source: &Path, destination: &Path, enabled: bool) -> Result<()> {
+/// 用途：根据源配置生成启用 TUN 的配置文件。
+fn tun_config_write(source: &Path, destination: &Path) -> Result<()> {
     let content = std::fs::read_to_string(source)
         .with_context(|| format!("failed to read runtime config: {}", source.display()))?;
     let mut yaml: serde_yaml_ng::Value =
@@ -2088,7 +2706,7 @@ fn write_tun_config(source: &Path, destination: &Path, enabled: bool) -> Result<
         .context("runtime tun config must be a mapping")?;
     tun.insert(
         serde_yaml_ng::Value::String("enable".into()),
-        serde_yaml_ng::Value::Bool(enabled),
+        serde_yaml_ng::Value::Bool(true),
     );
     let parent = destination.parent().context("TUN config has no parent")?;
     std::fs::create_dir_all(parent)?;
@@ -2096,7 +2714,8 @@ fn write_tun_config(source: &Path, destination: &Path, enabled: bool) -> Result<
     Ok(())
 }
 
-fn start_service_core(
+/// 用途：启动服务托管的核心进程。
+fn service_core_start(
     service_path: &Path,
     mihomo_path: &Path,
     data_core_dir: &Path,
@@ -2111,49 +2730,20 @@ fn start_service_core(
         }
     })
     .to_string();
-    run_service_command(service_path, "start-core", Some(&payload))
+    service_manager::service_command(service_path, "start-core", Some(&payload))
 }
 
-fn run_service_command(service_path: &Path, command: &str, input: Option<&str>) -> Result<String> {
-    use std::io::Write;
-
-    let mut process = Command::new(service_path)
-        .arg(command)
-        .stdin(if input.is_some() {
-            Stdio::piped()
-        } else {
-            Stdio::null()
-        })
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .with_context(|| format!("failed to run service command: {command}"))?;
-    if let Some(input) = input {
-        process
-            .stdin
-            .as_mut()
-            .context("service command has no stdin")?
-            .write_all(input.as_bytes())?;
-    }
-    let output = process.wait_with_output()?;
-    if output.status.success() {
-        return Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned());
-    }
-    bail!(
-        "service command {command} failed: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
-    )
-}
-
-fn parse_pid(output: &str) -> Option<u32> {
+/// 用途：从服务输出中提取进程 ID。
+fn pid_parse(output: &str) -> Option<u32> {
     output.split_whitespace().find_map(|part| {
         part.strip_prefix("pid=")
             .and_then(|value| value.parse().ok())
     })
 }
 
+/// 用途：读取服务核心的运行状态快照。
 fn service_core_snapshot(service_path: &Path, endpoint: &str) -> Result<serde_json::Value> {
-    let output = run_service_command(service_path, "status", None)?;
+    let output = service_manager::service_command(service_path, "status", None)?;
     let mut state = "unavailable";
     let mut pid = None;
     let mut error = None;
@@ -2180,7 +2770,9 @@ mod tests {
 
     struct TestDirectory(PathBuf);
 
+    /// 用途：提供测试临时目录的创建接口。
     impl TestDirectory {
+        /// 用途：创建当前测试独占的临时目录。
         fn create(name: &str) -> Result<Self> {
             let path =
                 std::env::temp_dir().join(format!("sbproxy-agent-{name}-{}", std::process::id()));
@@ -2192,13 +2784,16 @@ mod tests {
         }
     }
 
+    /// 用途：在测试目录离开作用域时清理临时文件。
     impl Drop for TestDirectory {
+        /// 用途：删除测试创建的临时目录。
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
     }
 
     #[test]
+    /// 用途：验证 Agent 状态可以完整保存并重新加载。
     fn state_store_round_trips_desired_state_and_runtime_path() -> Result<()> {
         let directory = TestDirectory::create("state")?;
         let store = AgentStateStore::new(&directory.0);
@@ -2218,6 +2813,158 @@ mod tests {
     }
 
     #[test]
+    /// 用途：验证缺少 Agent 配置路径时会从当前订阅恢复并持久化。
+    fn state_runtime_path_recovers_selected_subscription_config() -> Result<()> {
+        let directory = TestDirectory::create("state-runtime-recover")?;
+        let state_store = AgentStateStore::new(&directory.0);
+        let subscription_store = subscriptions::SubscriptionStore::new(&directory.0);
+        let subscription_id = "selected-subscription";
+        subscription_store.set_current_subscription_id(Some(subscription_id))?;
+        let runtime_path = directory
+            .0
+            .join("runtime")
+            .join(subscription_id)
+            .join("runtime.yaml");
+        std::fs::create_dir_all(
+            runtime_path
+                .parent()
+                .context("runtime path has no parent")?,
+        )?;
+        std::fs::write(&runtime_path, "mixed-port: 7890\nproxy-groups: []\n")?;
+        let mut state = AgentState::default();
+
+        let recovered = state_runtime_path_recover(
+            &directory.0,
+            &state_store,
+            &subscription_store,
+            &mut state,
+        )?;
+
+        assert!(recovered);
+        assert_eq!(
+            state.runtime_yaml_path.as_deref(),
+            Some(runtime_path.as_path())
+        );
+        assert_eq!(
+            state_store.load().runtime_yaml_path.as_deref(),
+            Some(runtime_path.as_path())
+        );
+        Ok(())
+    }
+
+    #[test]
+    /// 用途：验证已保存路径失效时会改用当前订阅仍存在的配置。
+    fn state_runtime_path_repairs_stale_path() -> Result<()> {
+        let directory = TestDirectory::create("state-runtime-stale")?;
+        let state_store = AgentStateStore::new(&directory.0);
+        let subscription_store = subscriptions::SubscriptionStore::new(&directory.0);
+        let subscription_id = "selected-subscription";
+        subscription_store.set_current_subscription_id(Some(subscription_id))?;
+        let runtime_path = directory
+            .0
+            .join("runtime")
+            .join(subscription_id)
+            .join("runtime.yaml");
+        std::fs::create_dir_all(
+            runtime_path
+                .parent()
+                .context("runtime path has no parent")?,
+        )?;
+        std::fs::write(&runtime_path, "mixed-port: 7890\n")?;
+        let mut state = AgentState {
+            runtime_yaml_path: Some(directory.0.join("missing-runtime.yaml")),
+            ..AgentState::default()
+        };
+
+        let recovered = state_runtime_path_recover(
+            &directory.0,
+            &state_store,
+            &subscription_store,
+            &mut state,
+        )?;
+
+        assert!(recovered);
+        assert_eq!(
+            state.runtime_yaml_path.as_deref(),
+            Some(runtime_path.as_path())
+        );
+        Ok(())
+    }
+
+    #[test]
+    /// 用途：验证没有当前订阅时保持原状态并继续使用空引导配置。
+    fn state_runtime_path_keeps_state_without_selection() -> Result<()> {
+        let directory = TestDirectory::create("state-runtime-no-selection")?;
+        let state_store = AgentStateStore::new(&directory.0);
+        let subscription_store = subscriptions::SubscriptionStore::new(&directory.0);
+        let mut state = AgentState::default();
+
+        let recovered = state_runtime_path_recover(
+            &directory.0,
+            &state_store,
+            &subscription_store,
+            &mut state,
+        )?;
+
+        assert!(!recovered);
+        assert!(state.runtime_yaml_path.is_none());
+        Ok(())
+    }
+
+    #[test]
+    /// 用途：验证当前订阅缺少运行配置时安全回退且不清除选择。
+    fn state_runtime_path_keeps_selection_when_config_is_missing() -> Result<()> {
+        let directory = TestDirectory::create("state-runtime-missing")?;
+        let state_store = AgentStateStore::new(&directory.0);
+        let subscription_store = subscriptions::SubscriptionStore::new(&directory.0);
+        let subscription_id = "selected-subscription";
+        subscription_store.set_current_subscription_id(Some(subscription_id))?;
+        let mut state = AgentState::default();
+
+        let recovered = state_runtime_path_recover(
+            &directory.0,
+            &state_store,
+            &subscription_store,
+            &mut state,
+        )?;
+
+        assert!(!recovered);
+        assert!(state.runtime_yaml_path.is_none());
+        assert_eq!(
+            subscription_store.current_subscription_id()?.as_deref(),
+            Some(subscription_id)
+        );
+        Ok(())
+    }
+
+    #[test]
+    /// 用途：验证非法订阅标识不会被拼接为目录穿越路径。
+    fn state_runtime_path_rejects_parent_directory_subscription_id() -> Result<()> {
+        let directory = TestDirectory::create("state-runtime-invalid-id")?;
+        let state_store = AgentStateStore::new(&directory.0);
+        let subscription_store = subscriptions::SubscriptionStore::new(&directory.0);
+        let selection_path = directory
+            .0
+            .join("subscriptions")
+            .join("selection_state.json");
+        std::fs::create_dir_all(
+            selection_path
+                .parent()
+                .context("selection path has no parent")?,
+        )?;
+        std::fs::write(&selection_path, r#"{"CurrentSubscriptionId":".."}"#)?;
+        let mut state = AgentState::default();
+
+        let result =
+            state_runtime_path_recover(&directory.0, &state_store, &subscription_store, &mut state);
+
+        assert!(result.is_err());
+        assert!(state.runtime_yaml_path.is_none());
+        Ok(())
+    }
+
+    #[test]
+    /// 用途：验证启动配置优先使用最后应用的运行时配置。
     fn startup_yaml_prefers_last_applied_runtime_config() -> Result<()> {
         let directory = TestDirectory::create("startup-yaml")?;
         let bootstrap_path = directory.0.join("bootstrap.yaml");
@@ -2236,6 +2983,7 @@ mod tests {
             service_update_path: directory.0.join("service-update"),
             install_data_dir: directory.0.clone(),
             app_version: "1.0.0".into(),
+            silent_start: false,
         };
         let state = AgentState {
             desired_running: true,
@@ -2243,7 +2991,7 @@ mod tests {
             system_proxy_enabled: false,
         };
 
-        let yaml = load_startup_yaml(&options, &state, &settings::AgentSettings::default())?;
+        let yaml = startup_yaml_load(&options, &state, &settings::AgentSettings::default())?;
 
         assert_eq!(yaml, "mixed-port: 7891");
         Ok(())

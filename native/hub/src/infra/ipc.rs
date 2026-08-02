@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[cfg(unix)]
 use anyhow::bail;
@@ -18,6 +19,7 @@ use tokio::sync::{Mutex, broadcast, mpsc};
 
 // 单帧上限 1 MiB；超大流会立即停止读取。
 pub const MAX_LINE_BYTES: usize = 1024 * 1024;
+pub type ConnectionId = u64;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -60,12 +62,26 @@ pub trait MethodHandler: Send + Sync {
         method: &str,
         params: serde_json::Value,
     ) -> std::result::Result<serde_json::Value, ErrorBody>;
+
+    async fn handle_connection(
+        &self,
+        _connection_id: ConnectionId,
+        method: &str,
+        params: serde_json::Value,
+    ) -> std::result::Result<serde_json::Value, ErrorBody> {
+        self.handle(method, params).await
+    }
+
+    async fn connection_opened(&self, _connection_id: ConnectionId) {}
+
+    async fn connection_closed(&self, _connection_id: ConnectionId) {}
 }
 
 pub struct IpcServer {
     handler: Arc<dyn MethodHandler>,
     event_tx: broadcast::Sender<Outgoing>,
     shutdown_rx: Mutex<Option<mpsc::Receiver<()>>>,
+    next_connection_id: AtomicU64,
 }
 
 impl IpcServer {
@@ -85,6 +101,7 @@ impl IpcServer {
             handler,
             event_tx: event_tx.clone(),
             shutdown_rx: Mutex::new(Some(shutdown_rx)),
+            next_connection_id: AtomicU64::new(1),
         });
         (server, event_tx, shutdown_tx)
     }
@@ -124,8 +141,12 @@ impl IpcServer {
                         Ok(stream) => {
                             let handler = self.handler.clone();
                             let event_tx = self.event_tx.clone();
+                            let connection_id =
+                                self.next_connection_id.fetch_add(1, Ordering::Relaxed);
                             tokio::spawn(async move {
-                                if let Err(e) = handle_connection(stream, handler, event_tx).await {
+                                if let Err(e) =
+                                    handle_connection(stream, handler, event_tx, connection_id).await
+                                {
                                     tracing::warn!("ipc connection handling failed: {e}");
                                 }
                             });
@@ -144,14 +165,27 @@ fn remove_stale_socket(path: &str) -> Result<()> {
     use std::os::unix::fs::FileTypeExt;
 
     let path = std::path::Path::new(path);
-    if !path.exists() {
-        return Ok(());
-    }
-    let metadata = std::fs::metadata(path)
-        .with_context(|| format!("Failed to read stale IPC socket: {}", path.display()))?;
+    let metadata = match std::fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("Failed to read stale IPC socket: {}", path.display()));
+        }
+    };
     if !metadata.file_type().is_socket() {
         bail!(
             "IPC socket path is occupied by a non-socket file: {}",
+            path.display()
+        );
+    }
+    use std::os::unix::fs::MetadataExt;
+    let parent = path.parent().context("IPC socket path has no parent directory")?;
+    let parent_metadata = std::fs::metadata(parent)
+        .with_context(|| format!("Failed to read IPC directory: {}", parent.display()))?;
+    if metadata.uid() != parent_metadata.uid() {
+        bail!(
+            "IPC socket owner does not match its directory owner: {}",
             path.display()
         );
     }
@@ -173,7 +207,9 @@ async fn handle_connection(
     stream: TokioIpcStream,
     handler: Arc<dyn MethodHandler>,
     event_tx: broadcast::Sender<Outgoing>,
+    connection_id: ConnectionId,
 ) -> Result<()> {
+    handler.connection_opened(connection_id).await;
     let (reader, writer) = stream.split();
     let mut reader = BufReader::new(reader);
     // 事件和请求响应共用 writer，锁保证单连接内写入顺序。
@@ -229,7 +265,10 @@ async fn handle_connection(
             let handler_cl = handler.clone();
             let writer_cl = writer.clone();
             tokio::spawn(async move {
-                let outgoing = match handler_cl.handle(&method, params).await {
+                let outgoing = match handler_cl
+                    .handle_connection(connection_id, &method, params)
+                    .await
+                {
                     Ok(result) => Outgoing::Response { id, result },
                     Err(error) => Outgoing::Error { id, error },
                 };
@@ -245,5 +284,6 @@ async fn handle_connection(
     .await;
 
     event_task.abort();
+    handler.connection_closed(connection_id).await;
     read_result
 }

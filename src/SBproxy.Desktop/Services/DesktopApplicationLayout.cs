@@ -26,8 +26,6 @@ internal static class DesktopApplicationLayout
 
     public static string CoreBinaryPath => Path.Combine(CoreDirectory, CoreBinaryName);
 
-    public static string AgentBinaryPath => Path.Combine(BaseDirectory, AppRuntimeNames.AgentBinaryName);
-
     public static string ServiceDirectory => Path.Combine(AppDataDirectory, PathConventions.ServiceSubdirectory);
 
     public static string ServiceUpdateDirectory => Path.Combine(InstallDataDirectory, PathConventions.ServiceSubdirectory, PathConventions.ServiceUpdateSubdirectory);

@@ -31,7 +31,7 @@ public sealed class WindowsAppBehaviorService : IAppBehaviorService
             return;
         }
 
-        var binaryPath = Environment.ProcessPath ?? string.Empty;
+        var binaryPath = Path.Combine(AppContext.BaseDirectory, AppRuntimeNames.AgentBinaryName);
         if (string.IsNullOrWhiteSpace(binaryPath))
         {
             AppLogger.Warning("Windows autostart path is empty");

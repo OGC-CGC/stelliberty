@@ -10,6 +10,7 @@ use tray_icon::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuIt
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
 #[derive(Debug, Clone)]
+/// 用途：表示托盘或桌面 UI 发起的 Agent 操作。
 pub enum AgentCommand {
     ActivateUi,
     CopyTerminal(TerminalShell),
@@ -17,10 +18,13 @@ pub enum AgentCommand {
     ToggleSystemProxy,
     ToggleTun,
     RestartCore,
+    #[cfg(windows)]
+    SessionEnding(std::sync::mpsc::SyncSender<()>),
     ExitApplication,
 }
 
 #[derive(Debug, Clone, Copy)]
+/// 用途：枚举可用于写入代理环境变量的终端 Shell。
 pub enum TerminalShell {
     PowerShell,
     Cmd,
@@ -28,6 +32,7 @@ pub enum TerminalShell {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// 用途：表示核心流量的出站代理模式。
 pub enum OutboundMode {
     Rule,
     Global,
@@ -35,6 +40,7 @@ pub enum OutboundMode {
 }
 
 #[derive(Debug, Clone)]
+/// 用途：保存托盘图标和菜单所需的运行状态。
 pub struct TrayState {
     pub core_running: bool,
     pub system_proxy_enabled: bool,
@@ -43,6 +49,7 @@ pub struct TrayState {
 }
 
 #[derive(Debug)]
+/// 用途：表示桌面托盘产生的事件。
 pub enum DesktopEvent {
     Menu(MenuEvent),
     Tray(TrayIconEvent),
@@ -54,7 +61,8 @@ pub enum DesktopEvent {
     BackendStopped,
 }
 
-pub fn run(
+/// 用途：启动系统托盘事件循环并转发用户操作。
+pub fn tray_run(
     start_backend: impl FnOnce(mpsc::UnboundedReceiver<AgentCommand>, EventLoopProxy<DesktopEvent>)
     + Send
     + 'static,
@@ -81,15 +89,34 @@ pub fn run(
     }));
 
     let (command_tx, command_rx) = mpsc::unbounded_channel();
+    #[cfg(windows)]
+    let _session_watcher = match WindowsSessionWatcher::new(command_tx.clone()) {
+        Ok(watcher) => Some(watcher),
+        Err(error) => {
+            eprintln!("failed to create Windows session watcher: {error:#}");
+            None
+        }
+    };
+    let (tray_ready_tx, tray_ready_rx) = std::sync::mpsc::sync_channel(1);
     let backend_proxy = proxy.clone();
-    std::thread::spawn(move || start_backend(command_rx, backend_proxy));
+    std::thread::spawn(move || {
+        if tray_ready_rx.recv().is_ok() {
+            start_backend(command_rx, backend_proxy);
+        }
+    });
 
     let mut tray = None;
+    let mut tray_ready_tx = Some(tray_ready_tx);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
         match event {
             Event::NewEvents(StartCause::Init) => match AgentTray::new() {
-                Ok(created) => tray = Some(created),
+                Ok(created) => {
+                    tray = Some(created);
+                    if let Some(ready) = tray_ready_tx.take() {
+                        let _ = ready.send(());
+                    }
+                }
                 Err(error) => {
                     eprintln!("failed to create User Agent tray: {error:#}");
                     *control_flow = ControlFlow::ExitWithCode(1);
@@ -152,6 +179,125 @@ pub fn run(
     })
 }
 
+#[cfg(windows)]
+/// 用途：持有用于接收 Windows 会话结束消息的隐藏窗口。
+struct WindowsSessionWatcher {
+    hwnd: windows_sys::Win32::Foundation::HWND,
+}
+
+#[cfg(windows)]
+/// 用途：创建并管理 Windows 会话结束消息监听窗口。
+impl WindowsSessionWatcher {
+    /// 用途：创建隐藏窗口并将会话结束事件转发给 Agent。
+    fn new(command_tx: mpsc::UnboundedSender<AgentCommand>) -> Result<Self> {
+        use std::ptr;
+        use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, RegisterClassW, WNDCLASSW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+            WS_OVERLAPPED,
+        };
+
+        let class_name = "SBproxyAgentSessionWatcher\0"
+            .encode_utf16()
+            .collect::<Vec<_>>();
+        let instance = unsafe { GetModuleHandleW(ptr::null()) };
+        let window_class = WNDCLASSW {
+            lpfnWndProc: Some(windows_session_proc),
+            lpszClassName: class_name.as_ptr(),
+            hInstance: instance,
+            ..unsafe { std::mem::zeroed() }
+        };
+        unsafe {
+            RegisterClassW(&window_class);
+        }
+        let sender = Box::into_raw(Box::new(command_tx));
+        let hwnd = unsafe {
+            CreateWindowExW(
+                WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+                class_name.as_ptr(),
+                ptr::null(),
+                WS_OVERLAPPED,
+                0,
+                0,
+                0,
+                0,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                instance,
+                sender.cast(),
+            )
+        };
+        if hwnd.is_null() {
+            unsafe {
+                drop(Box::from_raw(sender));
+            }
+            return Err(std::io::Error::last_os_error())
+                .context("failed to create Windows session watcher");
+        }
+        Ok(Self { hwnd })
+    }
+}
+
+#[cfg(windows)]
+/// 用途：在监听器释放时销毁 Windows 隐藏窗口。
+impl Drop for WindowsSessionWatcher {
+    /// 用途：释放 Windows 会话监听窗口的原生资源。
+    fn drop(&mut self) {
+        unsafe {
+            windows_sys::Win32::UI::WindowsAndMessaging::DestroyWindow(self.hwnd);
+        }
+    }
+}
+
+#[cfg(windows)]
+/// 用途：处理隐藏窗口接收的 Windows 会话生命周期消息。
+///
+/// 安全性：`lparam` 和窗口用户数据仅按对应 Windows 消息约定解引用，
+/// 发送器指针由窗口创建过程分配，并在 `WM_NCDESTROY` 中唯一释放。
+unsafe extern "system" fn windows_session_proc(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    message: u32,
+    wparam: windows_sys::Win32::Foundation::WPARAM,
+    lparam: windows_sys::Win32::Foundation::LPARAM,
+) -> windows_sys::Win32::Foundation::LRESULT {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        CREATESTRUCTW, DefWindowProcW, GetWindowLongPtrW, GWLP_USERDATA, SetWindowLongPtrW,
+        WM_ENDSESSION, WM_NCCREATE, WM_NCDESTROY, WM_QUERYENDSESSION,
+    };
+
+    if message == WM_NCCREATE {
+        let create = unsafe { &*(lparam as *const CREATESTRUCTW) };
+        unsafe {
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, create.lpCreateParams as isize);
+        }
+        return unsafe { DefWindowProcW(hwnd, message, wparam, lparam) };
+    }
+    let sender = unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) }
+        as *mut mpsc::UnboundedSender<AgentCommand>;
+    if message == WM_QUERYENDSESSION {
+        return 1;
+    }
+    if message == WM_ENDSESSION && wparam != 0 {
+        if let Some(sender) = unsafe { sender.as_ref() } {
+            let (completed_tx, completed_rx) = std::sync::mpsc::sync_channel(0);
+            if sender.send(AgentCommand::SessionEnding(completed_tx)).is_ok() {
+                let _ = completed_rx.recv_timeout(std::time::Duration::from_secs(8));
+            }
+        }
+        return 0;
+    }
+    if message == WM_NCDESTROY && !sender.is_null() {
+        let result = unsafe { DefWindowProcW(hwnd, message, wparam, lparam) };
+        unsafe {
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            drop(Box::from_raw(sender));
+        }
+        return result;
+    }
+    unsafe { DefWindowProcW(hwnd, message, wparam, lparam) }
+}
+
+/// 用途：持有托盘图标、菜单、热键及其当前状态。
 struct AgentTray {
     _tray: TrayIcon,
     show: MenuItem,
@@ -172,7 +318,9 @@ struct AgentTray {
     double_click_enabled: bool,
 }
 
+/// 用途：提供托盘资源创建、状态同步和事件到命令的映射。
 impl AgentTray {
+    /// 用途：创建托盘菜单、图标和全局热键管理器。
     fn new() -> Result<Self> {
         let menu = Menu::new();
         let show = MenuItem::new("显示主窗口", true, None);
@@ -216,7 +364,7 @@ impl AgentTray {
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
             .with_tooltip("Shadioium")
-            .with_icon(load_icon(false, false, false)?)
+            .with_icon(icon_load(false, false, false)?)
             .build()
             .context("failed to build tray icon")?;
         let hotkey_manager =
@@ -247,6 +395,7 @@ impl AgentTray {
         })
     }
 
+    /// 用途：将菜单事件映射为稳定的 Agent 命令。
     fn menu_command(&self, event: &MenuEvent) -> Option<AgentCommand> {
         if event.id == *self.show.id() {
             Some(AgentCommand::ActivateUi)
@@ -275,6 +424,7 @@ impl AgentTray {
         }
     }
 
+    /// 用途：同步托盘菜单、勾选状态和图标。
     fn set_state(&mut self, state: &TrayState) {
         let icon_changed = self.state.core_running != state.core_running
             || self.state.system_proxy_enabled != state.system_proxy_enabled
@@ -294,7 +444,7 @@ impl AgentTray {
         self.outbound_direct
             .set_checked(state.outbound_mode == OutboundMode::Direct);
         if icon_changed
-            && let Ok(icon) = load_icon(
+            && let Ok(icon) = icon_load(
                 state.core_running,
                 state.system_proxy_enabled,
                 state.tun_enabled,
@@ -304,6 +454,7 @@ impl AgentTray {
         }
     }
 
+    /// 用途：替换当前注册的全局热键及其命令映射。
     fn apply_hotkeys(&mut self, gestures: &[String; 3]) -> Result<()> {
         if !self.hotkeys.is_empty() {
             self.hotkey_manager
@@ -334,10 +485,12 @@ impl AgentTray {
         Ok(())
     }
 
+    /// 用途：按全局热键标识查找对应 Agent 命令。
     fn hotkey_command(&self, id: u32) -> Option<AgentCommand> {
         self.hotkey_commands.get(&id).cloned()
     }
 
+    /// 用途：判断托盘点击事件是否满足当前激活手势设置。
     fn is_activation_click(&self, event: &TrayIconEvent) -> bool {
         if self.double_click_enabled {
             matches!(
@@ -360,7 +513,8 @@ impl AgentTray {
     }
 }
 
-fn load_icon(running: bool, proxy: bool, tun: bool) -> Result<Icon> {
+/// 用途：根据核心、系统代理和 TUN 状态加载对应托盘图标。
+fn icon_load(running: bool, proxy: bool, tun: bool) -> Result<Icon> {
     let state = if !running {
         "disabled"
     } else if proxy && tun {

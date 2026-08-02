@@ -6,15 +6,18 @@ import sys
 import time
 from pathlib import Path
 
-from build_support.models import AppMetadata
+from build_support.models import AppMetadata, PlatformTarget
 from build_support.paths import BUILD_DIR
 
 
-def close_running_output_app(metadata: AppMetadata, output_dir: Path) -> None:
-    binary_path = output_binary_path(metadata, output_dir)
+def close_running_output_app(metadata: AppMetadata, target: PlatformTarget, output_dir: Path) -> None:
+    for binary_path in output_binary_paths(metadata, target, output_dir):
+        close_running_binary(binary_path)
+
+
+def close_running_binary(binary_path: Path) -> None:
     if not binary_path.exists():
         return
-
     resolved_binary = binary_path.resolve()
     ensure_build_output_path(resolved_binary)
 
@@ -39,9 +42,12 @@ def close_running_output_app(metadata: AppMetadata, output_dir: Path) -> None:
         raise RuntimeError(f"Output is still locked by running processes; build cannot continue: {still_running}")
 
 
-def output_binary_path(metadata: AppMetadata, output_dir: Path) -> Path:
+def output_binary_paths(metadata: AppMetadata, target: PlatformTarget, output_dir: Path) -> list[Path]:
     suffix = ".exe" if sys.platform == "win32" else ""
-    return output_dir / f"{metadata.app_name}{suffix}"
+    return [
+        output_dir / target.agent_binary,
+        output_dir / f"{metadata.app_name}{suffix}",
+    ]
 
 
 def ensure_build_output_path(path: Path) -> None:

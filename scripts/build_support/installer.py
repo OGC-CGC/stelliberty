@@ -194,13 +194,13 @@ def build_macos_app_bundle(
     shutil.copytree(output_dir, macos_dir)
     resources_dir.mkdir(parents=True, exist_ok=True)
 
-    executable_path = macos_dir / metadata.app_name
-    if not executable_path.exists():
-        raise FileNotFoundError(f"macOS executable does not exist: {executable_path}")
+    for executable_path in (macos_dir / target.agent_binary, macos_dir / metadata.app_name):
+        if not executable_path.exists():
+            raise FileNotFoundError(f"macOS executable does not exist: {executable_path}")
 
     set_macos_payload_permissions(macos_dir, metadata, target)
     info_plist_path = contents_dir / "Info.plist"
-    write_macos_info_plist(metadata, configuration, platform_name, info_plist_path)
+    write_macos_info_plist(metadata, configuration, platform_name, target, info_plist_path)
     build_macos_app_icon(resources_dir, info_plist_path, platform_name)
     return app_path
 
@@ -271,7 +271,7 @@ def build_linux_package_root(
 
     replacements = linux_replacements(metadata, configuration, target, package_root, linux_arch(platform_name))
     write_rendered_template("launcher.in", bin_dir / app_package, replacements, executable=True)
-    write_rendered_template("sbproxy.desktop.in", applications_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": f"/opt/{app_package}/{metadata.app_name}"})
+    write_rendered_template("sbproxy.desktop.in", applications_dir / f"{app_package}.desktop", replacements | {"APP_EXEC": f"/usr/bin/{app_package}"})
     copy_linux_icon(icons_dir / f"{app_package}.png", configuration)
     set_linux_payload_permissions(install_dir, metadata, target)
     return package_root
@@ -572,6 +572,7 @@ def render_windows_template(
         "APP_VERSION": metadata.version,
         "APP_PUBLISHER": metadata.display_name,
         "APP_EXE_NAME": f"{metadata.app_name}.exe",
+        "AGENT_EXE_NAME": target.agent_binary,
         "APP_PACKAGE_NAME": metadata.app_name.lower(),
         "APP_MUTEX": single_instance_mutex(metadata, configuration),
         "APP_ID": app_id(configuration),
@@ -710,7 +711,7 @@ def linux_replacements(
         "APP_NAME": display_name(metadata, configuration),
         "APP_VERSION": metadata.version,
         "APP_PACKAGE": app_package,
-        "APP_EXECUTABLE": metadata.app_name,
+        "APP_EXECUTABLE": target.agent_binary,
         "SERVICE_BINARY": service_binary_name(metadata, target),
         "LINUX_ARCH": arch,
         "PACKAGE_ROOT": sh_path(package_root),
@@ -734,11 +735,12 @@ def write_macos_info_plist(
     metadata: AppMetadata,
     configuration: str,
     platform_name: str,
+    target: PlatformTarget,
     output_path: Path,
 ) -> None:
     replacements = {
         "APP_NAME": xml_escape(display_name(metadata, configuration)),
-        "APP_EXECUTABLE": xml_escape(metadata.app_name),
+        "APP_EXECUTABLE": xml_escape(target.agent_binary),
         "APP_IDENTIFIER": xml_escape(macos_bundle_identifier(metadata, configuration)),
         "APP_VERSION": xml_escape(metadata.version),
         "APP_BUILD": xml_escape(macos_build_version(metadata.version)),

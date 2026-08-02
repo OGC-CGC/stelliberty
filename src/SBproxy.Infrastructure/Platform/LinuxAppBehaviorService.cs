@@ -20,7 +20,7 @@ public sealed class LinuxAppBehaviorService : IAppBehaviorService
             return;
         }
 
-        var binaryPath = Environment.ProcessPath ?? string.Empty;
+        var binaryPath = Path.Combine(AppContext.BaseDirectory, AppRuntimeNames.AgentBinaryName);
         if (string.IsNullOrWhiteSpace(binaryPath))
         {
             AppLogger.Warning("Linux autostart path is empty");

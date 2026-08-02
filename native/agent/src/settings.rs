@@ -5,8 +5,11 @@ use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use crate::storage;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
+/// 用途：表示 Agent 当前生效的应用设置。
 pub struct AgentSettings {
     pub settings_schema_version: u32,
     pub language: String,
@@ -104,7 +107,9 @@ pub struct AgentSettings {
     pub core_log_level: String,
 }
 
+/// 用途：提供完整且可序列化的 Agent 设置默认值。
 impl Default for AgentSettings {
+    /// 用途：构造首次启动或缺失字段时使用的默认设置。
     fn default() -> Self {
         Self {
             settings_schema_version: 1,
@@ -237,6 +242,7 @@ impl Default for AgentSettings {
     }
 }
 
+/// 用途：负责设置文件的读取、规范化、修改和持久化。
 pub struct SettingsStore {
     path: PathBuf,
     modified: Option<SystemTime>,
@@ -246,7 +252,9 @@ pub struct SettingsStore {
     pending_change: bool,
 }
 
+/// 用途：提供设置文档的加载、快照、增量更新和持久化接口。
 impl SettingsStore {
+    /// 用途：根据用户数据目录创建尚未加载的设置存储。
     pub fn new(user_data_dir: &Path) -> Self {
         Self {
             path: user_data_dir.join("settings.json"),
@@ -258,12 +266,13 @@ impl SettingsStore {
         }
     }
 
+    /// 用途：首次加载并规范化设置，后续调用返回当前副本。
     pub fn load(&mut self) -> Result<AgentSettings> {
         if self.revision != 0 {
             return Ok(self.current.clone());
         }
         let document = self.read_document()?;
-        let (document, current) = normalize(document)?;
+        let (document, current) = settings_normalize(document)?;
         self.document = document;
         self.current = current;
         if !self.path.is_file() {
@@ -277,6 +286,7 @@ impl SettingsStore {
         Ok(self.current.clone())
     }
 
+    /// 用途：检测外部修改，并在设置变化时返回新的设置副本。
     pub fn reload_if_changed(&mut self) -> Result<Option<AgentSettings>> {
         self.refresh()?;
         if !self.pending_change {
@@ -286,6 +296,7 @@ impl SettingsStore {
         Ok(Some(self.current.clone()))
     }
 
+    /// 用途：根据文件修改时间刷新内存中的设置文档。
     pub fn refresh(&mut self) -> Result<()> {
         if self.revision == 0 {
             self.load()?;
@@ -298,7 +309,7 @@ impl SettingsStore {
             return Ok(());
         }
         let document = self.read_document()?;
-        let (document, current) = normalize(document)?;
+        let (document, current) = settings_normalize(document)?;
         self.document = document;
         self.current = current;
         self.modified = modified;
@@ -307,15 +318,18 @@ impl SettingsStore {
         Ok(())
     }
 
+    /// 用途：返回当前设置文档的单调递增修订号。
     pub fn revision(&self) -> u64 {
         self.revision
     }
 
+    /// 用途：刷新并返回当前修订号及完整设置文档。
     pub fn snapshot(&mut self) -> Result<(u64, Value)> {
         self.refresh()?;
         Ok((self.revision, Value::Object(self.document.clone())))
     }
 
+    /// 用途：合并字段补丁、规范化结果并持久化新的设置文档。
     pub fn apply_patch(&mut self, changes: &Map<String, Value>) -> Result<(u64, AgentSettings, Value)> {
         if self.revision == 0 {
             self.load()?;
@@ -328,7 +342,7 @@ impl SettingsStore {
                 document.insert(name.clone(), value.clone());
             }
         }
-        let (document, current) = normalize(document)?;
+        let (document, current) = settings_normalize(document)?;
         self.document = document;
         self.current = current.clone();
         self.revision = self.revision.saturating_add(1);
@@ -341,16 +355,19 @@ impl SettingsStore {
         ))
     }
 
+    /// 用途：更新指定字符串设置并返回新的设置快照。
     pub fn update_string(&mut self, name: &str, value: &str) -> Result<AgentSettings> {
         let changes = Map::from_iter([(name.into(), Value::String(value.into()))]);
         self.apply_patch(&changes).map(|(_, settings, _)| settings)
     }
 
+    /// 用途：更新指定布尔设置并返回新的设置快照。
     pub fn update_bool(&mut self, name: &str, value: bool) -> Result<AgentSettings> {
         let changes = Map::from_iter([(name.into(), Value::Bool(value))]);
         self.apply_patch(&changes).map(|(_, settings, _)| settings)
     }
 
+    /// 用途：读取设置 JSON 对象，并在内容损坏时备份后回退为空对象。
     fn read_document(&self) -> Result<Map<String, Value>> {
         let content = match std::fs::read_to_string(&self.path) {
             Ok(content) => content,
@@ -380,23 +397,9 @@ impl SettingsStore {
         }
     }
 
+    /// 用途：以统一原子写入方式保存当前设置文档并更新修改时间。
     fn write_current_document(&mut self) -> Result<()> {
-        let parent = self.path.parent().context("settings path has no parent")?;
-        std::fs::create_dir_all(parent).context("failed to create settings directory")?;
-        let temporary = self.path.with_extension("json.agent.tmp");
-        std::fs::write(
-            &temporary,
-            serde_json::to_vec_pretty(&self.document)?,
-        )
-        .context("failed to write temporary settings")?;
-        if let Err(error) = std::fs::rename(&temporary, &self.path) {
-            if self.path.exists() {
-                std::fs::remove_file(&self.path).context("failed to replace settings")?;
-                std::fs::rename(&temporary, &self.path).context("failed to install settings")?;
-            } else {
-                return Err(error).context("failed to install settings");
-            }
-        }
+        storage::file_write_atomic(&self.path, &serde_json::to_vec_pretty(&self.document)?)?;
         self.modified = std::fs::metadata(&self.path)
             .and_then(|metadata| metadata.modified())
             .ok();
@@ -404,7 +407,10 @@ impl SettingsStore {
     }
 }
 
-fn normalize(mut document: Map<String, Value>) -> Result<(Map<String, Value>, AgentSettings)> {
+/// 用途：补齐和校验设置字段，返回规范文档及强类型设置。
+fn settings_normalize(
+    mut document: Map<String, Value>,
+) -> Result<(Map<String, Value>, AgentSettings)> {
     let defaults = serde_json::to_value(AgentSettings::default())?
         .as_object()
         .cloned()

@@ -1,27 +1,23 @@
-use std::fs::File;
-use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
-use base64::Engine;
-use reqwest::{Client, Method, StatusCode};
 use serde_json::{Map, Value};
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use tokio::sync::{Mutex, broadcast};
-use walkdir::WalkDir;
-use zip::{CompressionMethod, ZipWriter, write::SimpleFileOptions};
 
 use hub::infra::ipc::MethodHandler;
 use hub::infra::ipc::Outgoing;
 use std::sync::Arc;
 
+use crate::backups;
 use crate::settings::{AgentSettings, SettingsStore};
+use crate::sources;
+use crate::storage::file_write_atomic;
 use crate::subscriptions::SubscriptionStore;
+use crate::updates;
 
-const RELEASES_API_URL: &str =
-    "https://[::]:-1/api/v1/repos/Anonymous/stelliberty-fork/releases?per_page=30";
-
+/// 用途：调度自动更新、订阅刷新和 WebDAV 备份任务。
 pub struct BackgroundScheduler {
     user_data_dir: PathBuf,
     app_version: String,
@@ -35,7 +31,15 @@ pub struct BackgroundScheduler {
     next_delay_test: Option<OffsetDateTime>,
 }
 
+/// 用途：保存待应用的订阅下载结果及其元数据。
+struct SubscriptionDownload {
+    content: String,
+    traffic_info: Option<Value>,
+}
+
+/// 用途：提供后台任务调度器的构造和周期执行接口。
 impl BackgroundScheduler {
+    /// 用途：创建共享核心与订阅存储的后台任务调度器。
     pub fn new(
         user_data_dir: PathBuf,
         app_version: String,
@@ -57,6 +61,7 @@ impl BackgroundScheduler {
         }
     }
 
+    /// 用途：执行一次到期任务检查，并隔离各后台任务的失败。
     pub async fn tick(&mut self, settings_store: Arc<Mutex<SettingsStore>>) {
         let settings = match settings_store.lock().await.load() {
             Ok(settings) => settings,
@@ -65,14 +70,14 @@ impl BackgroundScheduler {
                 return;
             }
         };
-        if let Err(error) = self.update_subscriptions(self.first_run, &settings).await {
+        if let Err(error) = self.subscription_update_all(self.first_run, &settings).await {
             tracing::warn!("subscription scheduler failed: {error:#}");
         }
-        if let Err(error) = self.run_auto_delay_if_due(&settings).await {
+        if let Err(error) = self.delay_test_run_if_due(&settings).await {
             tracing::warn!("subscription auto-delay scheduler failed: {error:#}");
         }
         if let Err(error) = self
-            .check_app_update_if_due(settings_store.clone(), &settings, self.first_run)
+            .app_update_check_if_due(settings_store.clone(), &settings, self.first_run)
             .await
         {
             tracing::warn!("app update scheduler failed: {error:#}");
@@ -80,7 +85,7 @@ impl BackgroundScheduler {
         if OffsetDateTime::now_utc() >= self.next_webdav_check {
             self.next_webdav_check = OffsetDateTime::now_utc() + time::Duration::minutes(10);
             if let Err(error) = self
-                .backup_webdav_if_due(settings_store.clone(), &settings)
+                .webdav_backup_if_due(settings_store.clone(), &settings)
                 .await
             {
                 tracing::warn!("WebDAV backup scheduler failed: {error:#}");
@@ -89,25 +94,24 @@ impl BackgroundScheduler {
         self.first_run = false;
     }
 
-    async fn run_auto_delay_if_due(&mut self, settings: &AgentSettings) -> Result<()> {
-        let selection_path = self
-            .user_data_dir
-            .join("subscriptions")
-            .join("selection_state.json");
-        let selected = std::fs::read_to_string(selection_path)
-            .ok()
-            .and_then(|content| serde_json::from_str::<Value>(&content).ok())
-            .and_then(|document| {
-                document
-                    .get("CurrentSubscriptionId")
-                    .and_then(Value::as_str)
-                    .map(str::to_owned)
-            });
+    /// 用途：在所选订阅的自动延迟测试到期时触发核心测试。
+    async fn delay_test_run_if_due(&mut self, settings: &AgentSettings) -> Result<()> {
+        let subscriptions = self.subscriptions.lock().await;
+        let selected = subscriptions.current_subscription_id()?;
         let interval = selected
             .as_deref()
-            .and_then(|selected| self.subscription_delay_interval(selected).ok())
-            .flatten()
+            .and_then(|selected| {
+                subscriptions.list().ok()?.into_iter().find_map(|item| {
+                    (item.get("Id").and_then(Value::as_str) == Some(selected))
+                        .then(|| {
+                            item.get("AutoTestDelayIntervalMinutes")
+                                .and_then(Value::as_i64)
+                        })
+                        .flatten()
+                })
+            })
             .unwrap_or(0);
+        drop(subscriptions);
         let now = OffsetDateTime::now_utc();
         if selected != self.delay_subscription_id || interval != self.delay_interval_minutes {
             self.delay_subscription_id = selected;
@@ -130,25 +134,8 @@ impl BackgroundScheduler {
         Ok(())
     }
 
-    fn subscription_delay_interval(&self, selected: &str) -> Result<Option<i64>> {
-        let path = self
-            .user_data_dir
-            .join("subscriptions")
-            .join("subscriptions_list.json");
-        let document: Value = serde_json::from_slice(&std::fs::read(path)?)?;
-        Ok(document
-            .get("Subscriptions")
-            .and_then(Value::as_array)
-            .and_then(|items| {
-                items
-                    .iter()
-                    .find(|item| item.get("Id").and_then(Value::as_str) == Some(selected))
-            })
-            .and_then(|item| item.get("AutoTestDelayIntervalMinutes"))
-            .and_then(Value::as_i64))
-    }
-
-    async fn check_app_update_if_due(
+    /// 用途：按设置的启动或间隔策略检查应用更新。
+    async fn app_update_check_if_due(
         &self,
         settings_store: Arc<Mutex<SettingsStore>>,
         settings: &AgentSettings,
@@ -172,45 +159,26 @@ impl BackgroundScheduler {
         if interval.is_some_and(|interval| last.is_some_and(|last| now - last < interval)) {
             return Ok(());
         }
-        let releases: Value = Client::builder()
-            .timeout(Duration::from_secs(10))
-            .build()?
-            .get(RELEASES_API_URL)
-            .header(reqwest::header::USER_AGENT, "Shadioium-Agent")
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
+        let result = updates::app_update_check(
+            &self.app_version,
+            &settings.app_update_channel,
+            "Shadioium-Agent",
+        )
+        .await?;
         settings_store
             .lock()
             .await
-            .update_string("LastAppUpdateCheckTime", &format_time(now)?)?;
-        let candidate = releases.as_array().and_then(|items| {
-            items
-                .iter()
-                .filter(|item| item.get("draft").and_then(Value::as_bool) != Some(true))
-                .filter(|item| {
-                    settings.app_update_channel != "stable"
-                        || item.get("prerelease").and_then(Value::as_bool) != Some(true)
-                })
-                .filter_map(|item| {
-                    let version = item.get("tag_name")?.as_str()?;
-                    version_is_newer(version, &self.app_version).then_some((
-                        version.to_owned(),
-                        item.get("html_url")
-                            .and_then(Value::as_str)
-                            .unwrap_or_default()
-                            .to_owned(),
-                    ))
-                })
-                .max_by(|left, right| version_key(&left.0).cmp(&version_key(&right.0)))
-        });
-        if let Some((version, url)) = candidate
+            .update_string("LastAppUpdateCheckTime", &time_format(now)?)?;
+        if result.get("has_update").and_then(Value::as_bool) == Some(true)
+            && let Some(version) = result.get("latest_version").and_then(Value::as_str)
             && version != settings.ignored_update_version
         {
+            let url = result
+                .get("release_url")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
             let update_state_path = self.user_data_dir.join("runtime").join("agent-update.json");
-            atomic_write(
+            file_write_atomic(
                 &update_state_path,
                 &serde_json::to_vec_pretty(&serde_json::json!({ "version": version, "url": url }))?,
             )?;
@@ -222,7 +190,12 @@ impl BackgroundScheduler {
         Ok(())
     }
 
-    async fn update_subscriptions(&self, startup: bool, settings: &AgentSettings) -> Result<()> {
+    /// 用途：下载并应用所有满足自动更新条件的订阅。
+    async fn subscription_update_all(
+        &self,
+        startup: bool,
+        settings: &AgentSettings,
+    ) -> Result<()> {
         let subscriptions = self.subscriptions.lock().await.list()?;
         let now = OffsetDateTime::now_utc();
         for subscription in subscriptions {
@@ -234,17 +207,32 @@ impl BackgroundScheduler {
             {
                 continue;
             }
-            let id = read_string(&item, "Id")?.to_owned();
-            match self.download_subscription(&item, settings).await {
-                Ok(body) => {
-                    validate_subscription_yaml(&body)?;
+            let id = field_string(&item, "Id")?.to_owned();
+            match self.subscription_download(&item, settings).await {
+                Ok(download) => {
+                    let body = download.content;
+                    subscription_yaml_validate(&body)?;
+                    item.insert("SourceFormat".into(), Value::from(0));
+                    item.insert(
+                        "TrafficInfo".into(),
+                        download.traffic_info.unwrap_or(Value::Null),
+                    );
+                    item.insert(
+                        "BuiltinChainProxyNames".into(),
+                        Value::Array(
+                            chain_proxy_names_builtin(&body)?
+                                .into_iter()
+                                .map(Value::String)
+                                .collect(),
+                        ),
+                    );
                     self.subscriptions
                         .lock()
                         .await
                         .save_content(&id, &body)?;
-                    match self.apply_updated_subscription(&id, &body).await {
+                    match self.subscription_apply(&id, &body).await {
                         Ok(()) => {
-                            item.insert("LastUpdatedAt".into(), Value::String(format_time(now)?));
+                            item.insert("LastUpdatedAt".into(), Value::String(time_format(now)?));
                             item.insert("LastError".into(), Value::Null);
                             item.insert("LastErrorAt".into(), Value::Null);
                         }
@@ -253,13 +241,13 @@ impl BackgroundScheduler {
                                 "LastError".into(),
                                 Value::String(format!("updated but failed to apply: {error:#}")),
                             );
-                            item.insert("LastErrorAt".into(), Value::String(format_time(now)?));
+                            item.insert("LastErrorAt".into(), Value::String(time_format(now)?));
                         }
                     }
                 }
                 Err(error) => {
                     item.insert("LastError".into(), Value::String(format!("{error:#}")));
-                    item.insert("LastErrorAt".into(), Value::String(format_time(now)?));
+                    item.insert("LastErrorAt".into(), Value::String(time_format(now)?));
                 }
             }
             self.subscriptions
@@ -278,7 +266,8 @@ impl BackgroundScheduler {
         Ok(())
     }
 
-    async fn apply_updated_subscription(&self, subscription_id: &str, content: &str) -> Result<()> {
+    /// 用途：为当前订阅重建运行时配置并请求核心应用。
+    async fn subscription_apply(&self, subscription_id: &str, content: &str) -> Result<()> {
         let selected = self
             .subscriptions
             .lock()
@@ -289,7 +278,7 @@ impl BackgroundScheduler {
         }
 
         let Some(runtime_path) =
-            regenerate_runtime_config(&self.user_data_dir, subscription_id, content)?
+            runtime_config_regenerate(&self.user_data_dir, subscription_id, content)?
         else {
             tracing::warn!(
                 "selected subscription updated without an existing runtime config: {subscription_id}"
@@ -310,55 +299,57 @@ impl BackgroundScheduler {
         Ok(())
     }
 
-    async fn download_subscription(
+    /// 用途：下载、解密并整理单个订阅及其流量元数据。
+    async fn subscription_download(
         &self,
         item: &Map<String, Value>,
         settings: &AgentSettings,
-    ) -> Result<String> {
-        if !item
+    ) -> Result<SubscriptionDownload> {
+        let age_secret_key = item
             .get("AgeSecretKey")
             .and_then(Value::as_str)
-            .unwrap_or_default()
-            .is_empty()
-        {
-            bail!("encrypted subscription updates require an interactive key operation");
-        }
-        let mut builder = Client::builder().timeout(Duration::from_secs(10));
-        match item
+            .unwrap_or_default();
+        let proxy_mode = item
             .get("UpdateProxyMode")
             .and_then(Value::as_str)
-            .unwrap_or("Direct")
-        {
-            "Core" => {
-                builder = builder.proxy(reqwest::Proxy::all(format!(
-                    "http://{}:{}",
-                    settings.proxy_host, settings.mixed_port
-                ))?);
-            }
-            "SystemProxy" => {}
-            _ => builder = builder.no_proxy(),
-        }
+            .unwrap_or("Direct");
         let user_agent = item
             .get("UserAgent")
             .and_then(Value::as_str)
             .filter(|value| !value.trim().is_empty())
             .unwrap_or("clash.meta");
-        let response = builder
-            .build()?
-            .get(read_string(item, "SourceLocation")?)
-            .header(reqwest::header::USER_AGENT, user_agent)
-            .header(reqwest::header::CACHE_CONTROL, "no-cache")
-            .send()
-            .await?
-            .error_for_status()?;
-        let body = response.text().await?;
+        let downloaded = sources::source_download_raw(
+            field_string(item, "SourceLocation")?,
+            user_agent,
+            proxy_mode,
+            settings,
+            Duration::from_secs(10),
+        )
+        .await?;
+        let traffic_info =
+            downloaded
+                .traffic_info
+                .map(|[upload, download, total, expire]| {
+                    serde_json::json!({
+                        "Upload": upload,
+                        "Download": download,
+                        "Total": total,
+                        "Expire": expire,
+                    })
+                });
+        let body = hub::capabilities::age_text::decrypt_text(&downloaded.content, age_secret_key)
+            .context("failed to decrypt age subscription")?;
         if body.len() > 10 * 1024 * 1024 {
-            bail!("subscription response exceeded 10 MiB");
+            bail!("decrypted subscription exceeded 10 MiB");
         }
-        Ok(body)
+        Ok(SubscriptionDownload {
+            content: body,
+            traffic_info,
+        })
     }
 
-    async fn backup_webdav_if_due(
+    /// 用途：在备份间隔到期时创建 WebDAV 备份并记录完成时间。
+    async fn webdav_backup_if_due(
         &self,
         settings_store: Arc<Mutex<SettingsStore>>,
         settings: &AgentSettings,
@@ -366,14 +357,9 @@ impl BackgroundScheduler {
         if !settings.is_web_dav_backup_enabled || settings.web_dav_url.trim().is_empty() {
             return Ok(());
         }
-        let settings_json: Value =
-            std::fs::read_to_string(self.user_data_dir.join("settings.json"))
-                .ok()
-                .and_then(|content| serde_json::from_str(&content).ok())
-                .unwrap_or(Value::Null);
-        let last = settings_json
-            .get("LastWebDavBackupTime")
-            .and_then(Value::as_str)
+        let last = settings
+            .last_web_dav_backup_time
+            .as_deref()
             .and_then(|value| OffsetDateTime::parse(value, &Rfc3339).ok());
         let interval =
             time::Duration::hours(i64::from(settings.web_dav_backup_interval_hours.max(1)));
@@ -382,25 +368,30 @@ impl BackgroundScheduler {
             return Ok(());
         }
 
-        let temporary = std::env::temp_dir().join(format!(
-            "sbproxy-agent-backup-{}-{}.zip",
-            std::process::id(),
-            now.unix_timestamp()
-        ));
-        create_backup(&self.user_data_dir, &temporary)?;
-        let result = upload_webdav(settings, &temporary, now).await;
-        let _ = std::fs::remove_file(&temporary);
-        result?;
+        let webdav_settings = backups::WebDavSettings {
+            url: settings.web_dav_url.clone(),
+            remote_directory: settings.web_dav_remote_directory.clone(),
+            user_name: settings.web_dav_user_name.clone(),
+            password: settings.web_dav_password.clone(),
+            retention_count: settings.web_dav_backup_retention_count,
+        };
+        backups::webdav_create(
+            &self.user_data_dir,
+            &webdav_settings,
+            &format!("Shadioium/{}", self.app_version),
+        )
+        .await?;
         settings_store
             .lock()
             .await
-            .update_string("LastWebDavBackupTime", &format_time(now)?)?;
+            .update_string("LastWebDavBackupTime", &time_format(now)?)?;
         tracing::info!("scheduled WebDAV backup completed");
         Ok(())
     }
 }
 
-fn regenerate_runtime_config(
+/// 用途：基于新订阅内容重建现有运行时配置并保留用户修改。
+fn runtime_config_regenerate(
     user_data_dir: &Path,
     subscription_id: &str,
     new_content: &str,
@@ -421,16 +412,17 @@ fn regenerate_runtime_config(
         serde_yaml_ng::from_str(&old_runtime).context("stored runtime YAML is invalid")?;
     let new_original: serde_yaml_ng::Value =
         serde_yaml_ng::from_str(new_content).context("updated subscription YAML is invalid")?;
-    let new_runtime = carry_runtime_changes(&old_original, &old_runtime, &new_original);
-    atomic_write(&original_path, new_content.as_bytes())?;
-    atomic_write(
+    let new_runtime = runtime_changes_carry(&old_original, &old_runtime, &new_original);
+    file_write_atomic(&original_path, new_content.as_bytes())?;
+    file_write_atomic(
         &runtime_path,
         serde_yaml_ng::to_string(&new_runtime)?.as_bytes(),
     )?;
     Ok(Some(runtime_path))
 }
 
-fn carry_runtime_changes(
+/// 用途：将旧运行时相对原始配置的差异递归迁移到新配置。
+fn runtime_changes_carry(
     old_original: &serde_yaml_ng::Value,
     old_runtime: &serde_yaml_ng::Value,
     new_original: &serde_yaml_ng::Value,
@@ -456,7 +448,7 @@ fn carry_runtime_changes(
             Some(runtime_value) if runtime_value != old_value => {
                 let next_value = merged
                     .get(key)
-                    .map(|new_value| carry_runtime_changes(old_value, runtime_value, new_value))
+            .map(|new_value| runtime_changes_carry(old_value, runtime_value, new_value))
                     .unwrap_or_else(|| runtime_value.clone());
                 merged.insert(key.clone(), next_value);
             }
@@ -471,6 +463,7 @@ fn carry_runtime_changes(
     serde_yaml_ng::Value::Mapping(merged)
 }
 
+/// 用途：判断订阅是否满足启动或间隔自动更新条件。
 fn subscription_is_due(item: &Map<String, Value>, startup: bool, now: OffsetDateTime) -> bool {
     let mode = item
         .get("AutoUpdateMode")
@@ -497,7 +490,8 @@ fn subscription_is_due(item: &Map<String, Value>, startup: bool, now: OffsetDate
     last.is_none_or(|last| now - last >= time::Duration::minutes(minutes))
 }
 
-fn validate_subscription_yaml(content: &str) -> Result<()> {
+/// 用途：校验订阅 YAML 根结构及必要代理字段。
+fn subscription_yaml_validate(content: &str) -> Result<()> {
     let document: serde_yaml_ng::Value =
         serde_yaml_ng::from_str(content).context("subscription YAML is invalid")?;
     let mapping = document
@@ -511,204 +505,51 @@ fn validate_subscription_yaml(content: &str) -> Result<()> {
     Ok(())
 }
 
-fn create_backup(user_data_dir: &Path, destination: &Path) -> Result<()> {
-    let file = File::create(destination)?;
-    let mut zip = ZipWriter::new(file);
-    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-    let settings_path = user_data_dir.join("settings.json");
-    if let Ok(content) = std::fs::read_to_string(&settings_path) {
-        let mut settings: Map<String, Value> = serde_json::from_str(&content)?;
-        for key in [
-            "WindowWidth",
-            "WindowHeight",
-            "IsWindowMaximized",
-            "IsSilentStartEnabled",
-            "IsAutoStartEnabled",
-            "IsWebDavBackupEnabled",
-            "WebDavUrl",
-            "WebDavUserName",
-            "WebDavPassword",
-            "WebDavRemoteDirectory",
-            "WebDavBackupIntervalHours",
-            "WebDavBackupRetentionCount",
-            "LastWebDavBackupTime",
-        ] {
-            settings.remove(key);
-        }
-        zip.start_file("settings.json", options)?;
-        zip.write_all(&serde_json::to_vec_pretty(&settings)?)?;
-    }
-    for entry_name in ["subscriptions", "overrides", "dns.json"] {
-        let source = user_data_dir.join(entry_name);
-        if !source.exists() {
+/// 用途：提取配置中使用内置链式拨号的代理名称。
+fn chain_proxy_names_builtin(content: &str) -> Result<Vec<String>> {
+    let document: serde_yaml_ng::Value =
+        serde_yaml_ng::from_str(content).context("subscription YAML is invalid")?;
+    let Some(proxies) = document
+        .as_mapping()
+        .and_then(|root| root.get(serde_yaml_ng::Value::String("proxies".into())))
+        .and_then(serde_yaml_ng::Value::as_sequence)
+    else {
+        return Ok(Vec::new());
+    };
+    let mut names = Vec::new();
+    for proxy in proxies {
+        let Some(proxy) = proxy.as_mapping() else {
             continue;
-        }
-        for entry in WalkDir::new(&source).follow_links(false) {
-            let entry = entry?;
-            if !entry.file_type().is_file() {
-                continue;
-            }
-            let relative = entry.path().strip_prefix(user_data_dir)?;
-            zip.start_file(relative.to_string_lossy().replace('\\', "/"), options)?;
-            let mut input = File::open(entry.path())?;
-            std::io::copy(&mut input, &mut zip)?;
-        }
-    }
-    zip.finish()?;
-    Ok(())
-}
-
-async fn upload_webdav(
-    settings: &AgentSettings,
-    backup_path: &Path,
-    now: OffsetDateTime,
-) -> Result<()> {
-    let client = Client::builder().timeout(Duration::from_secs(30)).build()?;
-    let mut directory = settings.web_dav_url.trim_end_matches('/').to_owned();
-    for segment in settings
-        .web_dav_remote_directory
-        .split(['/', '\\'])
-        .filter(|segment| !segment.trim().is_empty())
-    {
-        if matches!(segment, "." | "..") {
-            bail!("WebDAV directory contains path traversal");
-        }
-        directory.push('/');
-        directory.push_str(segment);
-        let response = authorize(
-            client.request(Method::from_bytes(b"MKCOL")?, &directory),
-            settings,
-        )
-        .send()
-        .await?;
-        if !matches!(
-            response.status(),
-            StatusCode::CREATED | StatusCode::METHOD_NOT_ALLOWED | StatusCode::OK
-        ) {
-            bail!("WebDAV MKCOL returned {}", response.status());
-        }
-    }
-    let stamp = now.format(time::macros::format_description!(
-        "[year][month][day]-[hour][minute][second]"
-    ))?;
-    let target = format!("{directory}/shadioium-{stamp}.shadioium");
-    let mut bytes = Vec::new();
-    File::open(backup_path)?.read_to_end(&mut bytes)?;
-    let response = authorize(client.put(target), settings)
-        .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
-        .body(bytes)
-        .send()
-        .await?;
-    if !response.status().is_success() {
-        bail!("WebDAV upload returned {}", response.status());
-    }
-    prune_webdav(&client, settings, &directory).await?;
-    Ok(())
-}
-
-async fn prune_webdav(client: &Client, settings: &AgentSettings, directory: &str) -> Result<()> {
-    let response = authorize(
-        client.request(Method::from_bytes(b"PROPFIND")?, directory),
-        settings,
-    )
-    .header("Depth", "1")
-    .send()
-    .await?;
-    if !response.status().is_success() {
-        bail!("WebDAV PROPFIND returned {}", response.status());
-    }
-    let body = response.bytes().await?;
-    let mut reader = quick_xml::Reader::from_reader(body.as_ref());
-    reader.config_mut().trim_text(true);
-    let mut hrefs = Vec::new();
-    let mut in_href = false;
-    loop {
-        match reader.read_event()? {
-            quick_xml::events::Event::Start(tag) => {
-                in_href = tag.local_name().as_ref() == b"href";
-            }
-            quick_xml::events::Event::Text(text) if in_href => {
-                let href = text.decode()?.into_owned();
-                if href.ends_with(".shadioium") {
-                    hrefs.push(href);
-                }
-            }
-            quick_xml::events::Event::End(tag) if tag.local_name().as_ref() == b"href" => {
-                in_href = false;
-            }
-            quick_xml::events::Event::Eof => break,
-            _ => {}
-        }
-    }
-    hrefs.sort_unstable_by(|left, right| right.cmp(left));
-    let retention = usize::try_from(settings.web_dav_backup_retention_count.max(1)).unwrap_or(1);
-    for href in hrefs.into_iter().skip(retention) {
-        let target = if href.starts_with("http://") || href.starts_with("https://") {
-            href
-        } else {
-            let base = reqwest::Url::parse(directory)?;
-            base.join(&href)?.to_string()
         };
-        let response = authorize(client.delete(target), settings).send().await?;
-        if !response.status().is_success() && response.status() != StatusCode::NOT_FOUND {
-            bail!("WebDAV DELETE returned {}", response.status());
+        let has_dialer = proxy
+            .get(serde_yaml_ng::Value::String("dialer-proxy".into()))
+            .and_then(serde_yaml_ng::Value::as_str)
+            .is_some_and(|value| !value.trim().is_empty());
+        let name = proxy
+            .get(serde_yaml_ng::Value::String("name".into()))
+            .and_then(serde_yaml_ng::Value::as_str)
+            .filter(|value| !value.trim().is_empty());
+        if has_dialer
+            && let Some(name) = name
+            && !names.iter().any(|existing| existing == name)
+        {
+            names.push(name.to_owned());
         }
     }
-    Ok(())
+    Ok(names)
 }
 
-fn authorize(
-    request: reqwest::RequestBuilder,
-    settings: &AgentSettings,
-) -> reqwest::RequestBuilder {
-    if settings.web_dav_user_name.is_empty() {
-        request
-    } else {
-        let token = base64::engine::general_purpose::STANDARD.encode(format!(
-            "{}:{}",
-            settings.web_dav_user_name, settings.web_dav_password
-        ));
-        request.header(reqwest::header::AUTHORIZATION, format!("Basic {token}"))
-    }
-}
-
-fn read_string<'a>(item: &'a Map<String, Value>, name: &str) -> Result<&'a str> {
+/// 用途：读取订阅对象中必需且非空的字符串字段。
+fn field_string<'a>(item: &'a Map<String, Value>, name: &str) -> Result<&'a str> {
     item.get(name)
         .and_then(Value::as_str)
         .filter(|value| !value.trim().is_empty())
         .with_context(|| format!("subscription is missing {name}"))
 }
 
-fn format_time(value: OffsetDateTime) -> Result<String> {
+/// 用途：将时间统一格式化为 RFC 3339 文本。
+fn time_format(value: OffsetDateTime) -> Result<String> {
     value.format(&Rfc3339).context("failed to format timestamp")
-}
-
-fn atomic_write(path: &Path, content: &[u8]) -> Result<()> {
-    let parent = path.parent().context("path has no parent")?;
-    std::fs::create_dir_all(parent)?;
-    let temporary = path.with_extension("agent.tmp");
-    std::fs::write(&temporary, content)?;
-    if let Err(error) = std::fs::rename(&temporary, path) {
-        if path.exists() {
-            std::fs::remove_file(path)?;
-            std::fs::rename(&temporary, path)?;
-        } else {
-            return Err(error.into());
-        }
-    }
-    Ok(())
-}
-
-fn version_is_newer(candidate: &str, current: &str) -> bool {
-    version_key(candidate) > version_key(current)
-}
-
-fn version_key(value: &str) -> Vec<u64> {
-    value
-        .trim_start_matches(['v', 'V'])
-        .split(['.', '-', '+'])
-        .map(|part| part.parse().unwrap_or(0))
-        .collect()
 }
 
 #[cfg(test)]
@@ -716,6 +557,7 @@ mod tests {
     use super::*;
 
     #[test]
+    /// 用途：验证运行时差异能够迁移到新的订阅配置。
     fn runtime_changes_are_carried_onto_new_subscription_content() -> Result<()> {
         let old_original: serde_yaml_ng::Value =
             serde_yaml_ng::from_str("proxies: [old]\nmode: rule\ndns:\n  enable: false\n")?;
@@ -726,7 +568,7 @@ mod tests {
             "proxies: [new]\nmode: direct\ndns:\n  enable: true\n  nameserver: [1.1.1.1]\n",
         )?;
 
-        let merged = carry_runtime_changes(&old_original, &old_runtime, &new_original);
+        let merged = runtime_changes_carry(&old_original, &old_runtime, &new_original);
         let document = merged
             .as_mapping()
             .context("merged root is not a mapping")?;

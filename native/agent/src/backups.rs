@@ -14,7 +14,11 @@ use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
+use crate::storage::file_write_atomic;
+
+/// 用途：定义备份中允许跨设备迁移的目录。
 const PORTABLE_ROOTS: &[&str] = &["subscriptions", "overrides"];
+/// 用途：定义恢复时必须保留本机值的设置项。
 const LOCAL_SETTING_KEYS: &[&str] = &[
     "WindowWidth",
     "WindowHeight",
@@ -50,6 +54,7 @@ const LOCAL_SETTING_KEYS: &[&str] = &[
 ];
 
 #[derive(Clone, Deserialize)]
+/// 用途：保存 WebDAV 备份服务的连接和认证配置。
 pub struct WebDavSettings {
     pub url: String,
     pub remote_directory: String,
@@ -58,7 +63,8 @@ pub struct WebDavSettings {
     pub retention_count: i32,
 }
 
-pub fn create(user_data_dir: &Path, destination: Option<&str>) -> Result<PathBuf> {
+/// 用途：创建本地备份并返回生成文件路径。
+pub fn backup_create(user_data_dir: &Path, destination: Option<&str>) -> Result<PathBuf> {
     let path = destination.map_or_else(
         || {
             let timestamp = OffsetDateTime::now_utc()
@@ -72,14 +78,14 @@ pub fn create(user_data_dir: &Path, destination: Option<&str>) -> Result<PathBuf
         },
         PathBuf::from,
     );
-    let path = absolute_path(&path)?;
+    let path = path_absolute(&path)?;
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     let file = File::create(&path)?;
     let mut archive = ZipWriter::new(file);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-    add_portable_settings(user_data_dir, &mut archive, options)?;
+    settings_portable_add(user_data_dir, &mut archive, options)?;
     for name in ["subscriptions", "overrides", "dns.json"] {
         let source = user_data_dir.join(name);
         if source.is_file() {
@@ -97,7 +103,7 @@ pub fn create(user_data_dir: &Path, destination: Option<&str>) -> Result<PathBuf
             }
             let relative = entry.path().strip_prefix(user_data_dir)?;
             let portable = relative.to_string_lossy().replace('\\', "/");
-            if !is_portable_entry(&portable) {
+            if !entry_is_portable(&portable) {
                 continue;
             }
             archive.start_file(portable, options)?;
@@ -108,22 +114,24 @@ pub fn create(user_data_dir: &Path, destination: Option<&str>) -> Result<PathBuf
     Ok(path)
 }
 
-pub fn restore(
+/// 用途：从本地备份恢复 Agent 数据和设置。
+pub fn backup_restore(
     user_data_dir: &Path,
     source: Option<&str>,
     merge: bool,
 ) -> Result<String> {
     let path = match source {
         Some(path) => PathBuf::from(path),
-        None => latest_local_backup(user_data_dir).context("no backup file available to restore")?,
+        None => backup_local_latest(user_data_dir)
+            .context("no backup file available to restore")?,
     };
-    let local_settings = read_local_settings(user_data_dir);
+    let local_settings = settings_local_read(user_data_dir);
     let mut archive = ZipArchive::new(File::open(&path)?)?;
     let mut restorable = Vec::new();
     for index in 0..archive.len() {
         let entry = archive.by_index(index)?;
         let name = entry.name().replace('\\', "/");
-        if !entry.is_dir() && is_portable_entry(&name) && safe_relative(&name) {
+        if !entry.is_dir() && entry_is_portable(&name) && path_is_safe_relative(&name) {
             restorable.push((index, name));
         }
     }
@@ -132,10 +140,10 @@ pub fn restore(
     }
     if !merge {
         for name in ["settings.json", "dns.json"] {
-            remove_path(&user_data_dir.join(name))?;
+            path_remove(&user_data_dir.join(name))?;
         }
         for name in PORTABLE_ROOTS {
-            remove_path(&user_data_dir.join(name))?;
+            path_remove(&user_data_dir.join(name))?;
         }
     }
     let mut restored = 0_usize;
@@ -151,11 +159,11 @@ pub fn restore(
         entry.read_to_end(&mut bytes)?;
         if name == "settings.json" {
             if merge {
-                let (added, ignored) = merge_settings(user_data_dir, &bytes)?;
+                let (added, ignored) = settings_merge(user_data_dir, &bytes)?;
                 restored += added;
                 skipped += ignored;
             } else {
-                std::fs::write(&destination, bytes)?;
+                file_write_atomic(&destination, &bytes)?;
                 restored += 1;
             }
             continue;
@@ -163,11 +171,11 @@ pub fn restore(
         if let Some(parent) = destination.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(destination, bytes)?;
+        file_write_atomic(&destination, &bytes)?;
         restored += 1;
     }
     if !merge {
-        restore_local_settings(user_data_dir, local_settings)?;
+        settings_local_restore(user_data_dir, local_settings)?;
     }
     Ok(if merge {
         format!("Merge restore completed: added {restored}, skipped {skipped} existing files")
@@ -176,61 +184,65 @@ pub fn restore(
     })
 }
 
+/// 用途：验证 WebDAV 目录可访问且支持属性查询。
 pub async fn webdav_test(settings: &WebDavSettings, user_agent: &str) -> Result<()> {
-    let (client, directory) = ensure_webdav_directory(settings, user_agent).await?;
-    let response = authorize(
+    let (client, directory) = webdav_directory_ensure(settings, user_agent).await?;
+    let response = webdav_authorize(
         client.request(Method::from_bytes(b"PROPFIND")?, directory),
         settings,
     )
     .header("Depth", "0")
     .send()
     .await?;
-    expect_status(response.status(), &[StatusCode::MULTI_STATUS, StatusCode::OK])
+    webdav_status_expect(response.status(), &[StatusCode::MULTI_STATUS, StatusCode::OK])
 }
 
+/// 用途：列出 WebDAV 目录中的可恢复备份。
 pub async fn webdav_list(
     settings: &WebDavSettings,
     user_agent: &str,
 ) -> Result<Vec<Value>> {
-    let (client, directory) = ensure_webdav_directory(settings, user_agent).await?;
-    let response = authorize(
+    let (client, directory) = webdav_directory_ensure(settings, user_agent).await?;
+    let response = webdav_authorize(
         client.request(Method::from_bytes(b"PROPFIND")?, directory),
         settings,
     )
     .header("Depth", "1")
     .send()
     .await?;
-    expect_status(response.status(), &[StatusCode::MULTI_STATUS, StatusCode::OK])?;
-    parse_webdav_list(&response.bytes().await?)
+    webdav_status_expect(response.status(), &[StatusCode::MULTI_STATUS, StatusCode::OK])?;
+    webdav_list_parse(&response.bytes().await?)
 }
 
+/// 用途：创建本地备份并上传到 WebDAV 后执行保留策略。
 pub async fn webdav_create(
     user_data_dir: &Path,
     settings: &WebDavSettings,
     user_agent: &str,
 ) -> Result<()> {
-    let (client, directory) = ensure_webdav_directory(settings, user_agent).await?;
+    let (client, directory) = webdav_directory_ensure(settings, user_agent).await?;
     let timestamp = OffsetDateTime::now_utc().format(time::macros::format_description!(
         "[year][month][day]-[hour][minute][second]"
     ))?;
     let file_name = format!("shadioium-{timestamp}.shadioium");
     let temporary = user_data_dir.join("runtime").join(format!(".{file_name}.tmp"));
-    create(user_data_dir, temporary.to_str())?;
+    backup_create(user_data_dir, temporary.to_str())?;
     let bytes = std::fs::read(&temporary)?;
     let _ = std::fs::remove_file(&temporary);
-    let target = file_url(&directory, &file_name)?;
-    let response = authorize(client.put(target), settings)
+    let target = webdav_file_url(&directory, &file_name)?;
+    let response = webdav_authorize(client.put(target), settings)
         .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
         .body(bytes)
         .send()
         .await?;
-    expect_status(
+    webdav_status_expect(
         response.status(),
         &[StatusCode::CREATED, StatusCode::NO_CONTENT, StatusCode::OK],
     )?;
-    prune_webdav(&client, settings, &directory, user_agent).await
+    webdav_prune(&client, settings, &directory, user_agent).await
 }
 
+/// 用途：下载指定或最新的 WebDAV 备份并恢复本地数据。
 pub async fn webdav_restore(
     user_data_dir: &Path,
     settings: &WebDavSettings,
@@ -253,41 +265,46 @@ pub async fn webdav_restore(
                 .map(str::to_owned)
         })
         .context("no WebDAV backup file available to restore")?;
-    validate_file_name(&file_name)?;
-    let (client, directory) = ensure_webdav_directory(settings, user_agent).await?;
-    let response = authorize(client.get(file_url(&directory, &file_name)?), settings)
+    webdav_file_name_validate(&file_name)?;
+    let (client, directory) = webdav_directory_ensure(settings, user_agent).await?;
+    let response = webdav_authorize(
+        client.get(webdav_file_url(&directory, &file_name)?),
+        settings,
+    )
         .send()
         .await?;
-    expect_status(response.status(), &[StatusCode::OK])?;
+    webdav_status_expect(response.status(), &[StatusCode::OK])?;
     let temporary = user_data_dir
         .join("runtime")
         .join(format!(".restore-{file_name}.tmp"));
-    std::fs::write(&temporary, response.bytes().await?)?;
-    let result = restore(user_data_dir, temporary.to_str(), merge);
+    file_write_atomic(&temporary, &response.bytes().await?)?;
+    let result = backup_restore(user_data_dir, temporary.to_str(), merge);
     let _ = std::fs::remove_file(temporary);
     result
 }
 
+/// 用途：删除 WebDAV 上指定名称的备份文件。
 pub async fn webdav_delete(
     settings: &WebDavSettings,
     file_name: &str,
     user_agent: &str,
 ) -> Result<()> {
-    validate_file_name(file_name)?;
-    let (client, directory) = ensure_webdav_directory(settings, user_agent).await?;
-    let response = authorize(
-        client.delete(file_url(&directory, file_name)?),
+    webdav_file_name_validate(file_name)?;
+    let (client, directory) = webdav_directory_ensure(settings, user_agent).await?;
+    let response = webdav_authorize(
+        client.delete(webdav_file_url(&directory, file_name)?),
         settings,
     )
     .send()
     .await?;
-    expect_status(
+    webdav_status_expect(
         response.status(),
         &[StatusCode::OK, StatusCode::NO_CONTENT, StatusCode::NOT_FOUND],
     )
 }
 
-fn add_portable_settings(
+/// 用途：将移除本机专属字段后的设置写入备份归档。
+fn settings_portable_add(
     user_data_dir: &Path,
     archive: &mut ZipWriter<File>,
     options: SimpleFileOptions,
@@ -304,7 +321,8 @@ fn add_portable_settings(
     Ok(())
 }
 
-fn read_local_settings(user_data_dir: &Path) -> Map<String, Value> {
+/// 用途：读取恢复过程需要保留的本机设置项。
+fn settings_local_read(user_data_dir: &Path) -> Map<String, Value> {
     let settings: Map<String, Value> = std::fs::read_to_string(user_data_dir.join("settings.json"))
         .ok()
         .and_then(|content| serde_json::from_str(&content).ok())
@@ -315,18 +333,20 @@ fn read_local_settings(user_data_dir: &Path) -> Map<String, Value> {
         .collect()
 }
 
-fn restore_local_settings(user_data_dir: &Path, local: Map<String, Value>) -> Result<()> {
+/// 用途：将本机设置项合并回已恢复的设置文件。
+fn settings_local_restore(user_data_dir: &Path, local: Map<String, Value>) -> Result<()> {
     let path = user_data_dir.join("settings.json");
     let mut settings: Map<String, Value> = std::fs::read_to_string(&path)
         .ok()
         .and_then(|content| serde_json::from_str(&content).ok())
         .unwrap_or_default();
     settings.extend(local);
-    std::fs::write(path, serde_json::to_vec(&settings)?)?;
+    file_write_atomic(&path, &serde_json::to_vec(&settings)?)?;
     Ok(())
 }
 
-fn merge_settings(user_data_dir: &Path, backup: &[u8]) -> Result<(usize, usize)> {
+/// 用途：将备份设置中尚不存在的字段合并到当前设置。
+fn settings_merge(user_data_dir: &Path, backup: &[u8]) -> Result<(usize, usize)> {
     let path = user_data_dir.join("settings.json");
     let mut current: Map<String, Value> = std::fs::read_to_string(&path)
         .ok()
@@ -343,11 +363,12 @@ fn merge_settings(user_data_dir: &Path, backup: &[u8]) -> Result<(usize, usize)>
             added += 1;
         }
     }
-    std::fs::write(path, serde_json::to_vec(&current)?)?;
+    file_write_atomic(&path, &serde_json::to_vec(&current)?)?;
     Ok((added, ignored))
 }
 
-async fn ensure_webdav_directory(
+/// 用途：创建 WebDAV 客户端并确保远程备份目录存在。
+async fn webdav_directory_ensure(
     settings: &WebDavSettings,
     user_agent: &str,
 ) -> Result<(Client, String)> {
@@ -373,13 +394,13 @@ async fn ensure_webdav_directory(
         }
         current.push('/');
         current.push_str(segment);
-        let response = authorize(
+        let response = webdav_authorize(
             client.request(Method::from_bytes(b"MKCOL")?, &current),
             settings,
         )
         .send()
         .await?;
-        expect_status(
+        webdav_status_expect(
             response.status(),
             &[StatusCode::CREATED, StatusCode::METHOD_NOT_ALLOWED, StatusCode::OK],
         )?;
@@ -387,7 +408,8 @@ async fn ensure_webdav_directory(
     Ok((client, current))
 }
 
-async fn prune_webdav(
+/// 用途：按照保留数量删除 WebDAV 上的旧备份。
+async fn webdav_prune(
     client: &Client,
     settings: &WebDavSettings,
     directory: &str,
@@ -397,13 +419,13 @@ async fn prune_webdav(
     let retention = usize::try_from(settings.retention_count.max(1)).unwrap_or(1);
     for entry in entries.into_iter().skip(retention) {
         if let Some(file_name) = entry.get("file_name").and_then(Value::as_str) {
-            let response = authorize(
-                client.delete(file_url(directory, file_name)?),
+            let response = webdav_authorize(
+                client.delete(webdav_file_url(directory, file_name)?),
                 settings,
             )
             .send()
             .await?;
-            expect_status(
+            webdav_status_expect(
                 response.status(),
                 &[StatusCode::OK, StatusCode::NO_CONTENT, StatusCode::NOT_FOUND],
             )?;
@@ -412,7 +434,8 @@ async fn prune_webdav(
     Ok(())
 }
 
-fn parse_webdav_list(body: &[u8]) -> Result<Vec<Value>> {
+/// 用途：解析 WebDAV PROPFIND 响应中的备份元数据。
+fn webdav_list_parse(body: &[u8]) -> Result<Vec<Value>> {
     let mut reader = quick_xml::Reader::from_reader(body);
     reader.config_mut().trim_text(true);
     let mut entries = Vec::new();
@@ -480,7 +503,8 @@ fn parse_webdav_list(body: &[u8]) -> Result<Vec<Value>> {
     Ok(entries)
 }
 
-fn latest_local_backup(user_data_dir: &Path) -> Option<PathBuf> {
+/// 用途：返回本地备份目录中最后修改的备份文件。
+fn backup_local_latest(user_data_dir: &Path) -> Option<PathBuf> {
     let mut files = std::fs::read_dir(user_data_dir.join("backups"))
         .ok()?
         .filter_map(|entry| entry.ok())
@@ -495,7 +519,8 @@ fn latest_local_backup(user_data_dir: &Path) -> Option<PathBuf> {
     files.pop()
 }
 
-fn is_portable_entry(name: &str) -> bool {
+/// 用途：判断归档条目是否属于允许迁移的数据范围。
+fn entry_is_portable(name: &str) -> bool {
     name == "settings.json"
         || name == "dns.json"
         || (name.starts_with("subscriptions/")
@@ -506,13 +531,15 @@ fn is_portable_entry(name: &str) -> bool {
                 || name.ends_with(".js")))
 }
 
-fn safe_relative(name: &str) -> bool {
+/// 用途：判断归档条目是否为不含目录穿越的相对路径。
+fn path_is_safe_relative(name: &str) -> bool {
     !Path::new(name)
         .components()
         .any(|component| matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_)))
 }
 
-fn absolute_path(path: &Path) -> Result<PathBuf> {
+/// 用途：将备份目标路径转换为绝对路径。
+fn path_absolute(path: &Path) -> Result<PathBuf> {
     if path.is_absolute() {
         Ok(path.to_owned())
     } else {
@@ -520,7 +547,8 @@ fn absolute_path(path: &Path) -> Result<PathBuf> {
     }
 }
 
-fn remove_path(path: &Path) -> Result<()> {
+/// 用途：删除文件或目录，并将不存在视为成功。
+fn path_remove(path: &Path) -> Result<()> {
     if path.is_dir() {
         std::fs::remove_dir_all(path)?;
     } else if path.exists() {
@@ -529,19 +557,22 @@ fn remove_path(path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn validate_file_name(file_name: &str) -> Result<()> {
+/// 用途：校验 WebDAV 备份文件名不包含路径分隔符。
+fn webdav_file_name_validate(file_name: &str) -> Result<()> {
     if file_name.is_empty() || file_name.contains(['/', '\\']) {
         bail!("invalid WebDAV backup file name");
     }
     Ok(())
 }
 
-fn file_url(directory: &str, file_name: &str) -> Result<String> {
-    validate_file_name(file_name)?;
+/// 用途：构造指定 WebDAV 备份文件的访问地址。
+fn webdav_file_url(directory: &str, file_name: &str) -> Result<String> {
+    webdav_file_name_validate(file_name)?;
     Ok(format!("{}/{}", directory.trim_end_matches('/'), file_name))
 }
 
-fn authorize(
+/// 用途：为 WebDAV 请求附加可选的 Basic 认证信息。
+fn webdav_authorize(
     request: reqwest::RequestBuilder,
     settings: &WebDavSettings,
 ) -> reqwest::RequestBuilder {
@@ -554,7 +585,8 @@ fn authorize(
     }
 }
 
-fn expect_status(actual: StatusCode, expected: &[StatusCode]) -> Result<()> {
+/// 用途：校验 WebDAV 响应状态是否在允许集合内。
+fn webdav_status_expect(actual: StatusCode, expected: &[StatusCode]) -> Result<()> {
     if expected.contains(&actual) {
         Ok(())
     } else {
