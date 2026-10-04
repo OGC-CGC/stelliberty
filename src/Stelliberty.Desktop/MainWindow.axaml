@@ -50,6 +50,10 @@
             Background="Transparent"
             PointerPressed="OnTitleBarPointerPressed">
       <Grid x:Name="TitleBarLayout" ColumnDefinitions="*,Auto,Auto">
+        <Border Width="220"
+                HorizontalAlignment="Left"
+                Classes="sidebar-shadow"
+                IsHitTestVisible="False" />
         <controls:FpsCounter Grid.Column="1"
                              AutomationProperties.AutomationId="TitleBar.FpsCounter"
                              IsVisible="{Binding AppBehavior.IsTitleBarFpsVisible}"
