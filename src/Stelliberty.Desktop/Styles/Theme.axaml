@@ -98,6 +98,7 @@
   </ResourceDictionary.ThemeDictionaries>
 
   <SolidColorBrush x:Key="AppAccentBrush" Color="#60A5FA" />
+  <SolidColorBrush x:Key="AppWindowEdgeHighlightBrush" Color="Transparent" />
   <SolidColorBrush x:Key="AppAccentSubtleBrush" Color="#3860A5FA" />
   <SolidColorBrush x:Key="AppAccentBorderBrush" Color="#9960A5FA" />
   <SolidColorBrush x:Key="AppAccentTintBrush" Color="#1F60A5FA" />

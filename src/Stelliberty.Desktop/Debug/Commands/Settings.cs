@@ -764,6 +764,7 @@ internal static partial class DebugCommands
             "mica" => WindowEffect.Mica,
             "acrylic" => WindowEffect.Acrylic,
             "blur" => WindowEffect.Blur,
+            "frutiger-aero" or "frutigeraero" => WindowEffect.FrutigerAero,
             _ => throw new InvalidOperationException($"Unknown window effect: {value}")
         };
     }

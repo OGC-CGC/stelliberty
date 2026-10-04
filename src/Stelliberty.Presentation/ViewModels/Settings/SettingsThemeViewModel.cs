@@ -261,6 +261,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
             WindowEffect.Mica => "Settings.WindowEffect.Mica",
             WindowEffect.Acrylic => "Settings.WindowEffect.Acrylic",
             WindowEffect.Blur => "Settings.WindowEffect.Blur",
+            WindowEffect.FrutigerAero => "Settings.WindowEffect.FrutigerAero",
             _ => "Settings.WindowEffect.None"
         });
     }

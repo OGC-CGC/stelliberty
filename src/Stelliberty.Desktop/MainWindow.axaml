@@ -114,10 +114,24 @@
           <TextBlock AutomationProperties.AutomationId="Sidebar.BrandText"
                      Margin="0,4,0,28"
                      Text="{Binding Title}"
-                     FontSize="20"
-                     FontWeight="SemiBold"
+                     FontFamily="Snell Roundhand, avares://stelliberty_ui/Assets/fonts#Google Sans"
+                     FontSize="27"
+                     FontStyle="Italic"
+                     FontWeight="Bold"
+                     LetterSpacing="1"
                      HorizontalAlignment="Center"
-                     Foreground="{DynamicResource AppAccentBrush}" />
+                     RenderTransformOrigin="50%,50%">
+            <TextBlock.RenderTransform>
+              <RotateTransform Angle="-2" />
+            </TextBlock.RenderTransform>
+            <TextBlock.Foreground>
+              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Offset="0" Color="#FFF8FFFF" />
+                <GradientStop Offset="0.38" Color="#FF7DD3FC" />
+                <GradientStop Offset="1" Color="#FF2563EB" />
+              </LinearGradientBrush>
+            </TextBlock.Foreground>
+          </TextBlock>
 
           <StackPanel Grid.Row="1" Spacing="6">
             <Button Classes="nav-item"
@@ -304,5 +318,12 @@
                                 IsOpen="{Binding IsToastVisible}"
                                 Type="{Binding ToastType}"
                                 Message="{Binding ToastMessage}" />
+
+    <Border Grid.RowSpan="2"
+            ZIndex="1000"
+            IsHitTestVisible="False"
+            BorderBrush="{DynamicResource AppWindowEdgeHighlightBrush}"
+            BorderThickness="1"
+            CornerRadius="20" />
   </Grid>
 </Window>

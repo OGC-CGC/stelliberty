@@ -5,5 +5,6 @@ public enum WindowEffect
     None,
     Mica,
     Acrylic,
-    Blur
+    Blur,
+    FrutigerAero
 }
