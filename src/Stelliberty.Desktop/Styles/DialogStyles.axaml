@@ -4,7 +4,7 @@
 
   <Style Selector="TextBlock.dialog-title">
     <Setter Property="FontSize" Value="19" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
   <Style Selector="TextBlock.dialog-subtitle">
@@ -15,7 +15,7 @@
 
   <Style Selector="TextBlock.dialog-label">
     <Setter Property="FontSize" Value="12" />
-    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
     <Setter Property="Margin" Value="2,0,0,0" />
   </Style>
@@ -200,7 +200,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="FontSize" Value="13" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="Button.dialog-primary:pointerover">
     <Setter Property="Opacity" Value="0.88" />
@@ -233,7 +233,7 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="Button.dialog-secondary:pointerover">
     <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
@@ -275,7 +275,7 @@
   </Style>
   <Style Selector="TextBlock.dialog-section-title">
     <Setter Property="FontSize" Value="13" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -298,7 +298,7 @@
   </Style>
   <Style Selector="Border.update-version-slot TextBlock.uv-value">
     <Setter Property="FontSize" Value="15" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
@@ -378,7 +378,7 @@
 
   <Style Selector="ToggleButton.radio-card TextBlock.rc-title">
     <Setter Property="FontSize" Value="13" />
-    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
   <Style Selector="ToggleButton.radio-card TextBlock.rc-subtitle">
@@ -388,7 +388,7 @@
   </Style>
   <Style Selector="ToggleButton.radio-card:checked TextBlock.rc-title">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="ToggleButton.radio-card:checked TextBlock.rc-subtitle">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
@@ -433,7 +433,7 @@
   </Style>
   <Style Selector="ToggleButton.chain-chip:checked">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="ToggleButton.chain-chip:checked /template/ Border#ChipRoot">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
@@ -472,7 +472,7 @@
   </Style>
   <Style Selector="Border.chain-hop-index > TextBlock">
     <Setter Property="FontSize" Value="10.5" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -497,7 +497,7 @@
   </Style>
   <Style Selector="TextBlock.connection-detail-value[Tag=accent]">
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="TextBlock.connection-detail-value[Tag=muted]">
     <Setter Property="Foreground" Value="{DynamicResource AppTextTertiaryBrush}" />

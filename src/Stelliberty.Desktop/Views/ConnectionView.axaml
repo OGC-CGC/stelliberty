@@ -171,7 +171,7 @@
                       <TextBlock Grid.Column="1"
                                  Text="{Binding DisplayAddress}"
                                  Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                 FontWeight="SemiBold"
+                                 FontWeight="Normal"
                                  FontSize="14"
                                  TextTrimming="CharacterEllipsis"
                                  VerticalAlignment="Center" />
@@ -218,7 +218,7 @@
                           <TextBlock Text="{Binding UploadSpeedText}"
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
                                      FontSize="12"
-                                     FontWeight="SemiBold"
+                                     FontWeight="Normal"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                       </Border>
@@ -228,7 +228,7 @@
                           <TextBlock Text="{Binding DownloadSpeedText}"
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
                                      FontSize="12"
-                                     FontWeight="SemiBold"
+                                     FontWeight="Normal"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                       </Border>
@@ -240,7 +240,7 @@
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
                                      FontFamily="Consolas"
                                      FontSize="12"
-                                     FontWeight="SemiBold" />
+                                     FontWeight="Normal" />
                         </StackPanel>
                       </Border>
                     </Grid>
@@ -297,7 +297,7 @@
                                                            VerticalAlignment="Center" />
                           <TextBlock Classes="dialog-section-title" Text="{loc:Loc Connections.Card.Chain}" />
                         </StackPanel>
-                        <TextBlock FontSize="16" FontWeight="SemiBold"
+                        <TextBlock FontSize="16" FontWeight="Normal"
                                    Foreground="{DynamicResource AppAccentBrush}"
                                    TextWrapping="Wrap"
                                    AutomationProperties.AutomationId="Connections.Detail.SummaryChain"
@@ -314,21 +314,21 @@
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                           <StackPanel Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Common.Upload}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="SemiBold"
+                            <TextBlock FontFamily="Consolas" FontWeight="Normal"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryUpload"
                                        Text="{Binding DetailSummaryUpload}" />
                           </StackPanel>
                           <StackPanel Grid.Column="1" Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Common.Download}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="SemiBold"
+                            <TextBlock FontFamily="Consolas" FontWeight="Normal"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryDownload"
                                        Text="{Binding DetailSummaryDownload}" />
                           </StackPanel>
                           <StackPanel Grid.Column="2" Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Connections.Card.Duration}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="SemiBold"
+                            <TextBlock FontFamily="Consolas" FontWeight="Normal"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryDuration"
                                        Text="{Binding DetailSummaryDuration}" />

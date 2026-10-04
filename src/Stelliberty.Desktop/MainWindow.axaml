@@ -30,6 +30,19 @@
   </Window.Resources>
 
   <Window.Styles>
+    <Style Selector="TextBlock.brand-title">
+      <Setter Property="FontFamily" Value="Snell Roundhand, avares://stelliberty_ui/Assets/fonts#Google Sans" />
+      <Setter Property="FontSize" Value="27" />
+      <Setter Property="FontStyle" Value="Italic" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="1" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.brand-title.outline">
+      <Setter Property="Foreground" Value="#CC0F4C81" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+      <Setter Property="AutomationProperties.AccessibilityView" Value="Raw" />
+    </Style>
     <StyleInclude Source="avares://stelliberty_ui/Styles/ShellStyles.axaml" />
     <StyleInclude Source="avares://stelliberty_ui/Styles/PrimitivesStyles.axaml" />
     <StyleInclude Source="avares://stelliberty_ui/Styles/ScrollStyles.axaml" />
@@ -62,7 +75,7 @@
                              Margin="0,0,10,0"
                              FontFamily="Consolas"
                              FontSize="11"
-                             FontWeight="SemiBold"
+                             FontWeight="Normal"
                              Foreground="{DynamicResource AppTextSecondaryBrush}" />
         <StackPanel x:Name="CaptionButtons"
                     Grid.Column="2"
@@ -111,27 +124,50 @@
               Padding="12,24,12,20"
               Background="Transparent">
         <Grid RowDefinitions="Auto,*,Auto">
-          <TextBlock AutomationProperties.AutomationId="Sidebar.BrandText"
-                     Margin="0,4,0,28"
-                     Text="{Binding Title}"
-                     FontFamily="Snell Roundhand, avares://stelliberty_ui/Assets/fonts#Google Sans"
-                     FontSize="27"
-                     FontStyle="Italic"
-                     FontWeight="Bold"
-                     LetterSpacing="1"
-                     HorizontalAlignment="Center"
-                     RenderTransformOrigin="50%,50%">
-            <TextBlock.RenderTransform>
+          <Grid Margin="0,4,0,28"
+                HorizontalAlignment="Center"
+                RenderTransformOrigin="50%,50%">
+            <Grid.RenderTransform>
               <RotateTransform Angle="-2" />
-            </TextBlock.RenderTransform>
-            <TextBlock.Foreground>
-              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                <GradientStop Offset="0" Color="#FFF8FFFF" />
-                <GradientStop Offset="0.38" Color="#FF7DD3FC" />
-                <GradientStop Offset="1" Color="#FF2563EB" />
-              </LinearGradientBrush>
-            </TextBlock.Foreground>
-          </TextBlock>
+            </Grid.RenderTransform>
+
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform X="-1" Y="-1" /></TextBlock.RenderTransform>
+            </TextBlock>
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform Y="-1" /></TextBlock.RenderTransform>
+            </TextBlock>
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform X="1" Y="-1" /></TextBlock.RenderTransform>
+            </TextBlock>
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform X="-1" /></TextBlock.RenderTransform>
+            </TextBlock>
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform X="1" /></TextBlock.RenderTransform>
+            </TextBlock>
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform X="-1" Y="1" /></TextBlock.RenderTransform>
+            </TextBlock>
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform Y="1" /></TextBlock.RenderTransform>
+            </TextBlock>
+            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
+              <TextBlock.RenderTransform><TranslateTransform X="1" Y="1" /></TextBlock.RenderTransform>
+            </TextBlock>
+
+            <TextBlock Classes="brand-title"
+                       AutomationProperties.AutomationId="Sidebar.BrandText"
+                       Text="{Binding Title}">
+              <TextBlock.Foreground>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                  <GradientStop Offset="0" Color="#FFF8FFFF" />
+                  <GradientStop Offset="0.38" Color="#FF7DD3FC" />
+                  <GradientStop Offset="1" Color="#FF2563EB" />
+                </LinearGradientBrush>
+              </TextBlock.Foreground>
+            </TextBlock>
+          </Grid>
 
           <StackPanel Grid.Row="1" Spacing="6">
             <Button Classes="nav-item"

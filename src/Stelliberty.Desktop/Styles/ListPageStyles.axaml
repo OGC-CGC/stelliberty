@@ -13,7 +13,7 @@
 
   <Style Selector="TextBlock.list-count">
     <Setter Property="FontSize" Value="25" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
     <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
@@ -42,7 +42,7 @@
   </Style>
   <Style Selector="TextBlock.list-stat-value">
     <Setter Property="FontSize" Value="17" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
   <Style Selector="TextBlock.list-stat-value.small">
@@ -85,7 +85,7 @@
   </Style>
   <Style Selector="Button.list-chip.selected">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="Button.list-chip.selected /template/ Border#ChipRoot">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
@@ -297,7 +297,7 @@
   </Style>
   <Style Selector="TextBlock.list-empty-text">
     <Setter Property="FontSize" Value="15.5" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
   </Style>

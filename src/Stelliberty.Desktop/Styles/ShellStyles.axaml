@@ -137,7 +137,7 @@
   </Style>
   <Style Selector="Button.nav-item.selected">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
 
   <Style Selector="Border.nav-icon-pill">
@@ -148,6 +148,31 @@
   </Style>
   <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
+  </Style>
+
+  <Style Selector="Window.frutiger-aero Button.nav-item.selected">
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Window.frutiger-aero Button.nav-item.selected /template/ Border#NavRoot">
+    <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="7" />
+    <Setter Property="BoxShadow" Value="{DynamicResource AppSurfaceListShadow}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.16" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.16" />
+        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.16" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Window.frutiger-aero Button.nav-item.selected:pointerover /template/ Border#NavRoot">
+    <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
+  </Style>
+  <Style Selector="Window.frutiger-aero Button.nav-item.selected iconPacks|PackIconMingCuteIcons">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
   </Style>
 
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon">

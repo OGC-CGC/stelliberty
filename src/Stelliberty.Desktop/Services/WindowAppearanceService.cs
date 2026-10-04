@@ -188,6 +188,7 @@ internal sealed class WindowAppearanceService : IDisposable
         var useMacOSGlass = OperatingSystem.IsMacOS()
                             && effect == WindowEffect.FrutigerAero
                             && MacOSGlassEffectService.IsSupported;
+        _window.Classes.Set("frutiger-aero", useMacOSGlass);
         if (!useMacOSGlass)
         {
             _macOSGlassEffectService?.Remove();
@@ -236,7 +237,7 @@ internal sealed class WindowAppearanceService : IDisposable
         var effect = _theme.SelectedWindowEffect;
         var surfaceBrush = new SolidColorBrush(isLightTheme ? ThemeSurfaceColors.Light : ThemeSurfaceColors.Dark);
         var cardSurfaceBrush = new SolidColorBrush(Color.Parse(effect == WindowEffect.FrutigerAero
-            ? isLightTheme ? "#88FFFFFF" : "#66000000"
+            ? isLightTheme ? "#22FFFFFF" : "#22000000"
             : isLightTheme ? "#CCFFFFFF" : "#44000000"));
         var rootSurfaceBrush = effect switch
         {

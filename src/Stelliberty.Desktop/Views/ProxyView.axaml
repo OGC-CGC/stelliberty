@@ -186,7 +186,7 @@
                   <Grid Margin="13,10" RowDefinitions="*,Auto" IsHitTestVisible="False">
                     <TextBlock Text="{Binding Name}"
                                Foreground="{DynamicResource AppTextPrimaryBrush}"
-                               FontWeight="SemiBold"
+                               FontWeight="Normal"
                                FontSize="14"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
@@ -260,7 +260,7 @@
                         </Panel>
                         <StackPanel Spacing="4" VerticalAlignment="Center">
                           <TextBlock Text="{Binding Name}"
-                                     FontWeight="SemiBold" FontSize="15"
+                                     FontWeight="Normal" FontSize="15"
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
                                      TextTrimming="CharacterEllipsis" />
                           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -319,7 +319,7 @@
                                 <Grid Margin="13,10" RowDefinitions="*,Auto" IsHitTestVisible="False">
                                   <TextBlock Text="{Binding Name}"
                                              Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                             FontWeight="SemiBold"
+                                             FontWeight="Normal"
                                              FontSize="14"
                                              TextTrimming="CharacterEllipsis"
                                              VerticalAlignment="Center" />

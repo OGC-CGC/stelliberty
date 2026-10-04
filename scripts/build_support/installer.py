@@ -243,6 +243,7 @@ def build_macos_app_bundle(
     ui_executable_path.rename(named_ui_executable_path)
     stamp_macos_apphosts((executable_path, named_ui_executable_path))
     write_macos_info_plist(metadata, configuration, platform_name, contents_dir / "Info.plist")
+    build_macos_icon_composer_assets(resources_dir, platform_name)
     build_macos_icns(resources_dir / "AppIcon.icns", configuration)
     return app_path
 
@@ -909,6 +910,47 @@ def build_macos_icns(output_path: Path, configuration: str) -> None:
         run_checked(["iconutil", "-c", "icns", str(iconset_dir), "-o", str(output_path)])
 
 
+def build_macos_icon_composer_assets(output_dir: Path, platform_name: str) -> None:
+    source_path = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "macos" / "app_icon.icon"
+    if not source_path.exists():
+        raise FileNotFoundError(f"macOS Icon Composer source does not exist: {source_path}")
+
+    with tempfile.TemporaryDirectory(prefix="app-icon-") as temp_dir:
+        partial_info_plist = Path(temp_dir) / "assetcatalog_generated_info.plist"
+        result = run_checked([
+            "xcrun",
+            "actool",
+            "--compile",
+            str(output_dir),
+            "--output-format",
+            "human-readable-text",
+            "--notices",
+            "--warnings",
+            "--app-icon",
+            "app_icon",
+            "--standalone-icon-behavior",
+            "all",
+            "--output-partial-info-plist",
+            str(partial_info_plist),
+            "--development-region",
+            "zh-Hans",
+            "--platform",
+            "macosx",
+            "--target-device",
+            "mac",
+            "--minimum-deployment-target",
+            macos_min_system(platform_name),
+            str(source_path),
+        ])
+        if not (output_dir / "Assets.car").exists():
+            if result.stdout:
+                print(result.stdout.rstrip(), flush=True)
+            if result.stderr:
+                print(result.stderr.rstrip(), flush=True)
+        require_file(partial_info_plist)
+        require_file(output_dir / "Assets.car")
+
+
 def set_macos_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:
     executable_paths = [
         install_dir / metadata.app_name,
@@ -980,17 +1022,18 @@ def path_env(directory: Path) -> dict[str, str]:
     return env
 
 
-def run_checked(command: list[str], env: dict[str, str] | None = None) -> None:
+def run_checked(command: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     # 打包工具的报错是排查唯一线索，严格解码会让它变 None 而只剩一个退出码。
     result = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, text=True, errors="replace", check=False)
     if result.returncode == 0:
-        return
+        return result
 
     if result.stdout:
         print(result.stdout.rstrip(), flush=True)
     if result.stderr:
         print(result.stderr.rstrip(), flush=True)
     result.check_returncode()
+    raise AssertionError("unreachable")
 
 
 def run_capture_checked(command: list[str]) -> str:

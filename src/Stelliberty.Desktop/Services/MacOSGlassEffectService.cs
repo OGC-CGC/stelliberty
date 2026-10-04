@@ -7,7 +7,7 @@ namespace Stelliberty.Desktop.Services;
 internal sealed class MacOSGlassEffectService : IDisposable
 {
     private const string ObjectiveCLibrary = "/usr/lib/libobjc.A.dylib";
-    private static readonly nint ClearGlassStyle = 1;
+    private static readonly nint RegularGlassStyle = 0;
     private static readonly nint TitleBarVisualEffectMaterial = 3;
     private static readonly nint WidthAndHeightSizable = 2 | 16;
 
@@ -62,7 +62,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
                                         && SendBool(titleBarMaterialView, GetSelector("isHidden"));
         SetBool(titleBarMaterialView, GetSelector("setHidden:"), true);
 
-        SetInteger(glassView, GetSelector("setStyle:"), ClearGlassStyle);
+        SetInteger(glassView, GetSelector("setStyle:"), RegularGlassStyle);
         SetPointer(glassView, GetSelector("setTintColor:"), nint.Zero);
         SetDouble(glassView, GetSelector("setCornerRadius:"), 20);
         SetInteger(glassView, GetSelector("setAutoresizingMask:"), WidthAndHeightSizable);

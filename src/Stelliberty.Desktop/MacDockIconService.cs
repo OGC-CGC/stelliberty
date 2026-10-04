@@ -14,18 +14,15 @@ internal static class MacDockIconService
     {
         // AppKit 由 Avalonia 初始化，图标设置必须在主线程执行。
         Dispatcher.UIThread.VerifyAccess();
-        // 发布包 UI 位于 Contents/MacOS/data/deps，图标位于 Contents/Resources。
+        // 发布包 UI 位于 Contents/MacOS/data/deps。
+        var appBundlePath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", ".."));
         var iconPath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "Resources", "AppIcon.icns"));
-        if (!File.Exists(iconPath))
-        {
-            AppLogger.Warning($"macOS Dock icon was not found: {iconPath}");
-            return;
-        }
 
         try
         {
-            SetIcon(iconPath);
+            SetIcon(appBundlePath, iconPath);
         }
         catch (Exception exception)
         {
@@ -33,44 +30,82 @@ internal static class MacDockIconService
         }
     }
 
-    private static void SetIcon(string iconPath)
+    private static void SetIcon(string appBundlePath, string fallbackIconPath)
     {
-        var utf8Path = Marshal.StringToCoTaskMemUTF8(iconPath);
+        nint nsImage = nint.Zero;
+        if (OperatingSystem.IsMacOSVersionAtLeast(26))
+        {
+            nsImage = LoadSystemApplicationIcon(appBundlePath);
+        }
+
+        if (nsImage == nint.Zero)
+        {
+            nsImage = LoadImage(fallbackIconPath);
+        }
+
+        if (nsImage == nint.Zero)
+        {
+            AppLogger.Warning($"macOS Dock icon could not be loaded: {fallbackIconPath}");
+            return;
+        }
+
         try
         {
-            // 初始化阶段不依赖自动释放池，路径字符串与图像均显式持有并释放。
-            var nsString = Send(Send(GetClass("NSString"), GetSelector("alloc")),
-                GetSelector("initWithUTF8String:"), utf8Path);
-            nint nsImage;
-            try
-            {
-                nsImage = Send(Send(GetClass("NSImage"), GetSelector("alloc")),
-                    GetSelector("initWithContentsOfFile:"), nsString);
-            }
-            finally
-            {
-                Release(nsString, GetSelector("release"));
-            }
-            if (nsImage == nint.Zero)
-            {
-                AppLogger.Warning($"macOS Dock icon could not be loaded: {iconPath}");
-                return;
-            }
-
-            try
-            {
-                var application = Send(GetClass("NSApplication"), GetSelector("sharedApplication"));
-                SetApplicationIcon(application, GetSelector("setApplicationIconImage:"), nsImage);
-            }
-            finally
-            {
-                // 应用持有设置后的图像，此处仅释放 alloc/init 创建的本地所有权。
-                Release(nsImage, GetSelector("release"));
-            }
+            var application = Send(GetClass("NSApplication"), GetSelector("sharedApplication"));
+            SetApplicationIcon(application, GetSelector("setApplicationIconImage:"), nsImage);
         }
         finally
         {
-            Marshal.FreeCoTaskMem(utf8Path);
+            // 应用持有设置后的图像，此处仅释放本地所有权。
+            Release(nsImage, GetSelector("release"));
+        }
+    }
+
+    private static nint LoadSystemApplicationIcon(string appBundlePath)
+    {
+        var nsPath = CreateString(appBundlePath);
+        try
+        {
+            var workspace = Send(GetClass("NSWorkspace"), GetSelector("sharedWorkspace"));
+            var nsImage = Send(workspace, GetSelector("iconForFile:"), nsPath);
+            return nsImage == nint.Zero ? nint.Zero : Send(nsImage, GetSelector("retain"));
+        }
+        finally
+        {
+            Release(nsPath, GetSelector("release"));
+        }
+    }
+
+    private static nint LoadImage(string iconPath)
+    {
+        if (!File.Exists(iconPath))
+        {
+            return nint.Zero;
+        }
+
+        var nsPath = CreateString(iconPath);
+        try
+        {
+            return Send(Send(GetClass("NSImage"), GetSelector("alloc")),
+                GetSelector("initWithContentsOfFile:"), nsPath);
+        }
+        finally
+        {
+            Release(nsPath, GetSelector("release"));
+        }
+    }
+
+    private static nint CreateString(string value)
+    {
+        var utf8Value = Marshal.StringToCoTaskMemUTF8(value);
+        try
+        {
+            return Send(Send(GetClass("NSString"), GetSelector("alloc")),
+                GetSelector("initWithUTF8String:"), utf8Value);
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(utf8Value);
         }
     }
 

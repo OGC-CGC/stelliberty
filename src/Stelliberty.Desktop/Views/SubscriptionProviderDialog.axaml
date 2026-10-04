@@ -55,7 +55,7 @@
               <TextBlock Text="{loc:Loc Home.Subscription.Field.Traffic}" FontSize="12"
                          Foreground="{DynamicResource AppTextTertiaryBrush}" VerticalAlignment="Center" />
               <TextBlock Grid.Column="1" AutomationProperties.AutomationId="{Binding TrafficAutomationId}"
-                         Text="{Binding TrafficText}" FontSize="14" FontWeight="SemiBold"
+                         Text="{Binding TrafficText}" FontSize="14" FontWeight="Normal"
                          Foreground="{DynamicResource AppTextPrimaryBrush}" />
             </Grid>
             <ProgressBar Classes="provider-traffic" Classes.warning="{Binding IsTrafficWarning}"
@@ -67,7 +67,7 @@
                          Foreground="{DynamicResource AppTextTertiaryBrush}" />
               <TextBlock Grid.Column="1" Classes="provider-warning" Classes.warning="{Binding IsExpireWarning}"
                          AutomationProperties.AutomationId="{Binding ExpireAutomationId}"
-                         Text="{Binding ExpireText}" FontSize="12" FontWeight="SemiBold" />
+                         Text="{Binding ExpireText}" FontSize="12" FontWeight="Normal" />
               <TextBlock Grid.Column="2" Classes="provider-warning warning"
                          AutomationProperties.AutomationId="{Binding ExpireStatusAutomationId}"
                          IsVisible="{Binding IsExpireWarning}" Text="{Binding ExpireStatusText}" FontSize="12" />

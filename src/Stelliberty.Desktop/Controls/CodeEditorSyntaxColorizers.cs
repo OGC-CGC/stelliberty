@@ -121,7 +121,7 @@ internal sealed class YamlSyntaxColorizer : CodeEditorSyntaxColorizer
 
             if (keyEnd > valueStart)
             {
-                ColorizeRange(line, valueStart, keyEnd, Palette.Key, FontWeight.SemiBold);
+                ColorizeRange(line, valueStart, keyEnd, Palette.Key, FontWeight.Normal);
             }
 
             HighlightScalars(line, text, colonIndex + 1, contentEnd);
@@ -149,7 +149,7 @@ internal sealed class YamlSyntaxColorizer : CodeEditorSyntaxColorizer
             && text[markerIndex] == '-'
             && (markerIndex + 1 == contentEnd || char.IsWhiteSpace(text[markerIndex + 1])))
         {
-            ColorizeRange(line, markerIndex, markerIndex + 1, Palette.Marker, FontWeight.SemiBold);
+            ColorizeRange(line, markerIndex, markerIndex + 1, Palette.Marker, FontWeight.Normal);
             markerIndex++;
             while (markerIndex < contentEnd && char.IsWhiteSpace(text[markerIndex]))
             {
@@ -167,7 +167,7 @@ internal sealed class YamlSyntaxColorizer : CodeEditorSyntaxColorizer
             return;
         }
 
-        HighlightMatches(line, text, start, end, BooleanRegex, Palette.Boolean, FontWeight.SemiBold);
+        HighlightMatches(line, text, start, end, BooleanRegex, Palette.Boolean, FontWeight.Normal);
         HighlightMatches(line, text, start, end, NumberRegex, Palette.Number);
         HighlightMatches(line, text, start, end, StringRegex, Palette.String);
     }
@@ -308,8 +308,8 @@ internal sealed class JavaScriptSyntaxColorizer : CodeEditorSyntaxColorizer
         var contentEnd = commentStart >= 0 ? commentStart : text.Length;
         HighlightMatches(line, text, 0, contentEnd, StringRegex, Palette.String);
         HighlightMatches(line, text, 0, contentEnd, NumberRegex, Palette.Number);
-        HighlightMatches(line, text, 0, contentEnd, BooleanRegex, Palette.Boolean, FontWeight.SemiBold);
-        HighlightMatches(line, text, 0, contentEnd, KeywordRegex, Palette.Key, FontWeight.SemiBold);
+        HighlightMatches(line, text, 0, contentEnd, BooleanRegex, Palette.Boolean, FontWeight.Normal);
+        HighlightMatches(line, text, 0, contentEnd, KeywordRegex, Palette.Key, FontWeight.Normal);
         HighlightMatches(line, text, 0, contentEnd, FunctionRegex, Palette.Function);
 
         if (commentStart >= 0)

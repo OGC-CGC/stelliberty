@@ -25,7 +25,7 @@
         <TextBlock x:Name="SettingsHeaderText"
                    Text="{Binding Settings.HeaderText}"
                    FontSize="26"
-                   FontWeight="SemiBold"
+                   FontWeight="Normal"
                    VerticalAlignment="Center"
                    RenderTransformOrigin="50%,50%"
                    Foreground="{DynamicResource AppTextPrimaryBrush}" />

@@ -45,7 +45,7 @@
                          FontSize="10.5" Foreground="{DynamicResource AppTextTertiaryBrush}" HorizontalAlignment="Center" />
               <TextBlock AutomationProperties.AutomationId="Settings.About.VersionText"
                          Text="{Binding Settings.AppVersionText}"
-                         FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}"
+                         FontSize="13" FontWeight="Normal" Foreground="{DynamicResource AppAccentBrush}"
                          HorizontalAlignment="Center" />
             </StackPanel>
           </Border>

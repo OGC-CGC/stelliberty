@@ -72,21 +72,21 @@
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Classes="settings-row-subtitle" VerticalAlignment="Center"
                        Text="{loc:Loc CoreLogs.Stat.Total}" />
-            <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+            <TextBlock FontSize="13" FontWeight="Normal" VerticalAlignment="Center"
                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                        Text="{Binding FilteredLogCount}" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Classes="settings-row-subtitle" VerticalAlignment="Center"
                        Text="{loc:Loc AppLogs.Level.Warning}" />
-            <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+            <TextBlock FontSize="13" FontWeight="Normal" VerticalAlignment="Center"
                        Foreground="{DynamicResource AppWarningBrush}"
                        Text="{Binding WarningLogCount}" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Classes="settings-row-subtitle" VerticalAlignment="Center"
                        Text="{loc:Loc AppLogs.Level.Error}" />
-            <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+            <TextBlock FontSize="13" FontWeight="Normal" VerticalAlignment="Center"
                        Foreground="{DynamicResource AppDangerBrush}"
                        Text="{Binding ErrorLogCount}" />
           </StackPanel>

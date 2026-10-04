@@ -81,6 +81,6 @@
   </Style>
   <Style Selector="ComboBoxItem:selected">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
 </Styles>

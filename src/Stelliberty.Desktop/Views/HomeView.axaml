@@ -220,7 +220,7 @@
                 <iconPacks:PackIconMingCuteIcons Width="22" Height="22" Kind="ShieldFill"
                                                    Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="{loc:Loc Home.SystemProxy.Title}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" />
+                  <TextBlock Text="{loc:Loc Home.SystemProxy.Title}" FontSize="14" FontWeight="Normal" Foreground="{DynamicResource AppTextPrimaryBrush}" />
                 </StackPanel>
                 <ToggleSwitch Grid.Column="2" VerticalAlignment="Center"
                               AutomationProperties.AutomationId="Home.SystemProxyToggle"
@@ -231,7 +231,7 @@
                 <iconPacks:PackIconMingCuteIcons Width="22" Height="22" Kind="RouterModemFill"
                                                    Foreground="{DynamicResource AppVioletBrush}" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="{loc:Loc Home.VirtualNic.Title}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" />
+                  <TextBlock Text="{loc:Loc Home.VirtualNic.Title}" FontSize="14" FontWeight="Normal" Foreground="{DynamicResource AppTextPrimaryBrush}" />
                 </StackPanel>
                 <Button Grid.Column="2" Classes="soft-action" Padding="12,7" Margin="10,0,0,0" VerticalAlignment="Center"
                         AutomationProperties.AutomationId="Home.ServiceModeButton"

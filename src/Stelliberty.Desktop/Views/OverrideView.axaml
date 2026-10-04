@@ -129,7 +129,7 @@
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                    FontSize="12.5"
-                                   FontWeight="SemiBold"
+                                   FontWeight="Normal"
                                    TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </Border>
