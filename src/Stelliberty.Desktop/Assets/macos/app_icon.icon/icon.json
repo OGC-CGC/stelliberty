@@ -6,7 +6,7 @@
     {
       "layers" : [
         {
-          "glass" : true,
+          "glass" : false,
           "hidden-specializations" : [
             {
               "idiom" : "square",
