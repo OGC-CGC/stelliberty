@@ -8,6 +8,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
 {
     private const string ObjectiveCLibrary = "/usr/lib/libobjc.A.dylib";
     private static readonly nint RegularGlassStyle = 0;
+    private static readonly nint NoTitleBarSeparatorStyle = 1;
     private static readonly nint TitleBarVisualEffectMaterial = 3;
     private static readonly nint WidthAndHeightSizable = 2 | 16;
 
@@ -15,6 +16,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
     private nint _glassView;
     private nint _originalContentView;
     private nint _titleBarMaterialView;
+    private nint _originalTitleBarSeparatorStyle;
     private bool _wasTitleBarMaterialHidden;
 
     public static bool IsSupported => OperatingSystem.IsMacOSVersionAtLeast(26)
@@ -40,6 +42,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
         if (_glassView != nint.Zero && _window == handle.Handle)
         {
             SetBool(_titleBarMaterialView, GetSelector("setHidden:"), true);
+            HideTitleBarSeparator(_window);
             return true;
         }
 
@@ -60,6 +63,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
         var titleBarMaterialView = FindTitleBarMaterialView(originalContentView);
         var wasTitleBarMaterialHidden = titleBarMaterialView != nint.Zero
                                         && SendBool(titleBarMaterialView, GetSelector("isHidden"));
+        var originalTitleBarSeparatorStyle = Send(handle.Handle, GetSelector("titlebarSeparatorStyle"));
         SetBool(titleBarMaterialView, GetSelector("setHidden:"), true);
 
         SetInteger(glassView, GetSelector("setStyle:"), RegularGlassStyle);
@@ -77,7 +81,9 @@ internal sealed class MacOSGlassEffectService : IDisposable
         _glassView = glassView;
         _originalContentView = originalContentView;
         _titleBarMaterialView = titleBarMaterialView;
+        _originalTitleBarSeparatorStyle = originalTitleBarSeparatorStyle;
         _wasTitleBarMaterialHidden = wasTitleBarMaterialHidden;
+        HideTitleBarSeparator(handle.Handle);
         return true;
     }
 
@@ -89,6 +95,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
             _glassView = nint.Zero;
             _originalContentView = nint.Zero;
             _titleBarMaterialView = nint.Zero;
+            _originalTitleBarSeparatorStyle = nint.Zero;
             _wasTitleBarMaterialHidden = false;
             return;
         }
@@ -99,11 +106,13 @@ internal sealed class MacOSGlassEffectService : IDisposable
         var glassView = _glassView;
         var originalContentView = _originalContentView;
         var titleBarMaterialView = _titleBarMaterialView;
+        var originalTitleBarSeparatorStyle = _originalTitleBarSeparatorStyle;
         var wasTitleBarMaterialHidden = _wasTitleBarMaterialHidden;
         _window = nint.Zero;
         _glassView = nint.Zero;
         _originalContentView = nint.Zero;
         _titleBarMaterialView = nint.Zero;
+        _originalTitleBarSeparatorStyle = nint.Zero;
         _wasTitleBarMaterialHidden = false;
 
         Retain(originalContentView);
@@ -111,6 +120,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
         SetPointer(window, GetSelector("setContentView:"), originalContentView);
         Release(originalContentView);
         SetBool(titleBarMaterialView, GetSelector("setHidden:"), wasTitleBarMaterialHidden);
+        SetInteger(window, GetSelector("setTitlebarSeparatorStyle:"), originalTitleBarSeparatorStyle);
     }
 
     public void Dispose()
@@ -121,6 +131,20 @@ internal sealed class MacOSGlassEffectService : IDisposable
     private static void Retain(nint value)
     {
         Send(value, GetSelector("retain"));
+    }
+
+    private void HideTitleBarSeparator(nint window)
+    {
+        SetInteger(window, GetSelector("setTitlebarSeparatorStyle:"), NoTitleBarSeparatorStyle);
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (_window == window && _glassView != nint.Zero)
+                {
+                    SetInteger(window, GetSelector("setTitlebarSeparatorStyle:"), NoTitleBarSeparatorStyle);
+                }
+            },
+            DispatcherPriority.ApplicationIdle);
     }
 
     private static void Release(nint value)
