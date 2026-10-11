@@ -3,7 +3,7 @@
              xmlns:chrome="clr-namespace:Avalonia.Controls.Chrome;assembly=Avalonia.Controls"
              xmlns:semi="https://irihi.tech/semi"
              x:Class="Stelliberty.Desktop.App"
-             Name="Stelliberty">
+             Name="SBproxy">
   <Application.Resources>
     <ResourceDictionary>
       <ControlTheme x:Key="{x:Type chrome:WindowDrawnDecorations}"

@@ -1,12 +1,34 @@
-WTF LICENSE
+---------
+
+WUSHIDRM LICENSE
 Version 1.0, July 2026
 
-Copyright (c) 2026 Stelliberty contributors
+Copyright (c) 2026 WUSHIDRM LICENSE contributors
 
-Permission is granted, free of charge, to any person obtaining a copy of the
-original Stelliberty software and its documentation (the "Software"), to use,
-copy, study, modify, merge, publish, and distribute the Software solely for
+The WUSHIDRM LICENSE text is released into the public domain
+under CC0 1.0 Universal, to the extent permitted by law.
+
+---------
+
+Permission is granted, free of charge, to any person obtaining a copy of
+this software and its documentation (the "Software"), to use, copy, study,
+modify, merge, publish, and distribute the Software solely for
 noncommercial purposes, subject to all conditions below.
+
+0. Definition
+
+   "Original Software" means the Software as previously released under this
+   License.
+
+   A work is based on the Software when it contains, adapts, or derives
+   substantial portions of the Software.
+
+   "Publicly distributed" means any distribution, publication, or making
+   available of the Software to an unrestricted group of recipients,
+   including public repositories and software stores.
+
+   "Original Contributors" means persons who contributed copyrightable
+   material to the Original Software.
 
 1. No commercial use
 
@@ -14,13 +36,13 @@ noncommercial purposes, subject to all conditions below.
    purposes. Commercial purposes include, without limitation, selling or
    licensing the Software, charging for access or services, using it in a
    paid product or service, monetizing it through advertising or data, or
-   using it primarily to obtain commercial advantage or monetary
-   compensation.
+   directly used for commercial exploitation, or provide it for customers
+   for let customers to use your service.
 
 2. Source availability and copyleft
 
    Any modified version, derivative work, or other work based on the Software
-   must make its source available under this same WTF License. When such a
+   must make its source available under this same WUSHIDRM LICENSE. When such a
    work is distributed, published, made available to another person, or used to
    provide a service over a network, its complete corresponding source code
    and build instructions must be made publicly available at no charge and
@@ -28,18 +50,37 @@ noncommercial purposes, subject to all conditions below.
 
    The source code must include every modification and all material needed to
    build and run the work, except generally available system tools. No
-   additional term may restrict rights granted by this license.
+   additional term may remove or further restrict the rights granted by this
+   License.
+
+   The license text itself and required license notices must not be removed.
 
 3. Removal of original identifiers
 
-   Any modified version or derivative work must remove every identifier
-   associated with the original Stelliberty software. It must not contain,
-   display, or use the Stelliberty name, logos, icons, product names, package
-   or application identifiers, domains, artwork, or any other original
-   branding or source-identifying marks, except where a factual reference is
-   strictly required by law.
+   Any publicly distributed copy, including modified and unmodified versions
+   or derivative work, associated with the Original Software or Original
+   Contributors, must remove every identifiers originating from the
+   Original Software. It must not contain, display, or use the original app
+   name, logos, icons, product names, package or application identifiers,
+   domains, artwork, or any other original branding or source-identifying
+   marks, except where required by applicable law or third-party license
+   obligations.
 
-4. Third-party projects
+   The license text itself and required license notices must not be removed.
+
+4. Removal identifiers of orignial contributers
+
+   Any publicly distributed copy, including modified and unmodified versions
+   or derivative work, associated with the Original Software or Original
+   Contributors, must remove every identifier associated with the
+   original contributers. It must not contain, display, or use the original
+   author's name, username, email, way to contact, or any other signing or
+   source-identifying marks, including but not limited to: copyright notices,
+   author names, usernames, email addresses, commit metadata, signatures,
+   and contributor lists, except where required by applicable law or
+   third-party license obligations.
+
+5. Third-party projects
 
    Third-party components, assets, and dependencies are not relicensed by
    this license. Their original licenses, notices, and attribution
@@ -53,9 +94,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
 OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+---------
 THIRD-PARTY PROJECTS AND ASSETS
+---------
 
-Stelliberty directly uses, distributes, tests with, or builds with the
+This work directly uses, distributes, tests with, or builds with the
 projects listed below. Each project remains governed by its own license.
 This list does not replace the license text and notices shipped by each
 project or by its transitive dependencies.
@@ -119,3 +162,7 @@ Testing and packaging tools:
 - Inno Setup Chinese Simplified Translation:
   https://github.com/kira-96/Inno-Setup-Chinese-Simplified-Translation
 - Inno Setup contributed translations: https://jrsoftware.org/files/istrans/
+
+Original projects:
+
+- Stelliberty: https://github.com/Kindness-Kismet/stelliberty

@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <AppName>stelliberty</AppName>
-    <AppDisplayName>Stelliberty</AppDisplayName>
+    <AppDisplayName>SBproxy</AppDisplayName>
     <AppVersion>2.0.37</AppVersion>
     <AppPipePrefix>stelliberty</AppPipePrefix>
   </PropertyGroup>
