@@ -31,7 +31,7 @@
 
   <Window.Styles>
     <Style Selector="TextBlock.brand-title">
-      <Setter Property="FontFamily" Value="Snell Roundhand, avares://stelliberty_ui/Assets/fonts#Google Sans" />
+      <Setter Property="FontFamily" Value="Snell Roundhand, avares://stelliberty_ui/Assets/fonts#Noto Sans SC" />
       <Setter Property="FontSize" Value="27" />
       <Setter Property="FontStyle" Value="Italic" />
       <Setter Property="FontWeight" Value="Bold" />

@@ -125,7 +125,7 @@ Runtime components and data:
 
 Fonts:
 
-- Google Fonts and Google Sans: https://fonts.google.com
+- Maple Mono (SIL Open Font License 1.1): https://github.com/subframe7536/maple-font
 - Noto CJK: https://github.com/notofonts/noto-cjk
 
 Rust libraries and toolchain:

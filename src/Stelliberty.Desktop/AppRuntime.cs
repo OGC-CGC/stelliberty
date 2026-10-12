@@ -11,8 +11,7 @@ namespace Stelliberty.Desktop;
 
 internal static class AppRuntime
 {
-    private static string AppFontFamily => $"avares://{AppRuntimeNames.UiResourceAuthority}/Assets/fonts#Google Sans";
-    private static string CjkFontFamily => $"avares://{AppRuntimeNames.UiResourceAuthority}/Assets/fonts#Noto Sans SC";
+    private static string AppFontFamily => $"avares://{AppRuntimeNames.UiResourceAuthority}/Assets/fonts#Noto Sans SC";
 
     public static void RunUi(string[] args)
     {
@@ -78,7 +77,7 @@ internal static class AppRuntime
             DefaultFamilyName = AppFontFamily,
             FontFallbacks =
             [
-                new FontFallback { FontFamily = new FontFamily(CjkFontFamily) },
+                new FontFallback { FontFamily = new FontFamily(AppFontFamily) },
                 new FontFallback { FontFamily = new FontFamily("Segoe UI Emoji"), UnicodeRange = emojiRange },
                 new FontFallback { FontFamily = new FontFamily("Apple Color Emoji"), UnicodeRange = emojiRange },
                 new FontFallback { FontFamily = new FontFamily("Noto Color Emoji"), UnicodeRange = emojiRange },

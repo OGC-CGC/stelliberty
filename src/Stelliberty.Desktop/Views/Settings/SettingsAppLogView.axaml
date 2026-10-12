@@ -140,6 +140,7 @@
         <Border Classes="surface-row"
                 Padding="0"
                 Margin="0,0,0,8"
+                TextElement.FontFamily="avares://stelliberty_ui/Assets/fonts#Maple Mono CN"
                 AutomationProperties.AutomationId="{Binding RowAutomationId}">
           <Grid ColumnDefinitions="Auto,78,70,*" MinHeight="52">
             <Border Classes="list-color-bar"
@@ -150,7 +151,6 @@
             <TextBlock Grid.Column="1"
                        AutomationProperties.AutomationId="{Binding TimeAutomationId}"
                        Text="{Binding FormattedTime}"
-                       FontFamily="Consolas"
                        Foreground="{DynamicResource AppTextTertiaryBrush}"
                        FontSize="12"
                        Margin="14,0,0,0"

@@ -47,7 +47,8 @@ def build_output(metadata: AppMetadata, platform_name: str, configuration: str, 
     with timed_step(f"Check running output app {build_label}"):
         close_running_output_app(metadata, output_dir)
 
-    if clean:
+    clean_output = clean or (pack_format in ("app", "all") and platform_name.startswith("macos"))
+    if clean_output:
         with timed_step(f"Clean output directory {build_label}"):
             reset_output_directory(output_dir)
 

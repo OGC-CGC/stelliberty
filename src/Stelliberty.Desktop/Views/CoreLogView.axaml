@@ -152,6 +152,7 @@
             <DataTemplate x:DataType="vm:CoreLogRowViewModel">
               <Border Classes="surface-row"
                       Margin="0,0,0,10"
+                      TextElement.FontFamily="avares://stelliberty_ui/Assets/fonts#Maple Mono CN"
                       AutomationProperties.AutomationId="{Binding RowAutomationId}"
                       Tag="{Binding Payload}">
                 <Grid ColumnDefinitions="Auto,80,74,*" MinHeight="68">
@@ -163,7 +164,6 @@
                   <TextBlock Grid.Column="1"
                              AutomationProperties.AutomationId="{Binding TimeAutomationId}"
                              Text="{Binding FormattedTime}"
-                             FontFamily="Consolas"
                              Foreground="{DynamicResource AppTextTertiaryBrush}"
                              FontSize="12"
                              Margin="14,0,0,0"
