@@ -224,7 +224,9 @@
                 </StackPanel>
                 <ToggleSwitch Grid.Column="2" VerticalAlignment="Center"
                               AutomationProperties.AutomationId="Home.SystemProxyToggle"
-                              IsChecked="{Binding IsSystemProxyEnabled, Mode=TwoWay}"
+                              IsThreeState="True"
+                              IsEnabled="{Binding IsSystemProxyToggleEnabled}"
+                              IsChecked="{Binding SystemProxyToggleState, Mode=TwoWay}"
                               OnContent="" OffContent="" />
               </Grid>
               <Grid ColumnDefinitions="Auto,*,Auto,Auto" IsVisible="{Binding IsTakeoverTunTabSelected}">
@@ -239,8 +241,9 @@
                         Command="{Binding ToggleServiceModeCommand}" Content="{Binding ServiceModeButtonText}" />
                 <ToggleSwitch Grid.Column="3" Margin="10,0,0,0" VerticalAlignment="Center"
                               AutomationProperties.AutomationId="Home.VirtualNicToggle"
+                              IsThreeState="True"
                               IsEnabled="{Binding IsTunToggleEnabled}"
-                              IsChecked="{Binding IsTunEnabled, Mode=TwoWay}" OnContent="" OffContent="" />
+                              IsChecked="{Binding TunToggleState, Mode=TwoWay}" OnContent="" OffContent="" />
               </Grid>
             </Grid>
           </StackPanel>

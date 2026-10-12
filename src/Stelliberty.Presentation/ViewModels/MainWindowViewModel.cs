@@ -128,7 +128,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             settingsStore,
             localization,
             (success, failure) => RefreshSelectedSubscriptionRuntime(SubscriptionPage!.CurrentSubscriptionId, success, failure),
-            isEnabled => HomePage!.ApplyTunState(isEnabled && HomePage.CanToggleTun),
+            isEnabled =>
+            {
+                if (!HomePage!.IsTunApplyPending)
+                {
+                    HomePage.ApplyTunState(isEnabled && HomePage.CanToggleTun);
+                }
+            },
             MarkSystemProxyEndpointChanged);
         CoreConfig.ToastRequested += OnToastRequested;
         _localization.LanguageChanged += OnLocalizationLanguageChanged;
@@ -138,7 +144,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             systemProxyService,
             resolvedSystemProxyRequestFactory,
             serviceModeManager,
-            CoreConfig.ApplyTunFromHome,
+            null,
             networkConnectionProbe,
             homeProxyClient,
             () => $"{_settings.ProxyHost}:{_settings.MixedPort}",
@@ -152,6 +158,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             localization,
             systemPlatform,
             clipboardWriter);
+        HomePage.SetTunStateApplyAsync(ApplyTunFromHomeAsync);
         SystemIntegration = new SettingsSystemIntegrationViewModel(
             _settings,
             settingsStore,
@@ -733,6 +740,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void SyncTunState()
     {
+        if (HomePage.IsTunApplyPending)
+        {
+            return;
+        }
+
         var isTunEnabled = _settingsStore.Load().IsTunEnabled;
         if (_settings.IsTunEnabled == isTunEnabled && HomePage.IsTunEnabled == isTunEnabled)
         {
@@ -742,6 +754,53 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settings.IsTunEnabled = isTunEnabled;
         CoreConfig.RefreshFromSettings();
         HomePage.ApplyTunState(isTunEnabled);
+    }
+
+    private async Task<bool> ApplyTunFromHomeAsync(bool isEnabled)
+    {
+        var previousRefreshTask = LastRuntimeRefreshTask;
+        try
+        {
+            CoreConfig.ApplyTunFromHome(isEnabled);
+            if (ReferenceEquals(LastRuntimeRefreshTask, previousRefreshTask))
+            {
+                RefreshSelectedSubscriptionRuntime(
+                    SubscriptionPage.CurrentSubscriptionId,
+                    "Core runtime config refreshed after home TUN change",
+                    "Core runtime config refresh failed after home TUN change");
+            }
+
+            if (LastRuntimeRefreshTask is { } refreshTask)
+            {
+                await refreshTask;
+            }
+
+            if (CoreManager is null ? LastRuntimeApplyError is null : LastRuntimeApplyPid is not null)
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            RestoreTunSettingFromHomeState();
+            throw;
+        }
+
+        RestoreTunSettingFromHomeState();
+        return false;
+    }
+
+    private void RestoreTunSettingFromHomeState()
+    {
+        var coreState = HomePage.IsTunEnabled;
+        if (_settings.IsTunEnabled == coreState)
+        {
+            return;
+        }
+
+        _settings.IsTunEnabled = coreState;
+        _settingsStore.Save(_settings);
+        CoreConfig.RefreshFromSettings();
     }
 
     private void RefreshSelectedSubscriptionRuntime(string? subscriptionId, string successMessage, string failureMessage)
@@ -880,7 +939,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     private RuntimeConfigParams CurrentRuntimeConfigParams()
     {
         var parameters = RuntimeConfigParams.FromSettings(_settings);
-        return parameters with { IsTunEnabled = parameters.IsTunEnabled && HomePage.IsTunEnabled && HomePage.CanToggleTun };
+        return parameters with
+        {
+            IsTunEnabled = parameters.IsTunEnabled && HomePage.IsTunEnabledForRuntimeConfig && HomePage.CanToggleTun
+        };
     }
 
     private async Task RevertToEmptyRuntimeAsync(

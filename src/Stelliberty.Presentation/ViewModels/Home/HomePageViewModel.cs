@@ -23,6 +23,7 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
     private readonly IServiceModeManager? _serviceModeManager;
     private readonly Func<SystemProxyApplicationRequest> _systemProxyRequestFactory;
     private readonly Action<bool>? _tunStateChanged;
+    private Func<bool, Task<bool>>? _tunStateApplyAsync;
 
     private readonly Func<Task>? _coreRestart;
     private readonly ICoreUpdater? _coreUpdater;
@@ -38,7 +39,10 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
     private bool _isSystemProxyEnabled;
     private int _systemProxyApplyVersion;
     private int _pendingSystemProxyOperations;
+    private bool _isSystemProxyApplyPending;
     private bool _isTunEnabled;
+    private bool _isTunApplyPending;
+    private bool _pendingTunState;
     private int _tunApplyVersion;
 
     private bool _isTakeoverTunTab;
@@ -139,6 +143,11 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
         RefreshServiceMode(force: true);
     }
 
+    internal void SetTunStateApplyAsync(Func<bool, Task<bool>> applyAsync)
+    {
+        _tunStateApplyAsync = applyAsync;
+    }
+
     public event EventHandler<(string Message, ToastType Type)>? ToastRequested;
 
     public bool IsSystemProxyEnabled
@@ -155,14 +164,37 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public bool? SystemProxyToggleState
+    {
+        get => _isSystemProxyApplyPending ? null : _isSystemProxyEnabled;
+        set
+        {
+            if (value is { } isEnabled)
+            {
+                IsSystemProxyEnabled = isEnabled;
+            }
+            else if (!_isSystemProxyApplyPending)
+            {
+                IsSystemProxyEnabled = !_isSystemProxyEnabled;
+            }
+            else
+            {
+                OnPropertyChanged(nameof(SystemProxyToggleState));
+            }
+        }
+    }
+
+    public bool IsSystemProxyToggleEnabled => !_isSystemProxyApplyPending;
+
     public void ApplyTunState(bool isEnabled)
     {
-        if (_isTunEnabled == isEnabled)
+        if (_isTunEnabled == isEnabled && !_isTunApplyPending)
         {
             return;
         }
 
         Interlocked.Increment(ref _tunApplyVersion);
+        _isTunApplyPending = false;
         _isTunEnabled = isEnabled;
         RaiseHomeStateChanged();
     }
@@ -235,6 +267,30 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
             SetTun(value);
         }
     }
+
+    public bool? TunToggleState
+    {
+        get => _isTunApplyPending ? null : _isTunEnabled;
+        set
+        {
+            if (value is { } isEnabled)
+            {
+                IsTunEnabled = isEnabled;
+            }
+            else if (!_isTunApplyPending)
+            {
+                IsTunEnabled = !_isTunEnabled;
+            }
+            else
+            {
+                OnPropertyChanged(nameof(TunToggleState));
+            }
+        }
+    }
+
+    public bool IsTunApplyPending => _isTunApplyPending;
+
+    public bool IsTunEnabledForRuntimeConfig => _isTunApplyPending ? _pendingTunState : _isTunEnabled;
 
     public bool CanToggleTun => _runMode is ProcessRunMode.Administrator or ProcessRunMode.Service
         || (_serviceModeStatus.IsRunning && IsServiceModeCoreHostActive);
@@ -369,7 +425,7 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
     public bool IsCoreInteractive => _isCoreRunning && !_isCoreRestarting && !_isCoreUpdating;
 
     // TUN 只能在有权限且核心稳定时切换。
-    public bool IsTunToggleEnabled => CanToggleTun && IsCoreInteractive;
+    public bool IsTunToggleEnabled => CanToggleTun && IsCoreInteractive && !_isTunApplyPending;
 
     public ICommand ToggleSystemProxyCommand { get; }
 
@@ -605,6 +661,11 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
 
     private void ToggleSystemProxy()
     {
+        if (_isSystemProxyApplyPending)
+        {
+            return;
+        }
+
         SetSystemProxy(!_isSystemProxyEnabled);
     }
 
@@ -632,8 +693,14 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
 
     private void SetTun(bool shouldEnable)
     {
+        if (_isTunApplyPending)
+        {
+            return;
+        }
+
         var version = Interlocked.Increment(ref _tunApplyVersion);
-        _isTunEnabled = shouldEnable;
+        _isTunApplyPending = true;
+        _pendingTunState = shouldEnable;
         RaiseHomeStateChanged();
         _ = ApplyTunAsync(shouldEnable, version);
     }
@@ -648,28 +715,46 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            _tunStateChanged?.Invoke(shouldEnable);
+            var applied = true;
+            if (_tunStateApplyAsync is not null)
+            {
+                applied = await _tunStateApplyAsync(shouldEnable);
+            }
+            else
+            {
+                _tunStateChanged?.Invoke(shouldEnable);
+            }
+
+            Post(() => CompleteTunApply(shouldEnable, version, applied));
         }
         catch (Exception exception)
         {
             AppLogger.Warning($"TUN apply failed: {exception.Message}");
             if (!_isDisposed)
             {
-                Post(() => ApplyTunFailure(shouldEnable, version));
+                Post(() => CompleteTunApply(shouldEnable, version, applied: false));
             }
         }
     }
 
-    private void ApplyTunFailure(bool attemptedState, int version)
+    private void CompleteTunApply(bool attemptedState, int version, bool applied)
     {
         if (_isDisposed || version != Volatile.Read(ref _tunApplyVersion))
         {
             return;
         }
 
-        _isTunEnabled = !attemptedState;
+        _isTunApplyPending = false;
+        if (applied)
+        {
+            _isTunEnabled = attemptedState;
+        }
+
         RaiseHomeStateChanged();
-        RaiseToast(Localize("Home.Toast.TunApplyFailed"), ToastType.Error);
+        if (!applied)
+        {
+            RaiseToast(Localize("Home.Toast.TunApplyFailed"), ToastType.Error);
+        }
     }
 
     public void ReapplySystemProxySettings()
@@ -684,8 +769,13 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
 
     private void SetSystemProxy(bool shouldEnable)
     {
+        if (_isSystemProxyApplyPending)
+        {
+            return;
+        }
+
         var version = Interlocked.Increment(ref _systemProxyApplyVersion);
-        _isSystemProxyEnabled = shouldEnable;
+        _isSystemProxyApplyPending = true;
         RaiseHomeStateChanged();
         _ = Task.Run(() => ApplySystemProxyAsync(shouldEnable, version));
     }
@@ -719,7 +809,7 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
             AppLogger.Warning($"System proxy apply failed: {exception.Message}");
             if (!_isDisposed)
             {
-                Post(() => ApplySystemProxyFailure(shouldEnable, version));
+                Post(() => ApplySystemProxyFailure(version));
             }
         }
         finally
@@ -728,14 +818,14 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void ApplySystemProxyFailure(bool attemptedState, int version)
+    private void ApplySystemProxyFailure(int version)
     {
         if (_isDisposed || version != Volatile.Read(ref _systemProxyApplyVersion))
         {
             return;
         }
 
-        _isSystemProxyEnabled = !attemptedState;
+        _isSystemProxyApplyPending = false;
         RaiseHomeStateChanged();
 
         RaiseToast(Localize("Home.Toast.SystemProxyFailed"), ToastType.Error);
@@ -749,6 +839,7 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
         }
 
         _isSystemProxyEnabled = result.Status.IsEnabled;
+        _isSystemProxyApplyPending = false;
         RaiseHomeStateChanged();
         if (!result.IsSuccess)
         {
@@ -782,7 +873,7 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
 
     private void OnSystemProxyStatusChanged(object? sender, SystemProxyStatus status)
     {
-        if (_isDisposed || Volatile.Read(ref _pendingSystemProxyOperations) != 0)
+        if (_isDisposed || _isSystemProxyApplyPending || Volatile.Read(ref _pendingSystemProxyOperations) != 0)
         {
             return;
         }
@@ -1143,7 +1234,11 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
     private void RaiseHomeStateChanged()
     {
         OnPropertyChanged(nameof(IsSystemProxyEnabled));
+        OnPropertyChanged(nameof(SystemProxyToggleState));
+        OnPropertyChanged(nameof(IsSystemProxyToggleEnabled));
         OnPropertyChanged(nameof(IsTunEnabled));
+        OnPropertyChanged(nameof(TunToggleState));
+        OnPropertyChanged(nameof(IsTunApplyPending));
         OnPropertyChanged(nameof(PrivilegeModeText));
         OnPropertyChanged(nameof(ServiceModeState));
         OnPropertyChanged(nameof(ServiceModeMessage));

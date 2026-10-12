@@ -77,6 +77,21 @@
   <Style Selector="ToggleSwitch:checked /template/ Path#SwitchCheck">
     <Setter Property="Opacity" Value="1" />
   </Style>
+  <Style Selector="ToggleSwitch:indeterminate /template/ Border#SwitchTrack">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+  <Style Selector="ToggleSwitch:indeterminate /template/ Border#SwitchThumb">
+    <Setter Property="Background" Value="{DynamicResource AppSwitchThumbOnBrush}" />
+    <Setter Property="Margin" Value="14,0,0,0" />
+  </Style>
+  <Style Selector="ToggleSwitch:indeterminate /template/ Path#SwitchCheck">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="ToggleSwitch:disabled:indeterminate">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
   <Style Selector="ToggleSwitch:pointerover:unchecked /template/ Border#SwitchTrack">
     <Setter Property="BorderBrush" Value="{DynamicResource AppTextSecondaryBrush}" />
   </Style>
