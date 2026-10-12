@@ -27,8 +27,8 @@ namespace Stelliberty.Desktop;
 
 public sealed partial class MainWindow : Window
 {
-    // 隐藏后统一等待该时长：轻量模式结束 UI 进程，常规模式回收页面视觉树。
-    private static readonly TimeSpan HiddenReleaseDelay = TimeSpan.FromSeconds(60);
+    // 隐藏后等待：轻量模式结束 UI 进程，常规模式回收页面视觉树。
+    private static readonly TimeSpan HiddenReleaseDelay = TimeSpan.FromSeconds(AppSettings.DefaultLightweightModeShutdownDelaySeconds);
     private static readonly TimeSpan PageLoadingMinVisible = TimeSpan.FromMilliseconds(300);
     private readonly WindowAppearanceService _windowAppearanceService = new();
     private readonly WindowStateService _windowStateService;
@@ -1065,6 +1065,23 @@ public sealed partial class MainWindow : Window
         CancelPendingPageTransition();
         DeactivatePageHost(_visiblePageHost);
         _hiddenReleaseTimer.Stop();
+        if (_attachedViewModel is { AppBehavior.IsLightweightModeEnabled: true } viewModel)
+        {
+            var delaySeconds = viewModel.AppBehavior.LightweightModeShutdownDelaySeconds.GetValueOrDefault(
+                AppSettings.DefaultLightweightModeShutdownDelaySeconds);
+            if (delaySeconds == 0)
+            {
+                RequestUiShutdown();
+                return;
+            }
+
+            _hiddenReleaseTimer.Interval = TimeSpan.FromSeconds((double)delaySeconds);
+        }
+        else
+        {
+            _hiddenReleaseTimer.Interval = HiddenReleaseDelay;
+        }
+
         _hiddenReleaseTimer.Start();
     }
 

@@ -50,6 +50,10 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
 
     public string LightweightModeDescriptionText => _localization.GetString("Settings.AppBehavior.LightweightMode.Description");
 
+    public string LightweightModeShutdownDelayText => _localization.GetString("Settings.AppBehavior.LightweightMode.ShutdownDelay");
+
+    public string LightweightModeShutdownDelayDescriptionText => _localization.GetString("Settings.AppBehavior.LightweightMode.ShutdownDelayDescription");
+
     public string TrayDoubleClickText => _localization.GetString("Settings.AppBehavior.TrayDoubleClick");
 
     public string TrayDoubleClickDescriptionText => _localization.GetString("Settings.AppBehavior.TrayDoubleClick.Description");
@@ -79,6 +83,7 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
         SilentStartText,
         MinimizeToTrayText,
         LightweightModeText,
+        LightweightModeShutdownDelayText,
         TrayDoubleClickText,
         LazyModeText,
         TitleBarFpsText,
@@ -104,6 +109,38 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
     {
         get => _settings.IsLightweightModeEnabled;
         set => Apply(_settings.IsLightweightModeEnabled, value, next => _settings.IsLightweightModeEnabled = next);
+    }
+
+    public decimal? LightweightModeShutdownDelaySeconds
+    {
+        get => _settings.LightweightModeShutdownDelaySeconds;
+    }
+
+    public string LightweightModeShutdownDelaySecondsText
+    {
+        get => _settings.LightweightModeShutdownDelaySeconds.ToString();
+        set
+        {
+            if (!int.TryParse(value, out var seconds)
+                || seconds < AppSettings.MinLightweightModeShutdownDelaySeconds
+                || seconds > AppSettings.MaxLightweightModeShutdownDelaySeconds)
+            {
+                OnPropertyChanged(nameof(LightweightModeShutdownDelaySecondsText));
+                return;
+            }
+
+            if (_settings.LightweightModeShutdownDelaySeconds == seconds)
+            {
+                OnPropertyChanged(nameof(LightweightModeShutdownDelaySecondsText));
+                return;
+            }
+
+            Apply(
+                _settings.LightweightModeShutdownDelaySeconds,
+                seconds,
+                next => _settings.LightweightModeShutdownDelaySeconds = next,
+                nameof(LightweightModeShutdownDelaySecondsText));
+        }
     }
 
     public bool IsLazyModeEnabled
@@ -375,6 +412,8 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SilentStartText));
         OnPropertyChanged(nameof(SilentStartDescriptionText));
         OnPropertyChanged(nameof(MinimizeToTrayText));
+        OnPropertyChanged(nameof(LightweightModeShutdownDelayText));
+        OnPropertyChanged(nameof(LightweightModeShutdownDelayDescriptionText));
         OnPropertyChanged(nameof(TrayDoubleClickText));
         OnPropertyChanged(nameof(TrayDoubleClickDescriptionText));
         OnPropertyChanged(nameof(LazyModeText));

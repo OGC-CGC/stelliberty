@@ -495,6 +495,8 @@
   "Settings.AppBehavior.MinimizeToTray": "Minimize to Tray on Close",
   "Settings.AppBehavior.LightweightMode": "Lightweight Mode",
   "Settings.AppBehavior.LightweightMode.Description": "Reduce memory usage after the window has been hidden for a while, but make it slower to show again",
+  "Settings.AppBehavior.LightweightMode.ShutdownDelay": "Foreground close delay (seconds)",
+  "Settings.AppBehavior.LightweightMode.ShutdownDelayDescription": "In lightweight mode, the UI closes after the window has been hidden for this many seconds",
   "Settings.AppBehavior.TrayDoubleClick": "Use Left Double-click to Show or Hide Window",
   "Settings.AppBehavior.TrayDoubleClick.Description": "When off, switch to single-click behavior",
   "Settings.AppBehavior.LazyMode": "Lazy Mode",

@@ -495,6 +495,8 @@
   "Settings.AppBehavior.MinimizeToTray": "关闭时最小化到托盘",
   "Settings.AppBehavior.LightweightMode": "轻量模式",
   "Settings.AppBehavior.LightweightMode.Description": "隐藏窗口一段时间后减少内存占用，但再次显示会变慢",
+  "Settings.AppBehavior.LightweightMode.ShutdownDelay": "轻量模式前台保持时间",
+  "Settings.AppBehavior.LightweightMode.ShutdownDelayDescription": "轻量模式下应用在前台保持时间，单位秒",
   "Settings.AppBehavior.TrayDoubleClick": "鼠标左键双击显示/隐藏窗口",
   "Settings.AppBehavior.TrayDoubleClick.Description": "关闭后，变更为单击行为",
   "Settings.AppBehavior.LazyMode": "懒惰模式",

@@ -13,6 +13,9 @@ public sealed class AppSettings
     // macOS 留空让核心自动分配未占用的 utunN。
     public static string DefaultTunDevice => OperatingSystem.IsMacOS() ? string.Empty : "clash";
     public const int DefaultTunMtu = 9000;
+    public const int DefaultLightweightModeShutdownDelaySeconds = 60;
+    public const int MinLightweightModeShutdownDelaySeconds = 0;
+    public const int MaxLightweightModeShutdownDelaySeconds = 86400;
 
     public string Language { get; set; } = "System";
 
@@ -37,6 +40,8 @@ public sealed class AppSettings
     public bool IsMinimizeToTrayEnabled { get; set; }
 
     public bool IsLightweightModeEnabled { get; set; }
+
+    public int LightweightModeShutdownDelaySeconds { get; set; } = DefaultLightweightModeShutdownDelaySeconds;
 
     public bool IsTrayDoubleClickEnabled { get; set; } = true;
 

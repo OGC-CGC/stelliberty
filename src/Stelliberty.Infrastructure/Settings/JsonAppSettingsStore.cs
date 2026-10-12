@@ -169,6 +169,11 @@ public sealed class JsonAppSettingsStore : IAppSettingsStore
         settings.AccentColorMode ??= defaults.AccentColorMode;
         settings.AccentColor ??= defaults.AccentColor;
         settings.WindowEffect ??= defaults.WindowEffect;
+        if (settings.LightweightModeShutdownDelaySeconds is < AppSettings.MinLightweightModeShutdownDelaySeconds
+            or > AppSettings.MaxLightweightModeShutdownDelaySeconds)
+        {
+            settings.LightweightModeShutdownDelaySeconds = defaults.LightweightModeShutdownDelaySeconds;
+        }
         settings.WindowToggleHotkey ??= defaults.WindowToggleHotkey;
         settings.SystemProxyToggleHotkey ??= defaults.SystemProxyToggleHotkey;
         settings.TunToggleHotkey ??= defaults.TunToggleHotkey;
