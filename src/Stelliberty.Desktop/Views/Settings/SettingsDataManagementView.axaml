@@ -11,161 +11,165 @@
   <Grid>
 <!-- 数据管理 -->
 <StackPanel Spacing="10" IsVisible="{Binding Settings.IsDataManagementVisible}">
-  <TextBlock Classes="surface-group-title" Text="{Binding Settings.HeaderText}" />
-  <Border Classes="surface-group">
-    <StackPanel>
-      <Button Classes="settings-row first"
-              AutomationProperties.AutomationId="Settings.CreateDataBackupButton"
-              Click="OnCreateBackupClicked">
-        <Grid>
-          <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-            <TextBlock Classes="settings-row-title" Text="{Binding DataManagement.BackupText}" />
-            <TextBlock Classes="settings-row-subtitle" Text="{Binding DataManagement.BackupDescriptionText}" />
-          </StackPanel>
-        </Grid>
-      </Button>
-      <Border Classes="settings-row-divider" />
-      <Button Classes="settings-row last"
-              AutomationProperties.AutomationId="Settings.RestoreDataBackupButton"
-              Click="OnRestoreFromFileClicked">
-        <Grid>
-          <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-            <TextBlock Classes="settings-row-title" Text="{Binding DataManagement.RestoreText}" />
-            <TextBlock Classes="settings-row-subtitle" Text="{Binding DataManagement.RestoreDescriptionText}" />
-          </StackPanel>
-        </Grid>
-      </Button>
-    </StackPanel>
-  </Border>
-
-  <TextBlock Classes="surface-group-title" Text="{Binding DataManagement.WebDavGroupText}" />
-  <Border Classes="surface-group">
-    <StackPanel>
-      <Border Classes="settings-inline-row">
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Classes="settings-row-title"
-                     Text="{Binding DataManagement.WebDavEnableText}"
-                     VerticalAlignment="Center" />
-          <ToggleSwitch Grid.Column="1"
-                        AutomationProperties.AutomationId="Settings.WebDavEnableToggle"
-                        IsChecked="{Binding DataManagement.IsWebDavBackupEnabled}" />
-        </Grid>
-      </Border>
-      <Border Classes="settings-row-divider" />
-      <Border Classes="settings-inline-row">
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
-          <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavUrlText}" />
-          <TextBox Grid.Column="1"
-                   Classes="settings-input"
-                   AutomationProperties.AutomationId="Settings.WebDavUrlBox"
-                   Text="{Binding DataManagement.WebDavUrl, Mode=TwoWay}" />
-        </Grid>
-      </Border>
-      <Border Classes="settings-row-divider" />
-      <Border Classes="settings-inline-row">
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
-          <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavUserNameText}" />
-          <TextBox Grid.Column="1"
-                   Classes="settings-input"
-                   AutomationProperties.AutomationId="Settings.WebDavUserNameBox"
-                   Text="{Binding DataManagement.WebDavUserName, Mode=TwoWay}" />
-        </Grid>
-      </Border>
-      <Border Classes="settings-row-divider" />
-      <Border Classes="settings-inline-row">
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
-          <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavPasswordText}" />
-          <TextBox Grid.Column="1"
-                   Classes="settings-input"
-                   PasswordChar="•"
-                   AutomationProperties.AutomationId="Settings.WebDavPasswordBox"
-                   Text="{Binding DataManagement.WebDavPassword, Mode=TwoWay}" />
-        </Grid>
-      </Border>
-      <Border Classes="settings-row-divider" />
-      <Border Classes="settings-inline-row">
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
-          <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavRemoteDirectoryText}" />
-          <TextBox Grid.Column="1"
-                   Classes="settings-input"
-                   AutomationProperties.AutomationId="Settings.WebDavRemotePathBox"
-                   Text="{Binding DataManagement.WebDavRemoteDirectory, Mode=TwoWay}" />
-        </Grid>
-      </Border>
-      <Border Classes="settings-row-divider" />
-      <Border Classes="settings-inline-row">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <TextBlock Grid.Column="0"
-                     Classes="settings-row-title"
-                     Text="{Binding DataManagement.WebDavIntervalText}"
-                     VerticalAlignment="Center" />
-          <ComboBox Grid.Column="1"
-                    AutomationProperties.AutomationId="Settings.WebDavIntervalHoursComboBox"
-                    MinWidth="160"
-                    ItemsSource="{Binding DataManagement.WebDavBackupIntervalOptions}"
-                    SelectedItem="{Binding DataManagement.SelectedWebDavBackupIntervalOption, Mode=TwoWay}">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:ISelectionOption">
-                <TextBlock Text="{Binding DisplayName}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-        </Grid>
-      </Border>
-      <Border Classes="settings-row-divider" />
-      <Border Classes="settings-inline-row">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <TextBlock Grid.Column="0"
-                     Classes="settings-row-title"
-                     Text="{Binding DataManagement.WebDavRetentionText}"
-                     VerticalAlignment="Center" />
-          <ComboBox Grid.Column="1"
-                    AutomationProperties.AutomationId="Settings.WebDavRetentionCountComboBox"
-                    MinWidth="160"
-                    ItemsSource="{Binding DataManagement.WebDavBackupRetentionOptions}"
-                    SelectedItem="{Binding DataManagement.SelectedWebDavBackupRetentionOption, Mode=TwoWay}">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:ISelectionOption">
-                <TextBlock Text="{Binding DisplayName}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-        </Grid>
-      </Border>
-      <Border Classes="settings-row-divider" />
-      <Grid>
+  <StackPanel Spacing="0">
+    <TextBlock Classes="surface-group-title" Text="{Binding Settings.HeaderText}" />
+    <Border Classes="surface-group">
+      <StackPanel>
+        <Button Classes="settings-row first"
+                AutomationProperties.AutomationId="Settings.CreateDataBackupButton"
+                Click="OnCreateBackupClicked">
+          <Grid>
+            <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+              <TextBlock Classes="settings-row-title" Text="{Binding DataManagement.BackupText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{Binding DataManagement.BackupDescriptionText}" />
+            </StackPanel>
+          </Grid>
+        </Button>
+        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row last"
-                AutomationProperties.AutomationId="Settings.WebDavBackupManageButton"
-                Command="{Binding DataManagement.OpenWebDavBackupDialogCommand}"
-                IsEnabled="{Binding DataManagement.CanManageWebDavBackups}">
+                AutomationProperties.AutomationId="Settings.RestoreDataBackupButton"
+                Click="OnRestoreFromFileClicked">
+          <Grid>
+            <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+              <TextBlock Classes="settings-row-title" Text="{Binding DataManagement.RestoreText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{Binding DataManagement.RestoreDescriptionText}" />
+            </StackPanel>
+          </Grid>
+        </Button>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+
+  <StackPanel Spacing="0">
+    <TextBlock Classes="surface-group-title" Text="{Binding DataManagement.WebDavGroupText}" />
+    <Border Classes="surface-group">
+      <StackPanel>
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="settings-row-title"
+                       Text="{Binding DataManagement.WebDavEnableText}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          AutomationProperties.AutomationId="Settings.WebDavEnableToggle"
+                          IsChecked="{Binding DataManagement.IsWebDavBackupEnabled}" />
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+            <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavUrlText}" />
+            <TextBox Grid.Column="1"
+                     Classes="settings-input"
+                     AutomationProperties.AutomationId="Settings.WebDavUrlBox"
+                     Text="{Binding DataManagement.WebDavUrl, Mode=TwoWay}" />
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+            <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavUserNameText}" />
+            <TextBox Grid.Column="1"
+                     Classes="settings-input"
+                     AutomationProperties.AutomationId="Settings.WebDavUserNameBox"
+                     Text="{Binding DataManagement.WebDavUserName, Mode=TwoWay}" />
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+            <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavPasswordText}" />
+            <TextBox Grid.Column="1"
+                     Classes="settings-input"
+                     PasswordChar="•"
+                     AutomationProperties.AutomationId="Settings.WebDavPasswordBox"
+                     Text="{Binding DataManagement.WebDavPassword, Mode=TwoWay}" />
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+            <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding DataManagement.WebDavRemoteDirectoryText}" />
+            <TextBox Grid.Column="1"
+                     Classes="settings-input"
+                     AutomationProperties.AutomationId="Settings.WebDavRemotePathBox"
+                     Text="{Binding DataManagement.WebDavRemoteDirectory, Mode=TwoWay}" />
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBlock Grid.Column="0"
                        Classes="settings-row-title"
-                       Text="{Binding DataManagement.WebDavManageText}"
+                       Text="{Binding DataManagement.WebDavIntervalText}"
                        VerticalAlignment="Center" />
-            <Border Grid.Column="1" Width="96" />
+            <ComboBox Grid.Column="1"
+                      AutomationProperties.AutomationId="Settings.WebDavIntervalHoursComboBox"
+                      MinWidth="160"
+                      ItemsSource="{Binding DataManagement.WebDavBackupIntervalOptions}"
+                      SelectedItem="{Binding DataManagement.SelectedWebDavBackupIntervalOption, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ISelectionOption">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
           </Grid>
-        </Button>
-        <StackPanel Orientation="Horizontal"
-                    Spacing="8"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    Margin="0,0,20,0">
-          <Button Classes="dialog-primary"
-                  AutomationProperties.AutomationId="Settings.WebDavTestConnectionButton"
-                  Command="{Binding DataManagement.TestWebDavConnectionCommand}"
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0"
+                       Classes="settings-row-title"
+                       Text="{Binding DataManagement.WebDavRetentionText}"
+                       VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1"
+                      AutomationProperties.AutomationId="Settings.WebDavRetentionCountComboBox"
+                      MinWidth="160"
+                      ItemsSource="{Binding DataManagement.WebDavBackupRetentionOptions}"
+                      SelectedItem="{Binding DataManagement.SelectedWebDavBackupRetentionOption, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ISelectionOption">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Grid>
+          <Button Classes="settings-row last"
+                  AutomationProperties.AutomationId="Settings.WebDavBackupManageButton"
+                  Command="{Binding DataManagement.OpenWebDavBackupDialogCommand}"
                   IsEnabled="{Binding DataManagement.CanManageWebDavBackups}">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="{Binding DataManagement.WebDavTestText}" VerticalAlignment="Center" />
-              <iconPacks:PackIconMingCuteIcons Classes="button-spinner"
-                                                IsVisible="{Binding DataManagement.IsTestingWebDavConnection}"
-                                                Kind="LoadingFill" />
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock Grid.Column="0"
+                         Classes="settings-row-title"
+                         Text="{Binding DataManagement.WebDavManageText}"
+                         VerticalAlignment="Center" />
+              <Border Grid.Column="1" Width="96" />
+            </Grid>
           </Button>
-        </StackPanel>
-      </Grid>
-    </StackPanel>
-  </Border>
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Center"
+                      Margin="0,0,20,0">
+            <Button Classes="dialog-primary"
+                    AutomationProperties.AutomationId="Settings.WebDavTestConnectionButton"
+                    Command="{Binding DataManagement.TestWebDavConnectionCommand}"
+                    IsEnabled="{Binding DataManagement.CanManageWebDavBackups}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding DataManagement.WebDavTestText}" VerticalAlignment="Center" />
+                <iconPacks:PackIconMingCuteIcons Classes="button-spinner"
+                                                  IsVisible="{Binding DataManagement.IsTestingWebDavConnection}"
+                                                  Kind="LoadingFill" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </StackPanel>
+    </Border>
+  </StackPanel>
 </StackPanel>
 
 <controls:OverlayDialogHost AutomationProperties.AutomationId="Settings.RestoreDialogOverlay"

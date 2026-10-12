@@ -35,7 +35,7 @@
     <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="LetterSpacing" Value="1" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextTertiaryBrush}" />
-    <Setter Property="Margin" Value="8,8,0,10" />
+    <Setter Property="Margin" Value="14,8,0,6" />
   </Style>
 
   <Style Selector="Button.settings-row">
