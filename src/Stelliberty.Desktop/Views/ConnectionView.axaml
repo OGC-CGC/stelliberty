@@ -178,7 +178,8 @@
                     </Grid>
 
                     <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
-                      <Grid ColumnDefinitions="72,*" ColumnSpacing="8">
+                      <Grid ColumnDefinitions="72,*" ColumnSpacing="8"
+                            IsVisible="{Binding IsProcessVisible}">
                         <TextBlock Text="{loc:Loc Connections.Card.Process}"
                                    Classes="metric-label"
                                    VerticalAlignment="Center" />
