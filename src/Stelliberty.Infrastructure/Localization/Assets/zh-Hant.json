@@ -609,6 +609,7 @@
   "Settings.Port.Mixed": "混合連接埠",
   "Settings.Port.Socks": "SOCKS 連接埠",
   "Settings.Port.Http": "HTTP(S) 連接埠",
+  "Settings.Port.Redir": "Redir 連接埠",
   "Settings.Port.ControllerAddress": "外部控制器位址",
   "Settings.Port.ControllerSecret": "外部控制器密鑰",
   "Settings.Port.ControllerEnabled": "啟用外部控制器",

@@ -44,6 +44,7 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         "MixedPort",
         "SocksPort",
         "HttpPort",
+        "RedirPort",
         "IsExternalControllerEnabled",
         "ExternalControllerAddress",
         "ExternalControllerSecret",

@@ -22,6 +22,7 @@ public sealed partial class SettingsCoreConfigViewModel : ViewModelBase, IDispos
     private string _mixedPortText = string.Empty;
     private string _socksPortText = string.Empty;
     private string _httpPortText = string.Empty;
+    private string _redirPortText = string.Empty;
     private string _tunMtuText = string.Empty;
     private string _tcpKeepAliveIntervalText = string.Empty;
 
@@ -234,6 +235,7 @@ public sealed partial class SettingsCoreConfigViewModel : ViewModelBase, IDispos
         _mixedPortText = _settings.MixedPort.ToString();
         _socksPortText = _settings.SocksPort?.ToString() ?? string.Empty;
         _httpPortText = _settings.HttpPort?.ToString() ?? string.Empty;
+        _redirPortText = _settings.RedirPort?.ToString() ?? string.Empty;
         _tunMtuText = CurrentTunMtuText();
         _tcpKeepAliveIntervalText = _settings.TcpKeepAliveInterval.ToString();
     }

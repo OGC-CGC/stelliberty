@@ -609,6 +609,7 @@
   "Settings.Port.Mixed": "Mixed Port",
   "Settings.Port.Socks": "SOCKS Port",
   "Settings.Port.Http": "HTTP(S) Port",
+  "Settings.Port.Redir": "Redir Port",
   "Settings.Port.ControllerAddress": "External Controller Address",
   "Settings.Port.ControllerSecret": "External Controller Secret",
   "Settings.Port.ControllerEnabled": "Enable External Controller",

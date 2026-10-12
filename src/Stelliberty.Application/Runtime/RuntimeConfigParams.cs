@@ -13,6 +13,7 @@ public sealed record RuntimeConfigParams
             MixedPort = NormalizeRequiredPort(settings.MixedPort, Default.MixedPort),
             SocksPort = NormalizeOptionalPort(settings.SocksPort),
             HttpPort = NormalizeOptionalPort(settings.HttpPort),
+            RedirPort = NormalizeOptionalPort(settings.RedirPort),
             IsIpv6Enabled = settings.IsIpv6Enabled,
             IsAllowLanEnabled = settings.IsAllowLanEnabled,
             IsTcpConcurrentEnabled = settings.IsTcpConcurrentEnabled,
@@ -53,6 +54,8 @@ public sealed record RuntimeConfigParams
     public int SocksPort { get; init; } = 0;
 
     public int HttpPort { get; init; } = 0;
+
+    public int RedirPort { get; init; } = 0;
 
     public bool IsIpv6Enabled { get; init; }
 

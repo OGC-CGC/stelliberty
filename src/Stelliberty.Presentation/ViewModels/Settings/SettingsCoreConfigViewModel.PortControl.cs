@@ -7,6 +7,7 @@ public sealed partial class SettingsCoreConfigViewModel
     public string PortMixedText => _localization.GetString("Settings.Port.Mixed");
     public string PortSocksText => _localization.GetString("Settings.Port.Socks");
     public string PortHttpText => _localization.GetString("Settings.Port.Http");
+    public string PortRedirText => _localization.GetString("Settings.Port.Redir");
     public string PortControllerAddressText => _localization.GetString("Settings.Port.ControllerAddress");
     public string PortControllerSecretText => _localization.GetString("Settings.Port.ControllerSecret");
     public string PortControllerEnabledText => _localization.GetString("Settings.Port.ControllerEnabled");
@@ -16,6 +17,7 @@ public sealed partial class SettingsCoreConfigViewModel
         PortMixedText,
         PortSocksText,
         PortHttpText,
+        PortRedirText,
         PortControllerAddressText,
         PortControllerSecretText
     ];
@@ -45,6 +47,12 @@ public sealed partial class SettingsCoreConfigViewModel
     {
         get => _httpPortText;
         set => SetNullableIntWithArea(_settings.HttpPort, value, string.Empty, next => _settings.HttpPort = next, "PortControl", next => _httpPortText = next);
+    }
+
+    public string RedirPortText
+    {
+        get => _redirPortText;
+        set => SetNullableIntWithArea(_settings.RedirPort, value, string.Empty, next => _settings.RedirPort = next, "PortControl", next => _redirPortText = next);
     }
 
     public bool IsExternalControllerEnabled

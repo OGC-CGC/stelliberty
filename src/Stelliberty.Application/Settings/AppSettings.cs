@@ -112,6 +112,8 @@ public sealed class AppSettings
 
     public int? HttpPort { get; set; }
 
+    public int? RedirPort { get; set; }
+
     public bool IsExternalControllerEnabled { get; set; }
 
     public string ExternalControllerAddress { get; set; } = DefaultExternalControllerAddress;

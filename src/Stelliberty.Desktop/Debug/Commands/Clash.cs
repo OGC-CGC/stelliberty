@@ -183,6 +183,7 @@ internal static partial class DebugCommands
             "port.mixed" => config.MixedPortText,
             "port.socks" => config.SocksPortText,
             "port.http" => config.HttpPortText,
+            "port.redir" => config.RedirPortText,
             "port.controller-enabled" => Bool(config.IsExternalControllerEnabled),
             "port.controller-address" => config.ExternalControllerAddress,
             "port.controller-secret" => config.ExternalControllerSecret,
@@ -249,6 +250,7 @@ internal static partial class DebugCommands
             case "port.mixed": config.MixedPortText = normalizedValue; break;
             case "port.socks": config.SocksPortText = normalizedValue; break;
             case "port.http": config.HttpPortText = normalizedValue; break;
+            case "port.redir": config.RedirPortText = normalizedValue; break;
             case "port.controller-enabled": config.IsExternalControllerEnabled = ParseBool(normalizedValue); break;
             case "port.controller-address": config.ExternalControllerAddress = normalizedValue; break;
             case "port.controller-secret": config.ExternalControllerSecret = normalizedValue; break;

@@ -86,6 +86,7 @@ rules: []
         Set(config, "mixed-port", parameters.MixedPort);
         SetOrRemovePositiveInt(config, "port", parameters.HttpPort);
         SetOrRemovePositiveInt(config, "socks-port", parameters.SocksPort);
+        SetOrRemovePositiveInt(config, "redir-port", parameters.RedirPort);
         Set(config, "allow-lan", parameters.IsAllowLanEnabled);
         Set(config, "bind-address", parameters.IsAllowLanEnabled ? "0.0.0.0" : "127.0.0.1");
         Set(config, "mode", parameters.OutboundMode.ToLowerInvariant());
@@ -109,6 +110,7 @@ rules: []
         ValidateRequiredPort("mixed-port", parameters.MixedPort);
         ValidateOptionalPort("port", parameters.HttpPort);
         ValidateOptionalPort("socks-port", parameters.SocksPort);
+        ValidateOptionalPort("redir-port", parameters.RedirPort);
     }
 
     private static void ValidateRequiredPort(string key, int value)
