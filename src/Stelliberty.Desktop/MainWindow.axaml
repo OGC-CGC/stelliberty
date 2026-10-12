@@ -179,57 +179,64 @@
                     Classes.selected="{Binding IsHomeSelected}"
                     AutomationProperties.AutomationId="Navigation.HomeButton"
                     Command="{Binding ShowHomeCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-home" /></Border><TextBlock Text="{Binding HomeNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-              </StackPanel>
+              <Grid ColumnDefinitions="34,*,34">
+                <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-home" /></Border>
+                <TextBlock Grid.Column="1" Text="{Binding HomeNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </Grid>
             </Button>
             <Button Classes="nav-item"
                     Classes.selected="{Binding IsProxySelected}"
                     AutomationProperties.AutomationId="Navigation.ProxyButton"
                     Command="{Binding ShowProxyCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-proxy" /></Border><TextBlock Text="{Binding ProxyNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-              </StackPanel>
+              <Grid ColumnDefinitions="34,*,34">
+                <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-proxy" /></Border>
+                <TextBlock Grid.Column="1" Text="{Binding ProxyNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </Grid>
             </Button>
             <Button Classes="nav-item"
                     Classes.selected="{Binding IsConnectionsSelected}"
                     AutomationProperties.AutomationId="Navigation.ConnectionsButton"
                     Command="{Binding ShowConnectionsCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-connections" /></Border><TextBlock Text="{Binding ConnectionsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-              </StackPanel>
+              <Grid ColumnDefinitions="34,*,34">
+                <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-connections" /></Border>
+                <TextBlock Grid.Column="1" Text="{Binding ConnectionsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </Grid>
             </Button>
             <Button Classes="nav-item"
                     Classes.selected="{Binding IsCoreLogsSelected}"
                     AutomationProperties.AutomationId="Navigation.CoreLogsButton"
                     Command="{Binding ShowCoreLogsCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-log" /></Border><TextBlock Text="{Binding CoreLogsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-              </StackPanel>
+              <Grid ColumnDefinitions="34,*,34">
+                <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-log" /></Border>
+                <TextBlock Grid.Column="1" Text="{Binding CoreLogsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </Grid>
             </Button>
             <Button Classes="nav-item"
                     Classes.selected="{Binding IsRulesSelected}"
                     AutomationProperties.AutomationId="Navigation.RulesButton"
                     Command="{Binding ShowRulesCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-rules" /></Border><TextBlock Text="{Binding RulesNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-              </StackPanel>
+              <Grid ColumnDefinitions="34,*,34">
+                <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-rules" /></Border>
+                <TextBlock Grid.Column="1" Text="{Binding RulesNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </Grid>
             </Button>
             <Button Classes="nav-item"
                     Classes.selected="{Binding IsSubscriptionsSelected}"
                     AutomationProperties.AutomationId="Navigation.SubscriptionsButton"
                     Command="{Binding ShowSubscriptionsCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-subscription" /></Border><TextBlock Text="{Binding SubscriptionsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-              </StackPanel>
+              <Grid ColumnDefinitions="34,*,34">
+                <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-subscription" /></Border>
+                <TextBlock Grid.Column="1" Text="{Binding SubscriptionsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </Grid>
             </Button>
             <Button Classes="nav-item"
                     Classes.selected="{Binding IsOverridesSelected}"
                     AutomationProperties.AutomationId="Navigation.OverridesButton"
                     Command="{Binding ShowOverridesCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-overrides" /></Border><TextBlock Text="{Binding OverridesNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-              </StackPanel>
+              <Grid ColumnDefinitions="34,*,34">
+                <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-overrides" /></Border>
+                <TextBlock Grid.Column="1" Text="{Binding OverridesNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+              </Grid>
             </Button>
           </StackPanel>
 
@@ -238,9 +245,10 @@
                   Classes.selected="{Binding IsSettingsSelected}"
                   AutomationProperties.AutomationId="Navigation.SettingsButton"
                   Command="{Binding ShowSettingsCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <Border Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-settings" /></Border><TextBlock Text="{Binding SettingsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-            </StackPanel>
+            <Grid ColumnDefinitions="34,*,34">
+              <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-settings" /></Border>
+              <TextBlock Grid.Column="1" Text="{Binding SettingsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+            </Grid>
           </Button>
         </Grid>
       </Border>

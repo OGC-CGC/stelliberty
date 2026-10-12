@@ -111,7 +111,7 @@
     <Setter Property="Padding" Value="8,8" />
     <Setter Property="MinHeight" Value="52" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
     <Setter Property="Template">
       <ControlTemplate>
@@ -119,7 +119,8 @@
                 Background="{TemplateBinding Background}"
                 CornerRadius="{TemplateBinding CornerRadius}"
                 Padding="{TemplateBinding Padding}">
-          <ContentPresenter HorizontalAlignment="Left"
+          <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                             VerticalAlignment="Center"
                             Content="{TemplateBinding Content}" />
         </Border>
@@ -253,7 +254,7 @@
   <Style Selector="TextBlock.nav-label" x:DataType="vm:MainWindowViewModel">
     <Setter Property="FontSize" Value="14" />
     <Setter Property="LetterSpacing" Value="{Binding NavLabelLetterSpacing}" />
-    <Setter Property="Margin" Value="25,0,0,0" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 </Styles>
