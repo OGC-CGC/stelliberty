@@ -359,12 +359,5 @@
                                 IsOpen="{Binding IsToastVisible}"
                                 Type="{Binding ToastType}"
                                 Message="{Binding ToastMessage}" />
-
-    <Border Grid.RowSpan="2"
-            ZIndex="1000"
-            IsHitTestVisible="False"
-            BorderBrush="{DynamicResource AppWindowEdgeHighlightBrush}"
-            BorderThickness="1"
-            CornerRadius="20" />
   </Grid>
 </Window>

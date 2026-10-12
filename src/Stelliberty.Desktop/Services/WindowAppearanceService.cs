@@ -250,12 +250,8 @@ internal sealed class WindowAppearanceService : IDisposable
             WindowEffect.Acrylic or WindowEffect.Blur => new SolidColorBrush(Color.Parse(isLightTheme ? "#B3FFFFFF" : "#B3212121")),
             _ => (IBrush)Brushes.Transparent
         };
-        IBrush edgeHighlightBrush = OperatingSystem.IsMacOS() && effect == WindowEffect.FrutigerAero
-            ? new SolidColorBrush(Color.Parse(_isWindowActive ? "#B8FFFFFF" : "#66FFFFFF"))
-            : Brushes.Transparent;
         // 这里只处理窗口效果背景；其余样式归 Theme.axaml。
         _window.Resources["AppRootSurfaceBrush"] = rootSurfaceBrush;
-        _window.Resources["AppWindowEdgeHighlightBrush"] = edgeHighlightBrush;
         _window.Resources["AppDialogSurfaceBrush"] = surfaceBrush;
         _window.Resources["AppPopupSurfaceBrush"] = surfaceBrush;
         _window.Resources["ComboBoxPopupBackground"] = surfaceBrush;
