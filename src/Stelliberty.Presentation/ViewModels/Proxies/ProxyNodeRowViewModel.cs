@@ -11,19 +11,22 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
     private bool _isLocated;
     private bool _isClickable;
     private bool _isDelayTesting;
+    private bool _isProxyGroup;
 
     public ProxyNodeRowViewModel(
         ProxyNode node,
         bool isSelected,
         bool isLocated = false,
         bool isClickable = true,
-        bool isDelayTesting = false)
+        bool isDelayTesting = false,
+        bool isProxyGroup = false)
     {
         _node = node;
         _isSelected = isSelected;
         _isLocated = isLocated;
         _isClickable = isClickable;
         _isDelayTesting = isDelayTesting;
+        _isProxyGroup = isProxyGroup;
     }
 
     public string Name => _node.Name;
@@ -34,6 +37,13 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
     public string SelectAutomationId => $"Proxy.Node.{Name}.SelectButton";
 
     public string Type => _node.Type;
+    public string ActionAutomationId => $"Proxy.Node.{Name}.ActionButton";
+
+    public bool IsProxyGroup
+    {
+        get => _isProxyGroup;
+        private set => SetProperty(ref _isProxyGroup, value);
+    }
 
     public bool IsSelected
     {
@@ -83,7 +93,7 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
 
     public string DelayLevel => ProxyDelayPresentation.GetLevel(_node.Delay);
 
-    public void Update(ProxyNode node, bool isSelected, bool isLocated, bool isClickable, bool isDelayTesting)
+    public void Update(ProxyNode node, bool isSelected, bool isLocated, bool isClickable, bool isDelayTesting, bool isProxyGroup = false)
     {
         if (!ReferenceEquals(_node, node))
         {
@@ -97,6 +107,7 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
             }
         }
 
+        IsProxyGroup = isProxyGroup;
         IsSelected = isSelected;
         IsLocated = isLocated;
         IsClickable = isClickable;

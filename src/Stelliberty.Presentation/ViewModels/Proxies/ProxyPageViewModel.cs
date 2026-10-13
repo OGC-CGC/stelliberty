@@ -93,6 +93,7 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         }
         RefreshProxiesCommand = new RelayCommand(() => RefreshProxiesAsync().SafeFireAndForget("RefreshProxies"));
         SelectGroupCommand = new RelayCommand<string>(SelectGroup);
+        NavigateToGroupCommand = new RelayCommand<string>(NavigateToGroup);
         SelectNodeCommand = new RelayCommand<string>(nodeName => SelectNodeAsync(nodeName).SafeFireAndForget("SelectNode"));
         TestNodeDelayCommand = new RelayCommand<string>(nodeName => TestNodeDelayAsync(nodeName).SafeFireAndForget("TestNodeDelay"));
         TestAllDelaysCommand = new RelayCommand(() => TestAllDelaysAsync().SafeFireAndForget("TestAllDelays"));
@@ -109,6 +110,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
 
     // 节点切换请求核心清理连接；组合层接入连接页同步。
     public event EventHandler? NodeSelectionClosedConnections;
+
+    public event EventHandler<string>? GroupNavigationRequested;
 
     public IReadOnlyList<ProxyGroup> VisibleGroups => _visibleGroups;
 
@@ -242,6 +245,7 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
 
     public ICommand RefreshProxiesCommand { get; }
     public ICommand SelectGroupCommand { get; }
+    public ICommand NavigateToGroupCommand { get; }
     public ICommand SelectNodeCommand { get; }
     public ICommand TestNodeDelayCommand { get; }
     public ICommand TestAllDelaysCommand { get; }
@@ -533,6 +537,26 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         RaiseProxyStateChanged();
     }
 
+    private void NavigateToGroup(string? groupName)
+    {
+        var group = VisibleGroups.FirstOrDefault(item => string.Equals(item.Name, groupName, StringComparison.Ordinal));
+        if (group is null)
+        {
+            return;
+        }
+
+        _selectedGroup = group;
+        if (IsVerticalLayout)
+        {
+            _expandedGroupName = group.Name;
+        }
+        RaiseProxyStateChanged();
+        if (IsVerticalLayout)
+        {
+            GroupNavigationRequested?.Invoke(this, group.Name);
+        }
+    }
+
     public void SelectNode(string? nodeName)
     {
         SelectNodeAsync(nodeName).SafeFireAndForget("SelectNode");
@@ -671,7 +695,13 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        await TestGroupDelaysAsync(_selectedGroup.Name);
+        var groupName = _selectedGroup.Name;
+        if (IsVerticalLayout)
+        {
+            NavigateToGroup(groupName);
+        }
+
+        await TestGroupDelaysAsync(groupName);
     }
 
     public async Task TestGroupDelaysAsync(string? groupName)
@@ -1103,7 +1133,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             string.Equals(name, _selectedGroup?.DisplaySelectionName, StringComparison.Ordinal),
             string.Equals(name, _locatedNodeName, StringComparison.Ordinal),
             _selectedGroup?.IsManualSelectable == true,
-            _delayTests.TestingNodeNames.Contains(name));
+            _delayTests.TestingNodeNames.Contains(name),
+            VisibleGroups.Any(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal)));
         ApplyPendingBatchDelay(row, name);
         return row;
     }
@@ -1115,7 +1146,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             string.Equals(name, group?.DisplaySelectionName, StringComparison.Ordinal),
             string.Equals(name, _locatedNodeName, StringComparison.Ordinal),
             group?.IsManualSelectable == true,
-            _delayTests.TestingNodeNames.Contains(name));
+            _delayTests.TestingNodeNames.Contains(name),
+            VisibleGroups.Any(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal)));
         ApplyPendingBatchDelay(row, name);
     }
 

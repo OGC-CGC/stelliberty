@@ -95,5 +95,97 @@
       </StackPanel>
     </Border>
   </StackPanel>
+  <StackPanel Spacing="0">
+    <TextBlock Classes="surface-group-title" Text="{Binding Theme.BackgroundImageSectionTitle}" />
+    <Border Classes="surface-group">
+      <StackPanel>
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+              <TextBlock Text="{Binding Theme.BackgroundImagePathText}" TextTrimming="CharacterEllipsis"
+                         ToolTip.Tip="{Binding Theme.BackgroundImagePathText}" />
+              <TextBlock Text="{Binding Theme.BackgroundImageErrorText}" TextWrapping="Wrap"
+                         Foreground="{DynamicResource AppDangerBrush}"
+                         IsVisible="{Binding Theme.BackgroundImageLoadFailed}" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="{Binding Theme.BackgroundImageChooseText}"
+                    AutomationProperties.AutomationId="Settings.BackgroundImage.Choose"
+                    Click="OnChooseBackgroundImageClicked" />
+            <Button Grid.Column="2" Content="{Binding Theme.BackgroundImageClearText}"
+                    AutomationProperties.AutomationId="Settings.BackgroundImage.Clear"
+                    IsEnabled="{Binding Theme.HasBackgroundImage}"
+                    Command="{Binding Theme.ClearBackgroundImageCommand}" />
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
+                       Text="{Binding Theme.BackgroundImageStretchText}" />
+            <ComboBox Grid.Column="1" MinWidth="160"
+                      AutomationProperties.AutomationId="Settings.BackgroundImage.Stretch"
+                      ItemsSource="{Binding Theme.BackgroundStretchOptions}"
+                      SelectedItem="{Binding Theme.SelectedBackgroundStretchOption, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ISelectionOption">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
+                       Text="{Binding Theme.BackgroundImageHorizontalText}" />
+            <ComboBox Grid.Column="1" MinWidth="160"
+                      AutomationProperties.AutomationId="Settings.BackgroundImage.Horizontal"
+                      ItemsSource="{Binding Theme.BackgroundHorizontalOptions}"
+                      SelectedItem="{Binding Theme.SelectedBackgroundHorizontalOption, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ISelectionOption">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
+                       Text="{Binding Theme.BackgroundImageVerticalText}" />
+            <ComboBox Grid.Column="1" MinWidth="160"
+                      AutomationProperties.AutomationId="Settings.BackgroundImage.Vertical"
+                      ItemsSource="{Binding Theme.BackgroundVerticalOptions}"
+                      SelectedItem="{Binding Theme.SelectedBackgroundVerticalOption, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ISelectionOption">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,200,48" ColumnSpacing="10">
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+              <TextBlock Classes="settings-row-title" Text="{Binding Theme.BackgroundImageTransparencyText}" />
+              <TextBlock Text="{Binding Theme.BackgroundImageTransparencyHint}" TextWrapping="Wrap"
+                         Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" />
+            </StackPanel>
+            <Slider Grid.Column="1" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="Settings.BackgroundImage.Transparency"
+                    Value="{Binding Theme.BackgroundImageTransparency, Mode=TwoWay}" />
+            <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"
+                       Text="{Binding Theme.BackgroundImageTransparency, StringFormat='{}{0}%'}" />
+          </Grid>
+        </Border>
+      </StackPanel>
+    </Border>
+  </StackPanel>
 </StackPanel>
 </UserControl>

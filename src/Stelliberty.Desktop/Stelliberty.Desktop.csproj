@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\fonts\**" />
+    <AvaloniaResource Include="Assets\backgrounds\**" />
   </ItemGroup>
 
   <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">

@@ -21,6 +21,18 @@ public sealed class AppSettings
 
     public string Theme { get; set; } = "System";
 
+    public const string DefaultBackgroundImagePath = "builtin:default";
+
+    public string BackgroundImagePath { get; set; } = DefaultBackgroundImagePath;
+
+    public string BackgroundImageStretch { get; set; } = "None";
+
+    public string BackgroundImageHorizontalAlignment { get; set; } = "Right";
+
+    public string BackgroundImageVerticalAlignment { get; set; } = "Bottom";
+
+    public int BackgroundImageTransparency { get; set; } = 67;
+
     public string AccentColorMode { get; set; } = "System";
 
     public string AccentColor { get; set; } = "#3B82F6";

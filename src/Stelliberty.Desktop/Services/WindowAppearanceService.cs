@@ -1,6 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Stelliberty.Application.Diagnostics;
 using Avalonia.Threading;
 using Stelliberty.Application.Settings;
 using Stelliberty.Presentation.ViewModels;
@@ -15,11 +18,15 @@ internal sealed class WindowAppearanceService : IDisposable
     private MainWindow? _window;
     private SettingsThemeViewModel? _theme;
     private bool _isWindowActive;
+    private Border? _backgroundImageLayer;
+    private Bitmap? _backgroundBitmap;
+    private int _backgroundLoadVersion;
 
     public void Attach(MainWindow window, SettingsThemeViewModel theme)
     {
         if (_theme is not null)
         {
+            _theme.BackgroundImageChanged -= OnBackgroundImageChanged;
             _theme.ThemeChanged -= OnThemeChanged;
             _theme.WindowEffectChanged -= OnWindowEffectChanged;
         }
@@ -32,9 +39,12 @@ internal sealed class WindowAppearanceService : IDisposable
             _window.Opened -= OnWindowOpened;
         }
 
+        ReleaseBackgroundImage();
         _window = window;
+        _backgroundImageLayer = window.FindControl<Border>("BackgroundImageLayer");
         _theme = theme;
         _isWindowActive = window.IsActive;
+        _theme.BackgroundImageChanged += OnBackgroundImageChanged;
         _theme.ThemeChanged += OnThemeChanged;
         _theme.WindowEffectChanged += OnWindowEffectChanged;
         _window.ActualThemeVariantChanged += OnActualThemeVariantChanged;
@@ -43,6 +53,7 @@ internal sealed class WindowAppearanceService : IDisposable
         _window.Opened += OnWindowOpened;
         ApplyTheme(theme.SelectedOption.Value);
         ApplyWindowEffect(theme.SelectedWindowEffect);
+        UpdateBackgroundImage(reloadImage: true);
     }
 
     public void Reapply()
@@ -54,12 +65,15 @@ internal sealed class WindowAppearanceService : IDisposable
 
         ApplyTheme(_theme.SelectedOption.Value);
         ApplyWindowEffect(_theme.SelectedWindowEffect);
+        _backgroundImageLayer = _window?.FindControl<Border>("BackgroundImageLayer");
+        UpdateBackgroundImage(reloadImage: true);
     }
 
     public void Dispose()
     {
         if (_theme is not null)
         {
+            _theme.BackgroundImageChanged -= OnBackgroundImageChanged;
             _theme.ThemeChanged -= OnThemeChanged;
             _theme.WindowEffectChanged -= OnWindowEffectChanged;
         }
@@ -72,10 +86,113 @@ internal sealed class WindowAppearanceService : IDisposable
             _window.Opened -= OnWindowOpened;
         }
 
+        ReleaseBackgroundImage();
+        _backgroundImageLayer = null;
         _macOSGlassEffectService?.Dispose();
         _theme = null;
         _window = null;
         _isWindowActive = false;
+    }
+
+    private void OnBackgroundImageChanged(object? sender, bool reloadImage)
+        => UpdateBackgroundImage(reloadImage);
+
+    private void UpdateBackgroundImage(bool reloadImage)
+    {
+        if (_theme is null || _backgroundImageLayer is null)
+        {
+            return;
+        }
+
+        if (!reloadImage)
+        {
+            ApplyBackgroundImage();
+            return;
+        }
+
+        ReleaseBackgroundImage();
+        _theme.SetBackgroundImageLoadFailed(false);
+        if (_theme.HasBackgroundImage)
+        {
+            _ = LoadBackgroundImageAsync(_theme.BackgroundImagePath, _backgroundLoadVersion);
+        }
+    }
+
+    private async Task LoadBackgroundImageAsync(string path, int version)
+    {
+        // 解码在后台进行；快速替换图片或关闭窗口后，丢弃旧加载结果。
+        var bitmap = await Task.Run(() =>
+        {
+            try
+            {
+                using var stream = path == AppSettings.DefaultBackgroundImagePath
+                    ? AssetLoader.Open(new Uri("avares://stelliberty_ui/Assets/backgrounds/default.png"))
+                    : File.OpenRead(path);
+                return new Bitmap(stream);
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Error(exception, "Background image load failed");
+                return null;
+            }
+        });
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (version != _backgroundLoadVersion || _theme is null || _backgroundImageLayer is null)
+            {
+                bitmap?.Dispose();
+                return;
+            }
+
+            _backgroundBitmap = bitmap;
+            _theme.SetBackgroundImageLoadFailed(bitmap is null);
+            ApplyBackgroundImage();
+        });
+    }
+
+    private void ApplyBackgroundImage()
+    {
+        if (_theme is null || _backgroundImageLayer is null)
+        {
+            return;
+        }
+
+        _backgroundImageLayer.Background = _backgroundBitmap is null ? null : new ImageBrush
+        {
+            Source = _backgroundBitmap,
+            Stretch = _theme.BackgroundStretch switch
+            {
+                BackgroundImageStretchMode.None => Stretch.None,
+                BackgroundImageStretchMode.Uniform => Stretch.Uniform,
+                BackgroundImageStretchMode.Fill => Stretch.Fill,
+                _ => Stretch.UniformToFill
+            },
+            AlignmentX = _theme.BackgroundHorizontalAlignment switch
+            {
+                BackgroundImageHorizontalAlignment.Left => AlignmentX.Left,
+                BackgroundImageHorizontalAlignment.Right => AlignmentX.Right,
+                _ => AlignmentX.Center
+            },
+            AlignmentY = _theme.BackgroundVerticalAlignment switch
+            {
+                BackgroundImageVerticalAlignment.Top => AlignmentY.Top,
+                BackgroundImageVerticalAlignment.Bottom => AlignmentY.Bottom,
+                _ => AlignmentY.Center
+            },
+            Opacity = 1 - _theme.BackgroundImageTransparency / 100d
+        };
+    }
+
+    private void ReleaseBackgroundImage()
+    {
+        _backgroundLoadVersion++;
+        if (_backgroundImageLayer is not null)
+        {
+            _backgroundImageLayer.Background = null;
+        }
+        _backgroundBitmap?.Dispose();
+        _backgroundBitmap = null;
     }
 
     private void OnThemeChanged(object? sender, AppTheme theme)
@@ -237,8 +354,8 @@ internal sealed class WindowAppearanceService : IDisposable
         var effect = _theme.SelectedWindowEffect;
         var surfaceBrush = new SolidColorBrush(isLightTheme ? ThemeSurfaceColors.Light : ThemeSurfaceColors.Dark);
         var cardSurfaceBrush = new SolidColorBrush(Color.Parse(effect == WindowEffect.FrutigerAero
-            ? isLightTheme ? "#22FFFFFF" : "#22000000"
-            : isLightTheme ? "#CCFFFFFF" : "#44000000"));
+            ? isLightTheme ? "#66FFFFFF" : "#66000000"
+            : isLightTheme ? "#CCFFFFFF" : "#BB191919"));
         var rootSurfaceBrush = effect switch
         {
             WindowEffect.None => surfaceBrush,

@@ -8,6 +8,10 @@ namespace Stelliberty.Infrastructure.DataManagement;
 
 public sealed class FileDataBackupService(string appDataDirectory) : IDataManagementService
 {
+    private const string BackgroundImageSettingKey = "BackgroundImagePath";
+    private const string BackgroundImageBackupReference = "backup:background-image";
+    private const string BackgroundImageEntryName = "backgrounds/background-image";
+
     private static readonly string[] UserDataEntries =
     [
         "subscriptions",
@@ -19,6 +23,11 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
     [
         "Language",
         "Theme",
+        "BackgroundImagePath",
+        "BackgroundImageStretch",
+        "BackgroundImageHorizontalAlignment",
+        "BackgroundImageVerticalAlignment",
+        "BackgroundImageTransparency",
         "AccentColorMode",
         "AccentColor",
         "IsMinimizeToTrayEnabled",
@@ -125,6 +134,13 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
 
     public DataManagementOperationResult CreateBackup(string backupPath)
     {
+        var portableSettings = ReadPortableSettings();
+        var backgroundImagePath = portableSettings?[BackgroundImageSettingKey]?.GetValue<string>();
+        // 在创建备份前打开图片，缺失或不可读时直接报错。
+        using var backgroundImage = !string.IsNullOrWhiteSpace(backgroundImagePath)
+            && backgroundImagePath != AppSettings.DefaultBackgroundImagePath
+                ? File.OpenRead(backgroundImagePath)
+                : null;
         var normalizedBackupPath = Path.GetFullPath(backupPath);
         Directory.CreateDirectory(Path.GetDirectoryName(normalizedBackupPath)!);
         if (File.Exists(normalizedBackupPath))
@@ -133,7 +149,20 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         }
 
         using var archive = ZipFile.Open(normalizedBackupPath, ZipArchiveMode.Create);
-        AddSettingsEntry(archive);
+        if (backgroundImage is not null)
+        {
+            using (var destination = archive.CreateEntry(BackgroundImageEntryName).Open())
+            {
+                backgroundImage.CopyTo(destination);
+            }
+            portableSettings![BackgroundImageSettingKey] = BackgroundImageBackupReference;
+        }
+        if (portableSettings is not null)
+        {
+            var settingsEntry = archive.CreateEntry(PathConventions.SettingsFileName);
+            using var writer = new StreamWriter(settingsEntry.Open());
+            writer.Write(portableSettings.ToJsonString());
+        }
         foreach (var entry in UserDataEntries)
         {
             AddEntry(archive, entry);
@@ -187,6 +216,18 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         if (restorableEntries.Count == 0)
         {
             throw new InvalidOperationException("Backup file contains no restorable data");
+        }
+
+        // 在覆盖现有数据前确认新格式引用的图片确实存在。
+        foreach (var item in restorableEntries.Where(item => IsSettingsDestination(item.DestinationPath)))
+        {
+            using var reader = new StreamReader(item.Entry.Open());
+            var settings = JsonNode.Parse(reader.ReadToEnd())?.AsObject();
+            if (settings?[BackgroundImageSettingKey]?.GetValue<string>() == BackgroundImageBackupReference
+                && archive.GetEntry(BackgroundImageEntryName) is null)
+            {
+                throw new InvalidOperationException("Backup background image is missing");
+            }
         }
 
         Directory.CreateDirectory(appDataDirectory);
@@ -293,6 +334,7 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
             }
         }
 
+        RestoreBackgroundImage(portableSettings, entry.Archive);
         File.WriteAllText(settingsPath, portableSettings.ToJsonString());
     }
 
@@ -327,53 +369,81 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
     private (int Merged, int Ignored) MergeSettingsEntry(ZipArchiveEntry entry)
     {
         var settingsPath = Path.Combine(appDataDirectory, PathConventions.SettingsFileName);
+        JsonObject currentSettings;
+        JsonObject? backupSettings;
         try
         {
-            var currentSettings = File.Exists(settingsPath)
+            currentSettings = File.Exists(settingsPath)
                 ? JsonNode.Parse(File.ReadAllText(settingsPath))?.AsObject() ?? new JsonObject()
                 : new JsonObject();
 
             using var reader = new StreamReader(entry.Open());
-            var backupSettings = JsonNode.Parse(reader.ReadToEnd())?.AsObject();
-            if (backupSettings is null)
-            {
-                return (0, 0);
-            }
-
-            var merged = 0;
-            var ignored = 0;
-            foreach (var pair in backupSettings)
-            {
-                if (!BackupSettingKeys.Contains(pair.Key, StringComparer.Ordinal) || currentSettings.ContainsKey(pair.Key))
-                {
-                    ignored++;
-                    continue;
-                }
-
-                currentSettings[pair.Key] = pair.Value?.DeepClone();
-                merged++;
-            }
-
-            if (merged > 0)
-            {
-                File.WriteAllText(settingsPath, currentSettings.ToJsonString());
-            }
-
-            return (merged, ignored);
+            backupSettings = JsonNode.Parse(reader.ReadToEnd())?.AsObject();
         }
         catch (Exception exception)
         {
             AppLogger.Warning($"Portable settings merge failed; skipping settings: {exception.Message}");
             return (0, 0);
         }
+        if (backupSettings is null)
+        {
+            return (0, 0);
+        }
+
+        var mergedSettings = new JsonObject();
+        var ignored = 0;
+        foreach (var pair in backupSettings)
+        {
+            if (!BackupSettingKeys.Contains(pair.Key, StringComparer.Ordinal) || currentSettings.ContainsKey(pair.Key))
+            {
+                ignored++;
+                continue;
+            }
+
+            mergedSettings[pair.Key] = pair.Value?.DeepClone();
+        }
+
+        RestoreBackgroundImage(mergedSettings, entry.Archive);
+        foreach (var pair in mergedSettings)
+        {
+            currentSettings[pair.Key] = pair.Value?.DeepClone();
+        }
+        if (mergedSettings.Count > 0)
+        {
+            File.WriteAllText(settingsPath, currentSettings.ToJsonString());
+        }
+
+        return (mergedSettings.Count, ignored);
     }
 
-    private void AddSettingsEntry(ZipArchive archive)
+    private void RestoreBackgroundImage(JsonObject settings, ZipArchive archive)
+    {
+        if (settings[BackgroundImageSettingKey]?.GetValue<string>() != BackgroundImageBackupReference)
+        {
+            return;
+        }
+
+        var imageEntry = archive.GetEntry(BackgroundImageEntryName)
+            ?? throw new InvalidOperationException("Backup background image is missing");
+        // 独立文件名避免覆盖当前背景；仅解包设置实际引用的图片。
+        var destinationPath = Path.GetFullPath(Path.Combine(
+            appDataDirectory, "backgrounds", $"restored-{Guid.NewGuid():N}"));
+        if (!IsSafeDestination(destinationPath))
+        {
+            throw new InvalidOperationException("Invalid background image destination");
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+        imageEntry.ExtractToFile(destinationPath, overwrite: false);
+        settings[BackgroundImageSettingKey] = destinationPath;
+    }
+
+    private JsonObject? ReadPortableSettings()
     {
         var sourcePath = Path.Combine(appDataDirectory, PathConventions.SettingsFileName);
         if (!File.Exists(sourcePath))
         {
-            return;
+            return null;
         }
 
         try
@@ -381,7 +451,7 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
             var settings = JsonNode.Parse(File.ReadAllText(sourcePath))?.AsObject();
             if (settings is null)
             {
-                return;
+                return null;
             }
 
             var portableSettings = new JsonObject();
@@ -390,13 +460,12 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
                 portableSettings[key] = settings[key]?.DeepClone();
             }
 
-            var entry = archive.CreateEntry(PathConventions.SettingsFileName);
-            using var writer = new StreamWriter(entry.Open());
-            writer.Write(portableSettings.ToJsonString());
+            return portableSettings;
         }
         catch (Exception exception)
         {
             AppLogger.Warning($"Portable settings backup failed; skipping settings: {exception.Message}");
+            return null;
         }
     }
 

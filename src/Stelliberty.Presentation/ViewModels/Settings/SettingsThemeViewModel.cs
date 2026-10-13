@@ -17,6 +17,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     private AccentColorMode _accentColorMode;
     private WindowEffect _windowEffect;
     private string _customAccentColor;
+    private bool _backgroundImageLoadFailed;
 
     public SettingsThemeViewModel(AppSettings settings, IAppSettingsStore settingsStore, ILocalizationService localization, IWindowEffectCapability? windowEffectCapability = null)
     {
@@ -31,6 +32,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         settings.AccentColorMode = _accentColorMode.ToString();
         NormalizePersistedWindowEffect();
         _localization.LanguageChanged += OnLanguageChanged;
+        ClearBackgroundImageCommand = new RelayCommand(() => SetBackgroundImagePath(string.Empty));
         EditCustomAccentColorCommand = new RelayCommand(() => CustomAccentRequested?.Invoke(this, EventArgs.Empty));
     }
 
@@ -41,6 +43,155 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     public event EventHandler<WindowEffect>? WindowEffectChanged;
 
     public event EventHandler? CustomAccentRequested;
+
+    // true 表示重新读取图片，false 仅更新显示参数。
+    public event EventHandler<bool>? BackgroundImageChanged;
+
+    public string BackgroundImageSectionTitle => _localization.GetString("Settings.Background.Title");
+    public string BackgroundImageChooseText => _localization.GetString("Settings.Background.Choose");
+    public string BackgroundImageClearText => _localization.GetString("Settings.Background.Clear");
+    public string BackgroundImageStretchText => _localization.GetString("Settings.Background.Stretch");
+    public string BackgroundImageHorizontalText => _localization.GetString("Settings.Background.Horizontal");
+    public string BackgroundImageVerticalText => _localization.GetString("Settings.Background.Vertical");
+    public string BackgroundImageTransparencyText => _localization.GetString("Settings.Background.Transparency");
+    public string BackgroundImageTransparencyHint => _localization.GetString("Settings.Background.TransparencyHint");
+    public string BackgroundImagePath => _settings.BackgroundImagePath;
+    public bool HasBackgroundImage => !string.IsNullOrWhiteSpace(BackgroundImagePath);
+    public bool BackgroundImageLoadFailed => _backgroundImageLoadFailed;
+    public string BackgroundImageErrorText => _localization.GetString("Settings.Background.LoadFailed");
+    public string BackgroundImagePathText => BackgroundImagePath == AppSettings.DefaultBackgroundImagePath
+        ? _localization.GetString("Settings.Background.BuiltIn")
+        : HasBackgroundImage ? BackgroundImagePath : _localization.GetString("Settings.Background.None");
+
+    public BackgroundImageStretchMode BackgroundStretch => ParseBackgroundOption(
+        _settings.BackgroundImageStretch, BackgroundImageStretchMode.None);
+    public BackgroundImageHorizontalAlignment BackgroundHorizontalAlignment => ParseBackgroundOption(
+        _settings.BackgroundImageHorizontalAlignment, BackgroundImageHorizontalAlignment.Right);
+    public BackgroundImageVerticalAlignment BackgroundVerticalAlignment => ParseBackgroundOption(
+        _settings.BackgroundImageVerticalAlignment, BackgroundImageVerticalAlignment.Bottom);
+
+    public IReadOnlyList<SelectionOption<BackgroundImageStretchMode>> BackgroundStretchOptions =>
+        Enum.GetValues<BackgroundImageStretchMode>().Select(value =>
+            new SelectionOption<BackgroundImageStretchMode>(value, _localization.GetString($"Settings.Background.Stretch.{value}"))).ToArray();
+    public IReadOnlyList<SelectionOption<BackgroundImageHorizontalAlignment>> BackgroundHorizontalOptions =>
+        Enum.GetValues<BackgroundImageHorizontalAlignment>().Select(value =>
+            new SelectionOption<BackgroundImageHorizontalAlignment>(value, _localization.GetString($"Settings.Background.Align.{value}"))).ToArray();
+    public IReadOnlyList<SelectionOption<BackgroundImageVerticalAlignment>> BackgroundVerticalOptions =>
+        Enum.GetValues<BackgroundImageVerticalAlignment>().Select(value =>
+            new SelectionOption<BackgroundImageVerticalAlignment>(value, _localization.GetString($"Settings.Background.Align.{value}"))).ToArray();
+
+    public SelectionOption<BackgroundImageStretchMode> SelectedBackgroundStretchOption
+    {
+        get => BackgroundStretchOptions.First(option => option.Value == BackgroundStretch);
+        set
+        {
+            if (value.Value == BackgroundStretch)
+            {
+                return;
+            }
+
+            _settings.BackgroundImageStretch = value.Value.ToString();
+            SaveBackgroundSettings(nameof(SelectedBackgroundStretchOption));
+        }
+    }
+
+    public SelectionOption<BackgroundImageHorizontalAlignment> SelectedBackgroundHorizontalOption
+    {
+        get => BackgroundHorizontalOptions.First(option => option.Value == BackgroundHorizontalAlignment);
+        set
+        {
+            if (value.Value == BackgroundHorizontalAlignment)
+            {
+                return;
+            }
+
+            _settings.BackgroundImageHorizontalAlignment = value.Value.ToString();
+            SaveBackgroundSettings(nameof(SelectedBackgroundHorizontalOption));
+        }
+    }
+
+    public SelectionOption<BackgroundImageVerticalAlignment> SelectedBackgroundVerticalOption
+    {
+        get => BackgroundVerticalOptions.First(option => option.Value == BackgroundVerticalAlignment);
+        set
+        {
+            if (value.Value == BackgroundVerticalAlignment)
+            {
+                return;
+            }
+
+            _settings.BackgroundImageVerticalAlignment = value.Value.ToString();
+            SaveBackgroundSettings(nameof(SelectedBackgroundVerticalOption));
+        }
+    }
+
+    public int BackgroundImageTransparency
+    {
+        get => Math.Clamp(_settings.BackgroundImageTransparency, 0, 100);
+        set
+        {
+            var transparency = Math.Clamp(value, 0, 100);
+            if (transparency == BackgroundImageTransparency)
+            {
+                return;
+            }
+
+            _settings.BackgroundImageTransparency = transparency;
+            SaveBackgroundSettings(nameof(BackgroundImageTransparency));
+        }
+    }
+
+    public ICommand ClearBackgroundImageCommand { get; }
+
+    public void SetBackgroundImagePath(string path)
+    {
+        _settings.BackgroundImagePath = path;
+        SetBackgroundImageLoadFailed(false);
+        SaveBackgroundSettings(nameof(BackgroundImagePath), reloadImage: true);
+    }
+
+    public void SetBackgroundImageLoadFailed(bool failed)
+    {
+        SetProperty(ref _backgroundImageLoadFailed, failed, nameof(BackgroundImageLoadFailed));
+    }
+
+    private void SaveBackgroundSettings(string propertyName, bool reloadImage = false)
+    {
+        _settingsStore.Save(_settings);
+        OnPropertyChanged(propertyName);
+        if (reloadImage)
+        {
+            OnPropertyChanged(nameof(BackgroundImagePathText));
+            OnPropertyChanged(nameof(HasBackgroundImage));
+        }
+        BackgroundImageChanged?.Invoke(this, reloadImage);
+    }
+
+    private void RaiseBackgroundPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(BackgroundImageSectionTitle));
+        OnPropertyChanged(nameof(BackgroundImageChooseText));
+        OnPropertyChanged(nameof(BackgroundImageClearText));
+        OnPropertyChanged(nameof(BackgroundImageStretchText));
+        OnPropertyChanged(nameof(BackgroundImageHorizontalText));
+        OnPropertyChanged(nameof(BackgroundImageVerticalText));
+        OnPropertyChanged(nameof(BackgroundImageTransparencyText));
+        OnPropertyChanged(nameof(BackgroundImageTransparencyHint));
+        OnPropertyChanged(nameof(BackgroundImageErrorText));
+        OnPropertyChanged(nameof(BackgroundImagePath));
+        OnPropertyChanged(nameof(BackgroundImagePathText));
+        OnPropertyChanged(nameof(HasBackgroundImage));
+        OnPropertyChanged(nameof(BackgroundStretchOptions));
+        OnPropertyChanged(nameof(BackgroundHorizontalOptions));
+        OnPropertyChanged(nameof(BackgroundVerticalOptions));
+        OnPropertyChanged(nameof(SelectedBackgroundStretchOption));
+        OnPropertyChanged(nameof(SelectedBackgroundHorizontalOption));
+        OnPropertyChanged(nameof(SelectedBackgroundVerticalOption));
+        OnPropertyChanged(nameof(BackgroundImageTransparency));
+    }
+
+    private static T ParseBackgroundOption<T>(string value, T fallback) where T : struct, Enum
+        => Enum.TryParse<T>(value, out var parsed) && Enum.IsDefined(parsed) ? parsed : fallback;
 
     public string FieldLabelText => _localization.GetString("Settings.Field.Theme");
 
@@ -179,6 +330,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         _settings.AccentColorMode = _accentColorMode.ToString();
         NormalizePersistedWindowEffect();
         OnPropertyChanged(string.Empty);
+        BackgroundImageChanged?.Invoke(this, true);
 
         if (previousTheme != _selectedTheme)
         {
@@ -239,6 +391,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
+        RaiseBackgroundPropertiesChanged();
         OnPropertyChanged(nameof(FieldLabelText));
         OnPropertyChanged(nameof(AccentColorSectionTitle));
         OnPropertyChanged(nameof(WindowEffectSectionTitle));

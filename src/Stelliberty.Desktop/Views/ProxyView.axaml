@@ -14,28 +14,53 @@
         DataContext="{Binding ProxyPage}"
         x:DataType="vm:ProxyPageViewModel">
 
-      <Border Classes="surface-header"
-            Margin="8,0,25,0"
-            IsVisible="{Binding HasGroups}"
-            AutomationProperties.AutomationId="Proxy.Toolbar">
+    <Grid x:Name="ProxyToolbarHost"
+          Margin="8,0,25,0"
+          IsVisible="{Binding HasGroups}"
+          ZIndex="10">
+      <Border x:Name="ProxyToolbarSurface"
+              Classes="surface-header"
+              VerticalAlignment="Top"
+              PointerEntered="OnSelectorRegionPointerEntered"
+              PointerExited="OnSelectorRegionPointerExited"
+              AutomationProperties.AutomationId="Proxy.Toolbar">
       <StackPanel Spacing="13">
 
-        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsVerticalLayout}">
-          <ScrollViewer x:Name="GroupTabsScroll"
-                        AutomationProperties.AutomationId="Proxy.GroupBarScroll"
-                        HorizontalScrollBarVisibility="Hidden"
-                        VerticalScrollBarVisibility="Disabled">
-            <ScrollViewer.Transitions>
-              <Transitions>
-                <VectorTransition Property="Offset" Duration="0:0:0.16" Easing="CubicEaseOut" />
-              </Transitions>
-            </ScrollViewer.Transitions>
-            <Grid>
-              <ItemsControl AutomationProperties.AutomationId="Proxy.GroupBar"
+        <Grid x:Name="SelectorDropdownAnchor"
+              IsVisible="{Binding !IsVerticalLayout}"
+              GotFocus="OnSelectorRegionGotFocus"
+              LostFocus="OnSelectorRegionLostFocus">
+          <Border AutomationProperties.AutomationId="Proxy.SelectorDropdown.Current">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <Button x:Name="SelectorDropdownArrow"
+                      Grid.Column="1"
+                      Classes="selector-dropdown-arrow"
+                      Opacity="0"
+                      IsHitTestVisible="False"
+                      IsTabStop="False"
+                      PointerEntered="OnSelectorArrowPointerEntered"
+                      GotFocus="OnSelectorArrowGotFocus"
+                      Click="OnSelectorArrowClick"
+                      AutomationProperties.AutomationId="Proxy.SelectorDropdown.Arrow">
+                <Path Classes="selector-dropdown-chevron"
+                      Width="16" Height="16"
+                      Data="M 4,6 L 8,10 L 12,6"
+                      Stroke="{DynamicResource AppTextSecondaryBrush}"
+                      StrokeThickness="1.2"
+                      StrokeLineCap="Round"
+                      StrokeJoin="Round" />
+              </Button>
+
+              <ItemsControl x:Name="SelectorGroupItems"
+                            Height="34"
+                            ClipToBounds="True"
+                            AutomationProperties.AutomationId="Proxy.GroupBar"
                             ItemsSource="{Binding VisibleGroupRows}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal" Spacing="26" />
+                    <WrapPanel Orientation="Horizontal"
+                               ItemSpacing="26"
+                               LineSpacing="8" />
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -45,30 +70,14 @@
                             Content="{Binding Name}"
                             AutomationProperties.AutomationId="{Binding AutomationId}"
                             Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).SelectGroupCommand}"
-                            CommandParameter="{Binding Name}" />
+                            CommandParameter="{Binding Name}"
+                            Click="OnSelectorItemClick" />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-
             </Grid>
-          </ScrollViewer>
+          </Border>
 
-          <StackPanel Grid.Column="1"
-                      Orientation="Horizontal" Spacing="2"
-                      VerticalAlignment="Center" Margin="10,0,0,0">
-            <Button Classes="toolbar-icon"
-                    AutomationProperties.AutomationId="Proxy.GroupScrollLeftButton"
-                    Click="OnGroupScrollLeft"
-                    ToolTip.Tip="{loc:Loc Proxy.Tooltip.GroupScrollLeft}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="16" Height="16" Kind="LeftSmallLine" />
-            </Button>
-            <Button Classes="toolbar-icon"
-                    AutomationProperties.AutomationId="Proxy.GroupScrollRightButton"
-                    Click="OnGroupScrollRight"
-                    ToolTip.Tip="{loc:Loc Proxy.Tooltip.GroupScrollRight}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="16" Height="16" Kind="RightSmallLine" />
-            </Button>
-          </StackPanel>
         </Grid>
 
         <Border Height="1" Background="{DynamicResource AppBorderBrush}"
@@ -131,7 +140,8 @@
           </TextBox>
         </Grid>
       </StackPanel>
-    </Border>
+      </Border>
+    </Grid>
 
     <Grid Grid.Row="1">
       <Border Classes="list-empty"
@@ -185,6 +195,8 @@
                           ToolTip.Tip="{Binding Name}" />
                   <Grid Margin="13,10" RowDefinitions="*,Auto" IsHitTestVisible="False">
                     <TextBlock Text="{Binding Name}"
+                               Classes.proxy-node-name="True"
+                               Classes.has-group-action="{Binding IsProxyGroup}"
                                Foreground="{DynamicResource AppTextPrimaryBrush}"
                                FontWeight="Normal"
                                FontSize="14"
@@ -198,6 +210,15 @@
                       <TextBlock Text="{Binding Type}" TextTrimming="CharacterEllipsis" />
                     </Border>
                   </Grid>
+                  <Button Classes="node-action-button"
+                          AutomationProperties.AutomationId="{Binding ActionAutomationId}"
+                          HorizontalAlignment="Right" VerticalAlignment="Top"
+                          Margin="0,13,5,0"
+                          IsVisible="{Binding IsProxyGroup}"
+                          Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).NavigateToGroupCommand}"
+                          CommandParameter="{Binding Name}">
+                    <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="SquareArrowRightLine" />
+                  </Button>
                   <Button Classes="delay-test-button"
                           AutomationProperties.AutomationId="{Binding TestDelayAutomationId}"
                           Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).TestNodeDelayCommand}"
@@ -229,7 +250,8 @@
                     IsVisible="{Binding IsVerticalContentVisible}"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
-        <ItemsControl AutomationProperties.AutomationId="Proxy.GroupCardList"
+        <ItemsControl x:Name="GroupCardList"
+                      AutomationProperties.AutomationId="Proxy.GroupCardList"
                       Margin="8,0,25,15"
                       ItemsSource="{Binding VisibleGroupCards}">
           <ItemsControl.ItemsPanel>
@@ -285,9 +307,13 @@
                               Classes.expanded="{Binding IsExpanded}"
                               Width="18" Height="18"
                               VerticalAlignment="Center">
-                        <iconPacks:PackIconMingCuteIcons Width="18" Height="18"
-                                                         Kind="RightSmallLine"
-                                                         Foreground="{DynamicResource AppTextTertiaryBrush}" />
+                        <Path Width="16" Height="16"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Data="M 6,4 L 10,8 L 6,12"
+                              Stroke="{DynamicResource AppTextTertiaryBrush}"
+                              StrokeThickness="1.2"
+                              StrokeLineCap="Round"
+                              StrokeJoin="Round" />
                       </Border>
                     </Grid>
                   </Panel>
@@ -318,6 +344,8 @@
                                         ToolTip.Tip="{Binding Name}" />
                                 <Grid Margin="13,10" RowDefinitions="*,Auto" IsHitTestVisible="False">
                                   <TextBlock Text="{Binding Name}"
+                                             Classes.proxy-node-name="True"
+                                             Classes.has-group-action="{Binding IsProxyGroup}"
                                              Foreground="{DynamicResource AppTextPrimaryBrush}"
                                              FontWeight="Normal"
                                              FontSize="14"
@@ -331,6 +359,15 @@
                                     <TextBlock Text="{Binding Type}" TextTrimming="CharacterEllipsis" />
                                   </Border>
                                 </Grid>
+                                <Button Classes="node-action-button"
+                                        AutomationProperties.AutomationId="{Binding ActionAutomationId}"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Margin="0,13,5,0"
+                                        IsVisible="{Binding IsProxyGroup}"
+                                        Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).NavigateToGroupCommand}"
+                                        CommandParameter="{Binding Name}">
+                                  <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="SquareArrowRightLine" />
+                                </Button>
                                 <Button Classes="delay-test-button"
                                         AutomationProperties.AutomationId="{Binding TestDelayAutomationId}"
                                         Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).TestNodeDelayCommand}"

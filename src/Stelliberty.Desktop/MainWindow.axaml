@@ -61,6 +61,9 @@
   </Window.Styles>
 
   <Grid RowDefinitions="36,*">
+    <Border x:Name="BackgroundImageLayer" Grid.RowSpan="2"
+            IsHitTestVisible="False" ClipToBounds="True"
+            AutomationProperties.AccessibilityView="Raw" />
     <Border x:Name="TitleBarSurface"
             AutomationProperties.AutomationId="TitleBar.Root"
             Background="Transparent"
