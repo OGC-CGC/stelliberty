@@ -49,7 +49,7 @@ public sealed class AppSettings
 
     public bool IsSilentStartEnabled { get; set; }
 
-    public bool IsMinimizeToTrayEnabled { get; set; }
+    public bool IsMinimizeToTrayEnabled { get; set; } = true;
 
     public bool IsLightweightModeEnabled { get; set; }
 
@@ -59,7 +59,7 @@ public sealed class AppSettings
 
     public bool IsLazyModeEnabled { get; set; }
 
-    public bool IsTitleBarFpsVisible { get; set; } = true;
+    public bool IsTitleBarFpsVisible { get; set; }
 
     public bool IsAutoStartEnabled { get; set; }
 
