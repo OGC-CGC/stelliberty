@@ -8,17 +8,19 @@ on:
         required: true
         type: string
   push:
+    # 事件过滤器不支持仓库变量；在 validate-branch 中选择发布分支。
     branches:
-      - stable
+      - '**'
     paths:
       - Directory.Build.props
 
 concurrency:
-  group: stable-release
+  group: stable-release-${{ (github.event_name == 'workflow_dispatch' || github.ref_name == (vars.STABLE_BRANCH || 'stable')) && 'publish' || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: write
+  pull-requests: read
 
 env:
   DOTNET_NOLOGO: "1"
@@ -28,12 +30,13 @@ env:
 
 jobs:
   validate-branch:
-    name: Validate stable branch
+    name: Validate stable trigger
+    if: github.event_name == 'workflow_dispatch' || (github.ref_name == (vars.STABLE_BRANCH || 'stable') && !github.event.deleted)
     runs-on: ubuntu-22.04
     steps:
-      - name: Require stable branch
+      - name: Require a branch
         shell: bash
-        run: test "${{ github.ref }}" = 'refs/heads/stable'
+        run: test "${GITHUB_REF_TYPE}" = branch
 
   detect-version-change:
     name: Detect version change
@@ -51,12 +54,18 @@ jobs:
       - name: Detect AppVersion change
         id: detect
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
             echo 'should_build=true' >> "$GITHUB_OUTPUT"
             echo 'Manual trigger: build enabled.'
-          elif git diff --unified=0 "${{ github.event.before }}" "${{ github.sha }}" -- Directory.Build.props | grep -Eq '^[+-].*<AppVersion>'; then
+          elif ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            echo 'should_build=true' >> "$GITHUB_OUTPUT"
+            echo 'New branch or missing previous commit: build enabled.'
+          elif git diff --unified=0 "${BEFORE_SHA}" "${GITHUB_SHA}" -- Directory.Build.props | grep -E '^[+-].*<AppVersion>' >/dev/null; then
             echo 'should_build=true' >> "$GITHUB_OUTPUT"
             echo 'AppVersion changed: build enabled.'
           else
@@ -94,10 +103,13 @@ jobs:
       - name: Read stable version
         id: ver
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            version="${{ inputs.version }}"
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            version="${REQUESTED_VERSION}"
           else
             version="$(sed -n 's:.*<AppVersion>\(.*\)</AppVersion>.*:\1:p' Directory.Build.props)"
           fi
@@ -337,7 +349,7 @@ jobs:
           if-no-files-found: warn
 
   release:
-    name: Publish to download repository
+    name: Publish to current repository
     needs: [prepare, build]
     runs-on: ubuntu-22.04
     if: ${{ needs.build.result == 'success' }}
@@ -361,11 +373,11 @@ jobs:
           printf '%s' '${{ needs.prepare.outputs.release_notes }}' | base64 --decode > release_notes.md
           cat release_notes.md
 
-      - name: Publish to stelliberty
+      - name: Publish stable release
         uses: softprops/action-gh-release@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: Kindness-Kismet/stelliberty
+          repository: ${{ github.repository }}
           tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: ${{ needs.prepare.outputs.app_display_name }} ${{ needs.prepare.outputs.version }}
@@ -389,10 +401,13 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BETA_BRANCH: ${{ vars.BETA_BRANCH || 'beta' }}
+          STABLE_BRANCH: ${{ vars.STABLE_BRANCH || 'stable' }}
         run: |
           set -euo pipefail
-          gh api --paginate --slurp \
-            "repos/${GITHUB_REPOSITORY}/pulls?state=closed&base=stable&sort=updated&direction=desc&per_page=100" \
+          gh api --method GET --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f state=closed -f base="${STABLE_BRANCH}" -f sort=updated -f direction=desc -f per_page=100 \
             > stable-pulls.json
           pull_number=''
           source_sha=''
@@ -403,13 +418,14 @@ jobs:
               break
             fi
           done < <(
-            jq -r --arg repository "${GITHUB_REPOSITORY}" '
+            jq -r --arg repository "${GITHUB_REPOSITORY}" \
+              --arg beta_branch "${BETA_BRANCH}" --arg stable_branch "${STABLE_BRANCH}" '
               [
                 .[][]
                 | select(
                     .merged_at != null
-                    and .base.ref == "stable"
-                    and .head.ref == "beta"
+                    and .base.ref == $stable_branch
+                    and .head.ref == $beta_branch
                     and .head.repo.full_name == $repository
                     and .merge_commit_sha != null
                     and .head.sha != null
@@ -423,8 +439,8 @@ jobs:
             ' stable-pulls.json
           )
           if [ -z "${source_sha}" ]; then
-            echo '::error::No merged beta to stable pull request is included in this release.'
-            exit 1
+            source_sha="${GITHUB_SHA}"
+            echo '::notice::No promotion pull request found; using the release commit as the beta baseline.'
           fi
           printf 'pull_number=%s\nsource_sha=%s\n' "${pull_number}" "${source_sha}" | tee -a "$GITHUB_OUTPUT"
 

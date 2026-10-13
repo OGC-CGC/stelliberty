@@ -2,16 +2,19 @@ name: Parallel Trigger
 
 on:
   push:
+    # 分支变量在 job 条件中判断，未配置时继续使用 beta。
     branches:
-      - beta
+      - '**'
     paths: &verification-paths
       - 'src/**'
       - 'native/**'
       - 'tests/**'
       - 'scripts/**'
       - '.github/scripts/**'
-      - '.github/workflows/stability-verification.yml'
+      - '.github/workflows/**'
       - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'NuGet.config'
       - 'Stelliberty.slnx'
       - '**/Cargo.toml'
       - 'Cargo.lock'
@@ -23,8 +26,6 @@ on:
       - reopened
       - synchronize
       - edited
-    branches:
-      - beta
     paths: *verification-paths
   workflow_dispatch:
 
@@ -36,18 +37,9 @@ permissions:
   contents: write
 
 jobs:
-  validate-branch:
-    name: Validate trigger branch
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Require beta branch
-        shell: bash
-        run: test "${{ github.ref }}" = 'refs/heads/beta'
-
   detect-beta-build-changes:
     name: Detect beta build changes
-    if: github.event_name == 'push' && github.ref == 'refs/heads/beta'
+    if: github.event_name == 'push' && github.ref_name == (vars.BETA_BRANCH || 'beta') && !github.event.deleted
     runs-on: ubuntu-22.04
     outputs:
       should_build: ${{ steps.changes.outputs.should_build }}
@@ -66,16 +58,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if git log --format= --patch "${BEFORE_SHA}..${AFTER_SHA}" -- Directory.Build.props | grep -Eq '^[+-].*<AppVersion>'; then
-            echo 'should_build=false' >> "$GITHUB_OUTPUT"
-            echo 'Stable version metadata changed in this push; beta build is skipped.'
-            exit 0
-          fi
+          # 新分支的 before 为全零；缺失旧提交时直接继续判定发布基线。
+          if git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            if git log --format= --patch "${BEFORE_SHA}..${AFTER_SHA}" -- Directory.Build.props | grep -E '^[+-].*<AppVersion>' >/dev/null; then
+              echo 'should_build=false' >> "$GITHUB_OUTPUT"
+              echo 'Stable version metadata changed in this push; beta build is skipped.'
+              exit 0
+            fi
 
-          if git log --format= --name-only "${BEFORE_SHA}..${AFTER_SHA}" -- .github/CHANGELOG.md | grep -q .; then
-            echo 'should_build=false' >> "$GITHUB_OUTPUT"
-            echo 'Changelog changed in this push; beta build is skipped.'
-            exit 0
+            if git log --format= --name-only "${BEFORE_SHA}..${AFTER_SHA}" -- .github/CHANGELOG.md | grep . >/dev/null; then
+              echo 'should_build=false' >> "$GITHUB_OUTPUT"
+              echo 'Changelog changed in this push; beta build is skipped.'
+              exit 0
+            fi
           fi
 
           props_version="$(sed -n 's:.*<AppVersion>\(.*\)</AppVersion>.*:\1:p' Directory.Build.props)"
@@ -111,10 +106,10 @@ jobs:
             fi
           fi
 
-          # 基线 tag 尚未建立时优雅跳过，避免 fetch 失败拖垮整条验证流
+          # 首次发布没有基线标签，仍然构建当前版本。
           if ! git ls-remote --exit-code --tags origin "refs/tags/${previous_tag}" >/dev/null 2>&1; then
-            echo 'should_build=false' >> "$GITHUB_OUTPUT"
-            echo "::notice::Base tag ${previous_tag} does not exist yet; beta build is skipped."
+            echo 'should_build=true' >> "$GITHUB_OUTPUT"
+            echo "::notice::Base tag ${previous_tag} does not exist yet; building the first beta release."
             exit 0
           fi
 
@@ -123,9 +118,7 @@ jobs:
           should_build=false
           while IFS= read -r path; do
             case "${path}" in
-              Directory.Build.props)
-                ;;
-              *.cs|*.rs|*.axaml|*.csproj|Cargo.toml|*/Cargo.toml|Cargo.lock|Directory.Packages.props|Stelliberty.slnx|global.json)
+              src/*|native/*|tests/*|scripts/*|.github/scripts/*|.github/workflows/*|*.cs|*.rs|*.axaml|*.csproj|Cargo.toml|*/Cargo.toml|Cargo.lock|Directory.Build.props|Directory.Packages.props|NuGet.config|Stelliberty.slnx|global.json)
                 should_build=true
                 break
                 ;;
@@ -143,7 +136,11 @@ jobs:
     name: Trigger code quality
     if: >-
       ${{
-        (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/beta') &&
+        (
+          github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'push' && github.ref_name == (vars.BETA_BRANCH || 'beta') && !github.event.deleted) ||
+          (github.event_name == 'pull_request' && github.base_ref == (vars.BETA_BRANCH || 'beta'))
+        ) &&
         (github.event.action != 'edited' || github.event.changes.base.ref.from != null)
       }}
     uses: ./.github/workflows/code-quality.yml
@@ -153,7 +150,11 @@ jobs:
     name: Trigger test verification
     if: >-
       ${{
-        (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/beta') &&
+        (
+          github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'push' && github.ref_name == (vars.BETA_BRANCH || 'beta') && !github.event.deleted) ||
+          (github.event_name == 'pull_request' && github.base_ref == (vars.BETA_BRANCH || 'beta'))
+        ) &&
         (github.event.action != 'edited' || github.event.changes.base.ref.from != null)
       }}
     uses: ./.github/workflows/stability-verification.yml
@@ -169,7 +170,7 @@ jobs:
         needs.detect-beta-build-changes.outputs.should_build == 'true' &&
         needs.code-quality.result == 'success' &&
         needs.stability-verification.result == 'success' &&
-        github.ref == 'refs/heads/beta' &&
+        github.ref_name == (vars.BETA_BRANCH || 'beta') &&
         github.event_name == 'push'
       }}
     uses: ./.github/workflows/build-beta.yml
@@ -182,7 +183,7 @@ jobs:
       ${{
         always() &&
         github.event_name == 'push' &&
-        github.ref == 'refs/heads/beta' &&
+        github.ref_name == (vars.BETA_BRANCH || 'beta') &&
         needs.detect-beta-build-changes.result == 'success' &&
         needs.detect-beta-build-changes.outputs.should_build != 'true' &&
         needs.code-quality.result == 'success' &&

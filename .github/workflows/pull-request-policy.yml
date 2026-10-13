@@ -15,23 +15,29 @@ jobs:
       - name: Enforce branch policy
         shell: bash
         env:
-          ACTOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BETA_BRANCH: ${{ vars.BETA_BRANCH || 'beta' }}
+          STABLE_BRANCH: ${{ vars.STABLE_BRANCH || 'stable' }}
         run: |
           set -euo pipefail
-          if [ "${BASE_BRANCH}" = "beta" ]; then
-            echo 'Pull request targets beta.'
+          if [ "${BASE_BRANCH}" = "${BETA_BRANCH}" ]; then
+            echo "Pull request targets ${BETA_BRANCH}."
             exit 0
           fi
-          if [ "${BASE_BRANCH}" = "stable" ] \
-            && [ "${ACTOR}" = "Kindness-Kismet" ] \
-            && [ "${HEAD_BRANCH}" = "beta" ] \
-            && [ "${HEAD_REPOSITORY}" = "${REPOSITORY}" ]; then
-            echo 'Owner promotion from beta to stable.'
-            exit 0
+          if [ "${BASE_BRANCH}" = "${STABLE_BRANCH}" ] \
+            && [ "${HEAD_BRANCH}" = "${BETA_BRANCH}" ] \
+            && [ "${HEAD_REPOSITORY}" = "${GITHUB_REPOSITORY}" ]; then
+            permission="$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${PR_AUTHOR}/permission" --jq '.permission')"
+            case "${permission}" in
+              admin|write)
+                echo "Authorized promotion from ${BETA_BRANCH} to ${STABLE_BRANCH}."
+                exit 0
+                ;;
+            esac
           fi
-          echo '::error::Pull requests must target beta. Only Kindness-Kismet may promote beta directly to stable.'
+          echo "::error::Pull requests must target ${BETA_BRANCH}. Promotion from ${BETA_BRANCH} to ${STABLE_BRANCH} requires repository write permission and a branch in this repository."
           exit 1

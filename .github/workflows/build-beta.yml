@@ -19,12 +19,18 @@ env:
 
 jobs:
   validate-branch:
-    name: Validate beta branch
+    name: Validate beta trigger
     runs-on: ubuntu-22.04
     steps:
-      - name: Require beta branch
+      - name: Check beta trigger
         shell: bash
-        run: test "${{ github.ref }}" = 'refs/heads/beta'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BETA_BRANCH: ${{ vars.BETA_BRANCH || 'beta' }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_TYPE}" = branch
+          test "${EVENT_NAME}" = workflow_dispatch || test "${GITHUB_REF}" = "refs/heads/${BETA_BRANCH}"
 
   prepare:
     name: Prepare beta metadata
@@ -36,7 +42,6 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.tag }}
       release_notes: ${{ steps.notes.outputs.release_notes }}
-      can_build: ${{ steps.base-tag.outputs.can_build }}
 
     steps:
       - name: Check out repository
@@ -59,12 +64,12 @@ jobs:
         id: ver
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           props_version="$(sed -n 's:.*<AppVersion>\(.*\)</AppVersion>.*:\1:p' Directory.Build.props)"
           test -n "${props_version}"
-          tags="$(gh api --paginate 'repos/Kindness-Kismet/stelliberty/releases?per_page=100' --jq '.[] | select(.draft | not) | .tag_name')"
+          tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | select(.draft | not) | .tag_name')"
           stable="${props_version}"
           while IFS= read -r tag; do
             if [[ "${tag}" =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
@@ -123,38 +128,31 @@ jobs:
             printf -- '- Tag: `%s`\n' "${TAG}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify beta base tag
-        id: base-tag
+      - name: Generate beta release notes
+        id: notes
         shell: bash
         run: |
           set -euo pipefail
 
           previous_tag="${{ steps.ver.outputs.previous_tag }}"
           if git ls-remote --exit-code --tags origin "refs/tags/${previous_tag}" >/dev/null 2>&1; then
-            echo 'can_build=true' >> "$GITHUB_OUTPUT"
-            exit 0
+            git fetch --force origin "refs/tags/${previous_tag}:refs/tags/${previous_tag}"
+            revision_range="${previous_tag}..${GITHUB_SHA}"
+          else
+            revision_range="${GITHUB_SHA}^!"
+            echo "::notice::No release baseline exists; creating the first beta release."
           fi
-
-          echo 'can_build=false' >> "$GITHUB_OUTPUT"
-          echo "::notice::Beta build skipped because base tag ${previous_tag} does not exist."
-          echo "Beta build skipped because base tag \`${previous_tag}\` does not exist." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Generate beta release notes
-        id: notes
-        if: steps.base-tag.outputs.can_build == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          previous_tag="${{ steps.ver.outputs.previous_tag }}"
-          git fetch --force origin "refs/tags/${previous_tag}:refs/tags/${previous_tag}"
           {
             echo "## Changes"
             echo
+            if [ "${revision_range}" = "${GITHUB_SHA}^!" ]; then
+              echo 'First beta release in this repository.'
+              echo
+            fi
             while IFS=$'\t' read -r commit short subject; do
               printf -- '- %s [`%s`](%s/%s/commit/%s)\n' \
                 "${subject}" "${short}" "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${commit}"
-            done < <(git log --reverse --format='%H%x09%h%x09%s' "${previous_tag}..${GITHUB_SHA}")
+            done < <(git log --reverse --format='%H%x09%h%x09%s' "${revision_range}")
           } > release_notes.md
 
           echo "========== Release Notes =========="
@@ -166,7 +164,6 @@ jobs:
   build:
     name: Build / ${{ matrix.label }}
     needs: prepare
-    if: needs.prepare.outputs.can_build == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
 
@@ -354,9 +351,9 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish beta to download repository
+    name: Publish beta to current repository
     needs: [prepare, build]
-    if: ${{ needs.prepare.outputs.can_build == 'true' && needs.build.result == 'success' }}
+    if: ${{ needs.build.result == 'success' }}
     runs-on: ubuntu-22.04
 
     steps:
@@ -378,7 +375,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: Kindness-Kismet/stelliberty
+          repository: ${{ github.repository }}
           tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: ${{ needs.prepare.outputs.app_display_name }} ${{ needs.prepare.outputs.version }}
@@ -408,7 +405,7 @@ jobs:
 
           gh api \
             --method PATCH \
-            "repos/Kindness-Kismet/stelliberty/releases/${RELEASE_ID}" \
+            "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
             -F draft=false \
             -F prerelease=true
 
@@ -422,7 +419,7 @@ jobs:
           set -euo pipefail
 
           release_id="$(
-            gh api --paginate --slurp 'repos/Kindness-Kismet/stelliberty/releases?per_page=100' |
+            gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
               jq -r --arg tag "${TAG}" '[.[][] | select(.draft and .tag_name == $tag) | .id] | first // empty'
           )"
           if [ -z "${release_id}" ]; then
@@ -430,5 +427,5 @@ jobs:
             exit 0
           fi
 
-          gh api --method DELETE "repos/Kindness-Kismet/stelliberty/releases/${release_id}"
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/${release_id}"
           echo "::notice::Discarded unpublished beta release ${TAG}."
