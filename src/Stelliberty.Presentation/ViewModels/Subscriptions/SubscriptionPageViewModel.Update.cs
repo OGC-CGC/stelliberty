@@ -31,7 +31,7 @@ public sealed partial class SubscriptionPageViewModel
         var minDisplayTask = Task.Delay(600);
         try
         {
-            var item = AddLocalSubscriptionCore(args);
+            var item = await AddLocalSubscriptionCoreAsync(args);
             await minDisplayTask;
             AddDialog.Close();
             ShowSuccessToast("Subscriptions.Toast.ImportLocalSucceeded", item.Name);
@@ -64,11 +64,11 @@ public sealed partial class SubscriptionPageViewModel
         }
     }
 
-    public SubscriptionItemViewModel AddLocalSubscription(SubscriptionAddLocalRequestedEventArgs args)
+    public async Task<SubscriptionItemViewModel> AddLocalSubscriptionAsync(SubscriptionAddLocalRequestedEventArgs args)
     {
         try
         {
-            var item = AddLocalSubscriptionCore(args);
+            var item = await AddLocalSubscriptionCoreAsync(args);
             ShowSuccessToast("Subscriptions.Toast.ImportLocalSucceeded", item.Name);
             return item;
         }
@@ -81,6 +81,7 @@ public sealed partial class SubscriptionPageViewModel
 
     private async Task<SubscriptionItemViewModel> AddRemoteSubscriptionCoreAsync(SubscriptionAddRemoteRequestedEventArgs args, CancellationToken cancellationToken = default)
     {
+        await using var lease = await AcquireOperationAsync([], token: cancellationToken);
         var importer = _remoteSubscriptionImporter
             ?? throw new InvalidOperationException("Remote subscription importer is not initialized");
         var subscription = await importer.ImportAsync(new RemoteSubscriptionImportRequest(
@@ -94,13 +95,16 @@ public sealed partial class SubscriptionPageViewModel
             args.AgeSecretKey),
             cancellationToken);
         var item = ToSubscriptionItem(subscription);
+        if (_subscriptionSelectionStore is not null) _currentSubscriptionId = _subscriptionSelectionStore.GetCurrentSubscriptionId();
         AddSubscription(item);
+        if (RuntimeRefreshCompletion is { } completion) await completion();
         AppLogger.Info($"Subscription page received remote import: {subscription.Name}");
         return item;
     }
 
-    private SubscriptionItemViewModel AddLocalSubscriptionCore(SubscriptionAddLocalRequestedEventArgs args)
+    private async Task<SubscriptionItemViewModel> AddLocalSubscriptionCoreAsync(SubscriptionAddLocalRequestedEventArgs args)
     {
+        await using var lease = await AcquireOperationAsync([]);
         var importer = _localFileImporter
             ?? throw new InvalidOperationException("Local subscription importer is not initialized");
         var subscription = importer.Import(new LocalSubscriptionFileImportRequest(
@@ -108,7 +112,9 @@ public sealed partial class SubscriptionPageViewModel
             args.LocalFilePath,
             args.AutoTestDelayIntervalMinutes));
         var item = ToSubscriptionItem(subscription);
+        if (_subscriptionSelectionStore is not null) _currentSubscriptionId = _subscriptionSelectionStore.GetCurrentSubscriptionId();
         AddSubscription(item);
+        if (RuntimeRefreshCompletion is { } completion) await completion();
         AppLogger.Info($"Subscription page received local import: {subscription.Name}");
         return item;
     }
@@ -134,9 +140,11 @@ public sealed partial class SubscriptionPageViewModel
         var minDisplayTask = Task.Delay(600);
         try
         {
+            await using var lease = await AcquireOperationAsync([subscription.Id], true, cancellationToken);
             var result = await updater.UpdateAsync(subscription.Id, cancellationToken);
             await minDisplayTask;
             ApplySubscriptionUpdateResult(result);
+            if (RuntimeRefreshCompletion is { } completion) await completion();
             ShowSubscriptionUpdateToast(result.UpdatedSubscriptionIds.Contains(subscription.Id));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -176,9 +184,11 @@ public sealed partial class SubscriptionPageViewModel
         var minDisplayTask = Task.Delay(600);
         try
         {
+            await using var lease = await AcquireOperationAsync(subscriptionIds.ToArray(), true, cancellationToken);
             var result = await updater.UpdateManyAsync(subscriptionIds, cancellationToken);
             await minDisplayTask;
             ApplySubscriptionUpdateResult(result);
+            if (RuntimeRefreshCompletion is { } completion) await completion();
             ShowSubscriptionBatchUpdateToast(result.UpdatedSubscriptionIds.Count, result.SkippedSubscriptionIds.Count);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

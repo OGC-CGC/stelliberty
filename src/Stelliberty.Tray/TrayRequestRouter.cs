@@ -1,3 +1,4 @@
+using Stelliberty.Application.Cli;
 using Stelliberty.Application.Proxies;
 using System.Diagnostics;
 using System.Collections.Concurrent;
@@ -12,6 +13,7 @@ namespace Stelliberty.Tray;
 
 internal sealed class TrayRequestRouter : IDisposable
 {
+    private readonly Cli.CliService _cli;
     private readonly TrayLifetime _lifetime;
     private readonly UiSessionManager _uiSessions;
     private readonly ITrayCoreRuntime _coreRuntime;
@@ -41,6 +43,7 @@ internal sealed class TrayRequestRouter : IDisposable
         SystemPowerRecoveryService powerRecovery,
         SystemPowerMonitor powerMonitor)
     {
+        _cli = new Cli.CliService(coreRuntime, systemProxy, delayResults, backgroundTasks.Operations, backgroundTasks.NotifyClientStateChanged);
         _lifetime = lifetime;
         _uiSessions = uiSessions;
         _coreRuntime = coreRuntime;
@@ -75,6 +78,12 @@ internal sealed class TrayRequestRouter : IDisposable
 
             return request.Method switch
             {
+                TrayProtocol.OperationAcquireMethod => TrayIpcResult.Success(new BackgroundOperationGrant(
+                    _backgroundTasks.Operations.TryAcquire(connection.Id, request.DeserializeParameters<BackgroundOperationRequest>()))),
+                TrayProtocol.OperationReleaseMethod => ReleaseOperation(connection.Id, request),
+                TrayProtocol.CliExecuteMethod => TrayIpcResult.Success(JsonSerializer.SerializeToElement(
+                    await _cli.ExecuteAsync(request.DeserializeParameters<CliRequest>(), cancellationToken).ConfigureAwait(false),
+                    CliCatalog.JsonOptions)),
                 TrayProtocol.ProxyDelayScopeMethod => TrayIpcResult.Success(
                     await _delayResults.CaptureScopeAsync(cancellationToken).ConfigureAwait(false)),
                 TrayProtocol.ProxyDelayPublishMethod => await HandleProxyDelayAsync(request, cancellationToken).ConfigureAwait(false),
@@ -174,7 +183,7 @@ internal sealed class TrayRequestRouter : IDisposable
             return TrayIpcResult.Error("core.operation_failed", exception.Message);
         }
         catch (Exception exception) when (
-            request.Method == TrayProtocol.UiActivateMethod
+            (request.Method is TrayProtocol.UiActivateMethod)
             && exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
             AppLogger.Error(exception, "Desktop UI launch failed");
@@ -184,10 +193,17 @@ internal sealed class TrayRequestRouter : IDisposable
 
     public async Task OnConnectionClosedAsync(Guid connectionId)
     {
+        _backgroundTasks.Operations.ReleaseOwner(connectionId);
         _handshakes.TryRemove(connectionId, out _);
         _connections.TryRemove(connectionId, out _);
         await _hotkeys.ReleaseSuppressionAsync(connectionId).ConfigureAwait(false);
         await _uiSessions.OnConnectionClosedAsync(connectionId).ConfigureAwait(false);
+    }
+
+    private TrayIpcResult ReleaseOperation(Guid connectionId, TrayIpcRequest request)
+    {
+        _backgroundTasks.Operations.Release(connectionId, request.DeserializeParameters<BackgroundOperationRelease>().Id);
+        return TrayIpcResult.Success(new { });
     }
 
     private TrayIpcResult HandleHello(TrayIpcConnection connection, TrayIpcRequest request)
@@ -433,6 +449,7 @@ internal sealed class TrayRequestRouter : IDisposable
 
     public void Dispose()
     {
+        _cli.Dispose();
         _backgroundTasks.StateChanged -= OnBackgroundChanged;
         _coreRuntime.StateChanged -= OnCoreStateChanged;
         _coreRuntime.LogReceived -= OnCoreLogReceived;

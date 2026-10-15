@@ -90,6 +90,8 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
 
     private static readonly string[] LocalSettingKeys =
     [
+        "IsCliEnabled",
+        "CliPathProfileEntry",
         "WindowWidth",
         "WindowHeight",
         "IsWindowMaximized",

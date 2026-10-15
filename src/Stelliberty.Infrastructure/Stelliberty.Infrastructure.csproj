@@ -3,6 +3,9 @@
     <ProjectReference Include="..\Stelliberty.Application\Stelliberty.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Stelliberty.Settings.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Localization\Assets\*.json" />
   </ItemGroup>
 </Project>

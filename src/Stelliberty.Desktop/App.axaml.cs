@@ -46,9 +46,13 @@ public sealed partial class App : Avalonia.Application
     private DesktopTraySession? _traySession;
     private MainWindow? _mainWindow;
     private IActivatableLifetime? _macOSActivatableLifetime;
+    private readonly SemaphoreSlim _backgroundStatusGate = new(1, 1);
     private long _backgroundRevision = -1;
     private long _subscriptionRevision;
     private long _providerRevision;
+    private long _settingsRevision;
+    private long _clientSubscriptionRevision;
+    private long _proxyRevision;
     private AppUpdateAutoCheckResult? _lastAppUpdate;
     private DispatcherTimer? _homeRuntimeTimer;
     // 主动退出最多等待服务核心 5 秒，普通核心在 Rust 侧使用相同总预算。
@@ -174,7 +178,8 @@ public sealed partial class App : Avalonia.Application
                 subscriptionSelectionStore,
                 runtimeStore,
                 localization,
-                chainProxyContextLoader.Load);
+                chainProxyContextLoader.Load,
+                operations: _traySession);
             var overridePage = new OverridePageViewModel(
                 overrideDeleter,
                 overrideStore,
@@ -260,7 +265,8 @@ public sealed partial class App : Avalonia.Application
                     settings.ProxyNodeSortMode = sortMode.ToString();
                     settingsStore.Save(settings);
                 },
-                isPresentationActive: false);
+                isPresentationActive: false,
+                operations: _traySession);
             var rulePage = new RulePageViewModel(ruleOverrideService, localization);
             var coreLogPage = new CoreLogPageViewModel(localization: localization);
             var dataBackupService = new FileDataBackupService(platformDirectories.AppDataDirectory);
@@ -489,12 +495,29 @@ public sealed partial class App : Avalonia.Application
 
     private async Task ApplyBackgroundStatusAsync(BackgroundTaskStatus status)
     {
+        await _backgroundStatusGate.WaitAsync();
+        try { await ApplyBackgroundStatusCoreAsync(status); }
+        finally { _backgroundStatusGate.Release(); }
+    }
+
+    private async Task ApplyBackgroundStatusCoreAsync(BackgroundTaskStatus status)
+    {
         if (_mainWindow?.DataContext is not MainWindowViewModel viewModel || status.Revision <= _backgroundRevision)
         {
             return;
         }
 
         _backgroundRevision = status.Revision;
+        viewModel.SubscriptionPage.ApplyBackgroundOperations(status.Operations ?? []);
+        viewModel.ProxyPage.ApplyBackgroundOperations(status.Operations ?? []);
+        var settingsChanged = status.SettingsRevision != _settingsRevision;
+        var subscriptionsChanged = status.ClientSubscriptionRevision != _clientSubscriptionRevision;
+        var proxiesChanged = status.ProxyRevision != _proxyRevision;
+        _settingsRevision = status.SettingsRevision;
+        _clientSubscriptionRevision = status.ClientSubscriptionRevision;
+        _proxyRevision = status.ProxyRevision;
+        if (settingsChanged || subscriptionsChanged || proxiesChanged)
+            await viewModel.RefreshBackgroundStateAsync(settingsChanged, subscriptionsChanged, proxiesChanged);
         if (status.AppUpdate is { } update && update != _lastAppUpdate)
         {
             _lastAppUpdate = update;
@@ -694,7 +717,9 @@ public sealed partial class App : Avalonia.Application
 
         if (OperatingSystem.IsMacOS())
         {
-            return new MacOSAppBehaviorService(DesktopApplicationLayout.TrayBinaryPath);
+            return new MacOSAppBehaviorService(
+                DesktopApplicationLayout.TrayBinaryPath,
+                DesktopApplicationLayout.CliBinaryPath);
         }
 
         return new UnsupportedAppBehaviorService();

@@ -16,7 +16,7 @@ public sealed partial class SubscriptionPageViewModel
         RaiseMenuStateChanged();
     }
 
-    private void ConfirmDelete()
+    public async Task ConfirmDeleteAsync()
     {
         if (string.IsNullOrWhiteSpace(_deleteDialogSubscriptionId))
         {
@@ -32,6 +32,11 @@ public sealed partial class SubscriptionPageViewModel
             return;
         }
 
+        await using var lease = await AcquireOperationAsync([subscriptionId]);
+        index = FindSubscriptionIndex(subscriptionId);
+        if (index < 0) return;
+        _subscriptionLoadVersion++;
+        if (_subscriptionSelectionStore is not null) _currentSubscriptionId = _subscriptionSelectionStore.GetCurrentSubscriptionId();
         var isDeletingCurrentSubscription = string.Equals(_currentSubscriptionId, subscriptionId, StringComparison.Ordinal);
         _subscriptionDeleter.Delete(subscriptionId);
         _subscriptions.RemoveAt(index);
@@ -46,6 +51,7 @@ public sealed partial class SubscriptionPageViewModel
         if (isDeletingCurrentSubscription)
         {
             SubscriptionSelected?.Invoke(this, _currentSubscriptionId);
+            if (RuntimeRefreshCompletion is { } completion) await completion();
         }
     }
 

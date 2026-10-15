@@ -51,6 +51,10 @@ public sealed class AppSettings
 
     public bool IsMinimizeToTrayEnabled { get; set; } = true;
 
+    public bool IsCliEnabled { get; set; }
+
+    public string? CliPathProfileEntry { get; set; }
+
     public bool IsLightweightModeEnabled { get; set; }
 
     public int LightweightModeShutdownDelaySeconds { get; set; } = DefaultLightweightModeShutdownDelaySeconds;

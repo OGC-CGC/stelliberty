@@ -80,6 +80,8 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<string> Items =>
     [
+        CliText,
+        CliDescriptionText,
         SilentStartText,
         MinimizeToTrayText,
         LightweightModeText,
@@ -103,6 +105,61 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
     {
         get => _settings.IsMinimizeToTrayEnabled;
         set => Apply(_settings.IsMinimizeToTrayEnabled, value, next => _settings.IsMinimizeToTrayEnabled = next);
+    }
+
+    public string CliText => _localization.GetString("Settings.AppBehavior.Cli");
+
+    public string CliDescriptionText => _localization.GetString("Settings.AppBehavior.CliDescription");
+
+    public bool IsCliEnabled
+    {
+        get => _settings.IsCliEnabled;
+        set => SetCliEnabled(value);
+    }
+
+    private void SetCliEnabled(bool isEnabled)
+    {
+        if (_settings.IsCliEnabled == isEnabled)
+        {
+            return;
+        }
+
+        var previous = _settings.IsCliEnabled;
+        var previousProfileEntry = _settings.CliPathProfileEntry;
+        var profileEntry = previousProfileEntry;
+        var profileChanged = false;
+        try
+        {
+            if (isEnabled)
+            {
+                profileEntry = _service.BuildCliPathEntry();
+            }
+
+            profileChanged = _service.ApplyCliPathEntry(profileEntry, isEnabled);
+            _settings.IsCliEnabled = isEnabled;
+            _settings.CliPathProfileEntry = isEnabled ? profileEntry : null;
+            _settingsStore.Save(_settings);
+        }
+        catch (Exception exception)
+        {
+            _settings.IsCliEnabled = previous;
+            _settings.CliPathProfileEntry = previousProfileEntry;
+            if (profileChanged)
+            {
+                try
+                {
+                    _service.ApplyCliPathEntry(profileEntry, !isEnabled);
+                }
+                catch (Exception restoreException)
+                {
+                    AppLogger.Warning($"CLI PATH restore failed: {restoreException.Message}");
+                }
+            }
+
+            AppLogger.Warning($"CLI setting apply failed: {exception.Message}");
+        }
+
+        OnPropertyChanged(nameof(IsCliEnabled));
     }
 
     public bool IsLightweightModeEnabled
@@ -409,6 +466,8 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
+        OnPropertyChanged(nameof(CliText));
+        OnPropertyChanged(nameof(CliDescriptionText));
         OnPropertyChanged(nameof(SilentStartText));
         OnPropertyChanged(nameof(SilentStartDescriptionText));
         OnPropertyChanged(nameof(MinimizeToTrayText));

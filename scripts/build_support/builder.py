@@ -6,7 +6,7 @@ from pathlib import Path
 
 from build_support.commands import run
 from build_support.fonts import ensure_app_fonts
-from build_support.installer import pack_installers, pack_macos_app
+from build_support.installer import pack_installers, pack_macos_app, publish_cli
 from build_support.layout import organize_dependency_directory, output_name, service_binary_name, zip_output
 from build_support.models import AppMetadata, BuildRequest, PlatformTarget
 from build_support.paths import BUILD_DIR, CORE_DIRECTORY, DESKTOP_PROJECT, PRE_ASSETS_DIR, ROOT, RUST_WORKSPACE, SERVICE_UPDATE_DIRECTORY, TRAY_PROJECT
@@ -66,6 +66,9 @@ def build_output(metadata: AppMetadata, platform_name: str, configuration: str, 
 
     with timed_step(f"Organize dependency directory {build_label}"):
         organize_dependency_directory(output_dir, metadata, configuration)
+
+    with timed_step(f"Publish CLI {build_label}"):
+        publish_cli(metadata, configuration, target, output_dir)
 
     if pack_format in ("app", "all") and platform_name.startswith("macos"):
         with timed_step(f"Package app {build_label}"):

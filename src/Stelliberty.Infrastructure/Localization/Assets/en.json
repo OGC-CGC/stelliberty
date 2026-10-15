@@ -1,4 +1,6 @@
 {
+  "Settings.AppBehavior.Cli": "Enable command-line control",
+  "Settings.AppBehavior.CliDescription": "Allow the CLI tweak to control this software. Disabled by default.",
   "Nav.Home": "Home",
   "Nav.Proxy": "Proxy",
   "Nav.Connections": "Connections",

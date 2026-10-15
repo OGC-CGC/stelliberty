@@ -1,4 +1,6 @@
 {
+  "Settings.AppBehavior.Cli": "啟用命令列控制",
+  "Settings.AppBehavior.CliDescription": "允許透過隨附的 CLI 操縱本 App。預設關閉。",
   "Nav.Home": "主頁",
   "Nav.Proxy": "代理",
   "Nav.Connections": "連線",

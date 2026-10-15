@@ -1,9 +1,9 @@
 using Stelliberty.Application.Platform;
 using Stelliberty.Application.Settings;
 
-namespace Stelliberty.Desktop.Services;
+namespace Stelliberty.Infrastructure.Platform;
 
-internal sealed class WindowEffectCapability : IWindowEffectCapability
+public sealed class WindowEffectCapability : IWindowEffectCapability
 {
     public IReadOnlyList<WindowEffect> SupportedEffects { get; } = ResolveSupportedEffects();
 

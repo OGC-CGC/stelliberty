@@ -64,7 +64,7 @@ public sealed class JsonRpcPipeClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public async Task<JsonElement> RequestAsync(string method, JsonElement parameters, CancellationToken cancellationToken)
+    public async Task<JsonElement> RequestAsync(string method, JsonElement parameters, CancellationToken cancellationToken, TimeSpan? timeout = null)
     {
         ThrowIfDisposed();
         if (_writer is null)
@@ -91,7 +91,7 @@ public sealed class JsonRpcPipeClient : IDisposable, IAsyncDisposable
                 _writeGate.Release();
             }
             await using var reg = cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
-            return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
+            return await tcs.Task.WaitAsync(timeout ?? TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
         }
         finally
         {

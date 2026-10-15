@@ -49,5 +49,7 @@ internal static class DesktopApplicationLayout
 
     public static string TrayBinaryPath => Path.Combine(InstallRootDirectory, AppRuntimeNames.TrayBinaryName);
 
+    public static string CliBinaryPath => Path.Combine(InstallRootDirectory, "tweaks", "cli", "stelliberty-cli");
+
     private static string CoreBinaryName => OperatingSystem.IsWindows() ? "clash-mihomo-core.exe" : "clash-mihomo-core";
 }

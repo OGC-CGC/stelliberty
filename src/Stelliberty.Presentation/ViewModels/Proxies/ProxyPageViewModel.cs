@@ -1,3 +1,4 @@
+using Stelliberty.Application.Runtime;
 using System.Windows.Input;
 using Stelliberty.Application.Connections;
 using Stelliberty.Domain.Connections;
@@ -48,6 +49,17 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     private int _locateNodeRequestId;
     private ProxyChangeRequest? _lastChangeRequest;
     private readonly DelayTestCoordinator _delayTests = new();
+    private readonly IBackgroundOperationClient? _operations;
+    private bool _backgroundDelayBusy;
+
+    public void ApplyBackgroundOperations(IReadOnlyList<BackgroundOperationState> operations)
+    {
+        var busy = operations.Any(item => item.Request.Resource == BackgroundOperationRequest.Delay);
+        if (_backgroundDelayBusy == busy) return;
+        _backgroundDelayBusy = busy;
+        RaiseProxyStateChanged();
+    }
+
     private bool _shouldCloseConnectionsAfterSelection;
     private bool _shouldChangeCoreOnSelection = true;
     private bool _shouldTestDelaysThroughService = true;
@@ -72,8 +84,10 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         Action<ProxyPageLayout>? persistLayout = null,
         ProxyNodeSortMode initialSortMode = ProxyNodeSortMode.Default,
         Action<ProxyNodeSortMode>? persistSortMode = null,
-        bool isPresentationActive = true)
+        bool isPresentationActive = true,
+        IBackgroundOperationClient? operations = null)
     {
+        _operations = operations;
         _delayService = delayService;
         _coreClient = coreClient;
         _selectionService = selectionService ?? new ProxySelectionService(coreClient);
@@ -140,6 +154,10 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
     public ProxyGroup? SelectedGroup => _selectedGroup;
 
     public IReadOnlyList<ProxyNodeRowViewModel> VisibleNodeRows => _visibleNodeRows;
+
+    internal IReadOnlyList<ProxyNode> GetCliNodes(string groupName) => VisibleGroups
+        .First(group => group.Name == groupName).All
+        .Where(_entryNodes.ContainsKey).Select(name => _entryNodes[name]).ToArray();
 
     public int RealizedNodeRowCount => _visibleNodeRows.RealizedCount;
 
@@ -237,7 +255,7 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyCollection<string> DelayTestingNodeNames => _delayTests.TestingNodeNames;
 
-    public bool IsDelayTesting => _delayTests.IsTesting;
+    public bool IsDelayTesting => _delayTests.IsTesting || _backgroundDelayBusy;
 
     public bool IsBatchDelayTesting => _delayTests.IsBatchTesting;
 
@@ -364,7 +382,7 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         RefreshProxiesAsync().SafeFireAndForget("RefreshProxies");
     }
 
-    public void BindLoadedConfigToSubscription(string subscriptionId)
+    public void BindLoadedConfigToSubscription(string? subscriptionId)
     {
         _loadedSubscriptionId = subscriptionId;
         OnPropertyChanged(nameof(LoadedSubscriptionId));
@@ -632,6 +650,9 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        await using var lease = _operations is null ? null
+            : await _operations.TryAcquireAsync(new(BackgroundOperationRequest.Delay, []));
+        if (_operations is not null && lease is null) return;
         var cancellation = BeginSingleDelayTest(nodeName);
         try
         {
@@ -741,6 +762,9 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        await using var lease = _operations is null ? null
+            : await _operations.TryAcquireAsync(new(BackgroundOperationRequest.Delay, []));
+        if (_operations is not null && lease is null) return;
         var batchNodeNames = nodeNames.Except(excludedNodeNames, StringComparer.Ordinal).ToList();
         var cancellation = BeginBatchDelayTest(nodeNames);
         var configVersion = _configVersion;

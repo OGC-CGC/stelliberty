@@ -8,7 +8,12 @@ namespace Stelliberty.Infrastructure.Tray;
 
 public static class TrayProtocol
 {
-    public const int Version = 10;
+    public const int Version = 11;
+
+    public const string OperationAcquireMethod = "operations.acquire";
+    public const string OperationReleaseMethod = "operations.release";
+
+    public const string CliExecuteMethod = "cli.execute";
 
     public const string HelloMethod = "tray.hello";
     public const string HealthMethod = "tray.get_health";

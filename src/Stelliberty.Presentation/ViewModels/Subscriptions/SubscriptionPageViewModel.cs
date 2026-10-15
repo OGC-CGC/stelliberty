@@ -1,3 +1,4 @@
+using Stelliberty.Application.Runtime;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Stelliberty.Application.Diagnostics;
@@ -40,6 +41,26 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
     private readonly ObservableCollection<SubscriptionItemViewModel> _subscriptions = [];
     private readonly ReadOnlyObservableCollection<SubscriptionItemViewModel> _subscriptionView;
     private readonly UpdateOperationState _updateState = new();
+    private readonly IBackgroundOperationClient? _operations;
+    private IReadOnlyList<string> _backgroundUpdatingIds = [];
+    private bool _backgroundSubscriptionBusy;
+    internal Func<Task>? RuntimeRefreshCompletion { get; set; }
+
+    public void ApplyBackgroundOperations(IReadOnlyList<BackgroundOperationState> operations)
+    {
+        _backgroundSubscriptionBusy = operations.Any(item => item.Request.Resource == BackgroundOperationRequest.Subscriptions);
+        _backgroundUpdatingIds = operations.Where(item => item.Request.IsUpdate).SelectMany(item => item.Request.SubscriptionIds).Distinct().ToArray();
+        RaiseSubscriptionStateChanged();
+    }
+
+    private async Task<IAsyncDisposable?> AcquireOperationAsync(string[] ids, bool update = false, CancellationToken token = default)
+    {
+        if (_operations is null) return null;
+        return await _operations.TryAcquireAsync(new(BackgroundOperationRequest.Subscriptions, ids, update), token)
+            ?? throw new InvalidOperationException("Subscription operations are busy.");
+    }
+
+    private int _subscriptionLoadVersion;
     private string? _currentSubscriptionId;
     private SubscriptionRowMenuSelection? _selectedRowMenuAction;
     private string? _copiedLink;
@@ -62,8 +83,10 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         ISubscriptionSelectionStore? subscriptionSelectionStore = null,
         ISelectedSubscriptionRuntimeStore? runtimeStore = null,
         ILocalizationService? localization = null,
-        Func<string, SubscriptionChainProxyContext>? chainProxyContextLoader = null)
+        Func<string, SubscriptionChainProxyContext>? chainProxyContextLoader = null,
+        IBackgroundOperationClient? operations = null)
     {
+        _operations = operations;
         _localFileImporter = localFileImporter;
         _remoteSubscriptionImporter = remoteSubscriptionImporter;
         _subscriptionUpdater = subscriptionUpdater;
@@ -108,7 +131,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         SubscriptionStore = subscriptionStore;
         SelectionStore = subscriptionSelectionStore;
         _subscriptionView = new ReadOnlyObservableCollection<SubscriptionItemViewModel>(_subscriptions);
-        SelectSubscriptionCommand = new RelayCommand<string>(SelectSubscription);
+        SelectSubscriptionCommand = new RelayCommand<string>(id => SelectSubscriptionAsync(id).SafeFireAndForget("SelectSubscription"));
         UpdateSubscriptionCommand = new RelayCommand<string>(subscriptionId => _ = UpdateSubscriptionAsync(subscriptionId));
         UpdateAllSubscriptionsCommand = new RelayCommand(() => _ = UpdateAllSubscriptionsAsync());
         CopyLinkCommand = new RelayCommand<string>(CopyLink);
@@ -121,7 +144,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         ShowChainProxyDialogCommand = new RelayCommand<string>(ShowChainProxyDialog);
         ShowEditDialogCommand = new RelayCommand<string>(ShowEditDialog);
         ShowDeleteDialogCommand = new RelayCommand<string>(ShowDeleteDialog);
-        ConfirmDeleteCommand = new RelayCommand(ConfirmDelete);
+        ConfirmDeleteCommand = new RelayCommand(() => ConfirmDeleteAsync().SafeFireAndForget("DeleteSubscription"));
         CancelDeleteDialogCommand = new RelayCommand(CancelDeleteDialog);
         MoveSubscriptionCommand = new RelayCommand<SubscriptionMoveRequest>(MoveSubscription);
         MoveSubscriptionUpCommand = new RelayCommand<string>(MoveSubscriptionUp);
@@ -192,9 +215,9 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
 
     public bool IsBatchUpdatingSubscriptions => _updateState.IsBatchUpdating;
 
-    public IReadOnlyList<string> UpdatingSubscriptionIds => _updateState.UpdatingItemIds;
+    public IReadOnlyList<string> UpdatingSubscriptionIds => _updateState.UpdatingItemIds.Concat(_backgroundUpdatingIds).Distinct().ToArray();
 
-    public bool CanUpdateAllSubscriptions => !IsBatchUpdatingSubscriptions && GetPendingSubscriptionUpdateIds().Count > 0;
+    public bool CanUpdateAllSubscriptions => !_backgroundSubscriptionBusy && !IsBatchUpdatingSubscriptions && GetPendingSubscriptionUpdateIds().Count > 0;
 
     public bool IsUpdateAllIconVisible => !IsBatchUpdatingSubscriptions;
 
@@ -261,6 +284,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
 
     public void AddSubscription(SubscriptionItemViewModel subscription)
     {
+        _subscriptionLoadVersion++;
         var hadNoSelection = string.IsNullOrWhiteSpace(_currentSubscriptionId);
         if (hadNoSelection)
         {
@@ -278,8 +302,15 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         }
     }
 
+    public Task ReloadFromStoreAsync()
+    {
+        _currentSubscriptionId = _subscriptionSelectionStore?.GetCurrentSubscriptionId();
+        return InitializeAsync();
+    }
+
     public void LoadSubscriptions(IReadOnlyList<Subscription> subscriptions)
     {
+        _subscriptionLoadVersion++;
         _providerRefreshVersion++;
         foreach (var id in _providerSnapshots.Keys.Except(subscriptions.Select(item => item.Id)).ToList())
         {
@@ -352,6 +383,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
     // 启动列表在后台加载并回到 UI 线程提交；失败只记日志。
     public async Task InitializeAsync()
     {
+        var loadVersion = ++_subscriptionLoadVersion;
         using var loading = Loading.BeginLoading();
         if (_subscriptionStore is null)
         {
@@ -361,6 +393,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         try
         {
             var subscriptions = await Task.Run(() => _subscriptionStore.LoadSubscriptions());
+            if (loadVersion != _subscriptionLoadVersion) return;
             LoadSubscriptions(subscriptions);
             await RefreshProviderTrafficAsync();
         }
@@ -454,7 +487,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         RaiseSubscriptionStateChanged();
     }
 
-    private void SelectSubscription(string? subscriptionId)
+    public async Task SelectSubscriptionAsync(string? subscriptionId)
     {
         var selectedId = subscriptionId ?? string.Empty;
         if (_subscriptions.All(item => item.Id != selectedId))
@@ -462,6 +495,9 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
             return;
         }
 
+        await using var lease = await AcquireOperationAsync([selectedId]);
+        if (_subscriptionStore is not null && !_subscriptionStore.LoadSubscriptions().Any(item => item.Id == selectedId)) return;
+        if (_subscriptionSelectionStore is not null) _currentSubscriptionId = _subscriptionSelectionStore.GetCurrentSubscriptionId();
         // 重新选择当前订阅只关闭面板，避免重复应用运行时配置。
         if (string.Equals(_currentSubscriptionId, selectedId, StringComparison.Ordinal))
         {
@@ -473,6 +509,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         _subscriptionSelectionStore?.SetCurrentSubscriptionId(selectedId);
         Provider.Close();
         SubscriptionSelected?.Invoke(this, selectedId);
+        if (RuntimeRefreshCompletion is { } completion) await completion();
     }
 
     private void SetCurrentSubscriptionId(string selectedId)
@@ -524,7 +561,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
     {
         foreach (var subscription in _subscriptions)
         {
-            subscription.SetUpdating(_updateState.UpdatingItemIds.Contains(subscription.Id, StringComparer.Ordinal));
+            subscription.SetUpdating(UpdatingSubscriptionIds.Contains(subscription.Id, StringComparer.Ordinal));
         }
     }
 

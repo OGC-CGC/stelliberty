@@ -1,3 +1,4 @@
+using Stelliberty.Application.Cli;
 using Stelliberty.Application.Proxies;
 using System.Text.Json;
 using Stelliberty.Application.Platform;
@@ -33,7 +34,17 @@ public sealed class TrayIpcClient : IDisposable, IAsyncDisposable
     public event EventHandler? Disconnected;
     public event EventHandler<BackgroundTaskStatus>? BackgroundChanged;
 
+    public Task<BackgroundOperationGrant> AcquireOperationAsync(BackgroundOperationRequest request, CancellationToken token) =>
+        RequestAsync<BackgroundOperationGrant>(TrayProtocol.OperationAcquireMethod, request, token);
+
+    public Task ReleaseOperationAsync(Guid id, CancellationToken token) =>
+        RequestAsync<JsonElement>(TrayProtocol.OperationReleaseMethod, new BackgroundOperationRelease(id), token);
+
     public Task ConnectAsync(CancellationToken cancellationToken) => _client.ConnectAsync(cancellationToken);
+
+    public Task<JsonElement> ExecuteCliAsync(CliRequest request, CancellationToken cancellationToken) =>
+        _client.RequestAsync(TrayProtocol.CliExecuteMethod,
+            JsonSerializer.SerializeToElement(request, TrayJson.Options), cancellationToken, TimeSpan.FromSeconds(180));
 
     public async Task<TrayHello> HelloAsync(int processId, CancellationToken cancellationToken)
     {

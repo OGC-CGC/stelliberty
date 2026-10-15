@@ -42,6 +42,8 @@ internal interface ITrayCoreRuntime
 
     Task<CoreApplyConfigResult> ApplyCurrentSettingsAsync(CancellationToken cancellationToken);
 
+    Task<CoreApplyConfigResult?> RefreshCurrentSettingsAsync(CancellationToken cancellationToken);
+
     Task<ServiceModeStatus> GetServiceModeStatusAsync(CancellationToken cancellationToken);
     Task SendHeartbeatAsync(CancellationToken cancellationToken);
 
@@ -214,6 +216,27 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
         var subscriptionId = new FileSubscriptionSelectionStore(TrayApplicationLayout.AppDataDirectory)
             .GetCurrentSubscriptionId() ?? string.Empty;
         return ApplyConfigAsync(new CoreApplyConfigRequest(content, subscriptionId), cancellationToken);
+    }
+
+    // CLI 即使在核心停止时也生成持久运行时配置，但不启动核心。
+    public async Task<CoreApplyConfigResult?> RefreshCurrentSettingsAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var content = BuildBootstrapYaml(CanUseTun() || _isServiceModeActive);
+        var subscriptionId = new FileSubscriptionSelectionStore(TrayApplicationLayout.AppDataDirectory)
+            .GetCurrentSubscriptionId();
+        if (subscriptionId is null)
+        {
+            var settings = new JsonAppSettingsStore(new TrayPlatformDirectories()).Load();
+            var parameters = RuntimeConfigParams.FromSettings(settings) with
+            {
+                IsTunEnabled = settings.IsTunEnabled && (CanUseTun() || _isServiceModeActive)
+            };
+            content = new RuntimeConfigGenerator().GenerateEmpty(parameters).RuntimeConfigContent;
+            new FileRuntimeConfigStore(TrayApplicationLayout.RuntimeDirectory).SaveEmpty(content);
+        }
+        if (CurrentStatus.Snapshot.State != CoreState.Running) return null;
+        return await ApplyConfigAsync(new CoreApplyConfigRequest(content, subscriptionId ?? string.Empty), cancellationToken).ConfigureAwait(false);
     }
 
     public Task<ServiceModeStatus> GetServiceModeStatusAsync(CancellationToken cancellationToken)

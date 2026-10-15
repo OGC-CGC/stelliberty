@@ -200,6 +200,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         SubscriptionAutoDelay = new SubscriptionAutoDelayCoordinator(SubscriptionPage, ProxyPage, _now);
+        SubscriptionPage.RuntimeRefreshCompletion = () => LastRuntimeRefreshTask ?? Task.CompletedTask;
         SubscriptionPage.SubscriptionSelected += OnSubscriptionSelected;
         SubscriptionPage.SubscriptionUpdateStarting += OnSubscriptionUpdateStarting;
         SubscriptionPage.SubscriptionsUpdated += OnSubscriptionsUpdated;
@@ -252,6 +253,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         ProxyPage.NodeSelectionClosedConnections -= OnProxyNodeSelectionClosedConnections;
         ProxyPage.PropertyChanged -= OnProxyPagePropertyChanged;
         CoreLogPage.LogsCleared -= OnCoreLogsCleared;
+        SubscriptionPage.RuntimeRefreshCompletion = null;
         SubscriptionPage.SubscriptionSelected -= OnSubscriptionSelected;
         SubscriptionPage.SubscriptionUpdateStarting -= OnSubscriptionUpdateStarting;
         SubscriptionPage.SubscriptionsUpdated -= OnSubscriptionsUpdated;
@@ -701,6 +703,25 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         DataManagement.RefreshFromSettings();
         CoreConfig.RefreshFromSettings();
         SystemIntegration.RefreshFromSettings();
+    }
+
+    // 后台命令已完成持久化和运行时应用；此处仅刷新已存在的界面。
+    public async Task RefreshBackgroundStateAsync(bool settingsChanged, bool subscriptionsChanged, bool proxiesChanged)
+    {
+        if (settingsChanged)
+        {
+            ReloadSettingsFromStore();
+            SyncRestoredSettingsPages();
+            HomePage.ApplyTunState(_settings.IsTunEnabled && HomePage.CanToggleTun);
+            HomePage.ApplyOutboundMode(OutboundModeParser.TryParse(_settings.OutboundMode) ?? Domain.Proxies.OutboundMode.Rule);
+        }
+        if (subscriptionsChanged) await SubscriptionPage.ReloadFromStoreAsync();
+        if (proxiesChanged)
+        {
+            await ProxyPage.RefreshProxiesAsync();
+            ProxyPage.BindLoadedConfigToSubscription(SubscriptionPage.CurrentSubscriptionId);
+            RulePage.RefreshRulesCommand.Execute(null);
+        }
     }
 
     private void ReloadSettingsFromStore()

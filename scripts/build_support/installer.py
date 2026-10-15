@@ -40,16 +40,26 @@ def pack_installers(
 ) -> list[Path]:
     check_packaging_tools(platform_name)
 
-    if platform_name.startswith("win"):
-        return [pack_windows_installer(metadata, platform_name, configuration, target, output_dir)]
+    with tempfile.TemporaryDirectory(prefix="stelliberty-installer-") as temporary:
+        staged = Path(temporary) / "payload"
+        shutil.copytree(output_dir, staged)
+        if platform_name.startswith("win"):
+            return [pack_windows_installer(metadata, platform_name, configuration, target, staged)]
+        if platform_name.startswith("linux"):
+            return pack_linux_installers(metadata, platform_name, configuration, target, staged)
+        if platform_name.startswith("macos"):
+            return pack_macos_installers(metadata, platform_name, configuration, target, staged)
+        raise RuntimeError(f"Packaging is not supported for this platform yet: {platform_name}")
 
-    if platform_name.startswith("linux"):
-        return pack_linux_installers(metadata, platform_name, configuration, target, output_dir)
 
-    if platform_name.startswith("macos"):
-        return pack_macos_installers(metadata, platform_name, configuration, target, output_dir)
-
-    raise RuntimeError(f"Packaging is not supported for this platform yet: {platform_name}")
+def publish_cli(metadata: AppMetadata, configuration: str, target: PlatformTarget, output_dir: Path) -> None:
+    run_checked([
+        "dotnet", "publish", str(ROOT / "src" / "Stelliberty.Cli" / "Stelliberty.Cli.csproj"),
+        "--configuration", "Release" if configuration == "release" else "Debug",
+        "--runtime", target.dotnet_runtime, "--self-contained", "false",
+        f"-p:AppVersion={metadata.version}", f"-p:Version={metadata.version}",
+        "--output", str(output_dir / "tweaks" / "cli"),
+    ])
 
 
 def check_packaging_tools(platform_name: str) -> None:
@@ -233,6 +243,8 @@ def build_macos_app_bundle(
     if not executable_path.exists():
         raise FileNotFoundError(f"macOS executable does not exist: {executable_path}")
 
+    cli_path = macos_dir / "tweaks" / "cli" / "stelliberty-cli"
+    require_file(cli_path)
     set_macos_payload_permissions(macos_dir, metadata, target)
     ui_executable_path = macos_dir / DEPS_DIRECTORY / f"{metadata.app_name}_ui"
     require_file(ui_executable_path)
@@ -241,7 +253,8 @@ def build_macos_app_bundle(
         raise FileExistsError(f"macOS UI executable destination already exists: {named_ui_executable_path}")
     # 只改 apphost 文件名；它仍加载原有的 UI 程序集和依赖配置。
     ui_executable_path.rename(named_ui_executable_path)
-    stamp_macos_apphosts((executable_path, named_ui_executable_path))
+    hosts = (executable_path, named_ui_executable_path)
+    stamp_macos_apphosts(hosts + (cli_path,))
     write_macos_info_plist(metadata, configuration, platform_name, contents_dir / "Info.plist")
     build_macos_icon_composer_assets(resources_dir, platform_name)
     build_macos_icns(resources_dir / "AppIcon.icns", configuration)
@@ -954,6 +967,7 @@ def build_macos_icon_composer_assets(output_dir: Path, platform_name: str) -> No
 def set_macos_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:
     executable_paths = [
         install_dir / metadata.app_name,
+        install_dir / "tweaks" / "cli" / "stelliberty-cli",
         install_dir / DEPS_DIRECTORY / f"{metadata.app_name}_ui",
         install_dir / "data" / "core" / "clash-mihomo-core",
         install_dir / "data" / "service" / "update" / service_binary_name(metadata, target),
@@ -983,6 +997,7 @@ def macos_min_system(platform_name: str) -> str:
 def set_linux_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:
     executable_paths = [
         install_dir / metadata.app_name,
+        install_dir / "tweaks" / "cli" / "stelliberty-cli",
         install_dir / DEPS_DIRECTORY / f"{metadata.app_name}_ui",
         install_dir / "data" / "core" / "clash-mihomo-core",
         install_dir / "data" / "service" / "update" / service_binary_name(metadata, target),

@@ -14,6 +14,19 @@
     <Border Classes="surface-group">
       <StackPanel>
         <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.CliText}" />
+              <TextBlock Text="{Binding AppBehavior.CliDescriptionText}" TextWrapping="Wrap"
+                         Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1"
+                          AutomationProperties.AutomationId="Settings.CliEnabledToggle"
+                          IsChecked="{Binding AppBehavior.IsCliEnabled, Mode=TwoWay}" />
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="3">
               <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.SilentStartText}" />

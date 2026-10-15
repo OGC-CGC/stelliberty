@@ -17,15 +17,15 @@ internal static partial class DebugCommands
         if (spec.StartsWith("add remote ", StringComparison.OrdinalIgnoreCase))
         {
             var item = await page.AddRemoteSubscriptionAsync(ParseSubscriptionRemoteArgs(spec["add remote ".Length..].Trim()));
-            page.SelectSubscriptionCommand.Execute(item.Id);
+            await page.SelectSubscriptionAsync(item.Id);
             await WaitRuntimeRefreshAsync(viewModel);
             return $"id={item.Id};{SubscriptionState(page, viewModel)}";
         }
 
         if (spec.StartsWith("add local ", StringComparison.OrdinalIgnoreCase))
         {
-            var item = page.AddLocalSubscription(ParseSubscriptionLocalArgs(spec["add local ".Length..].Trim()));
-            page.SelectSubscriptionCommand.Execute(item.Id);
+            var item = await page.AddLocalSubscriptionAsync(ParseSubscriptionLocalArgs(spec["add local ".Length..].Trim()));
+            await page.SelectSubscriptionAsync(item.Id);
             await WaitRuntimeRefreshAsync(viewModel);
             return $"id={item.Id};{SubscriptionState(page, viewModel)}";
         }
@@ -37,7 +37,7 @@ internal static partial class DebugCommands
 
         if (spec.StartsWith("select ", StringComparison.OrdinalIgnoreCase))
         {
-            page.SelectSubscriptionCommand.Execute(spec["select ".Length..].Trim());
+            await page.SelectSubscriptionAsync(spec["select ".Length..].Trim());
             await WaitRuntimeRefreshAsync(viewModel);
             return SubscriptionState(page, viewModel);
         }
@@ -80,7 +80,7 @@ internal static partial class DebugCommands
         if (spec.StartsWith("delete ", StringComparison.OrdinalIgnoreCase))
         {
             page.ShowDeleteDialogCommand.Execute(spec["delete ".Length..].Trim());
-            page.ConfirmDeleteCommand.Execute(null);
+            await page.ConfirmDeleteAsync();
             await WaitRuntimeRefreshAsync(viewModel);
             return SubscriptionState(page, viewModel);
         }

@@ -34,8 +34,10 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
     {
         _coreRuntime = coreRuntime;
         _delayResults = delayResults;
+        Operations.Changed += OnOperationsChanged;
     }
 
+    public BackgroundOperationRegistry Operations { get; } = new();
     public event EventHandler<BackgroundTaskStatus>? StateChanged;
 
     public BackgroundTaskStatus Status
@@ -75,6 +77,7 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
         var backupScheduler = new WebDavBackupScheduler(_settingsStore,
             new WebDavDataBackupService(new FileDataBackupService(TrayApplicationLayout.AppDataDirectory), _backupStore));
 
+        var startupUpdatesPending = true;
         await Task.WhenAll(
             // 低频采集提供者额度，界面关闭后仍保留最新记录。
             RunLoopAsync("provider snapshots", TimeSpan.FromSeconds(30), async (_, token) =>
@@ -89,18 +92,32 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
                 (_, token) => _coreRuntime.SendHeartbeatAsync(token), cancellationToken),
             RunLoopAsync("subscription updates", TimeSpan.FromMinutes(1), async (startup, token) =>
             {
-                var result = startup
-                    ? await subscriptionRunner.RunStartupUpdatesAsync(token).ConfigureAwait(false)
-                    : await subscriptionRunner.RunDueIntervalUpdatesAsync(DateTimeOffset.Now, token).ConfigureAwait(false);
-                if (result.UpdatedSubscriptionIds.Count + result.SkippedSubscriptionIds.Count == 0)
+                var owner = Guid.NewGuid();
+                var planner = new SubscriptionAutoUpdatePlanner();
+                var subscriptions = _subscriptions.LoadSubscriptions();
+                var plan = startupUpdatesPending ? planner.PlanStartupUpdates(subscriptions)
+                    : planner.PlanDueIntervalUpdates(subscriptions, DateTimeOffset.Now);
+                var ids = plan.UpdateSubscriptionIds.ToArray();
+                if (ids.Length == 0) { startupUpdatesPending = false; return; }
+                var lease = Operations.TryAcquire(owner, new(BackgroundOperationRequest.Subscriptions, ids, true));
+                if (lease is null) return;
+                try
                 {
-                    return;
+                    var result = startupUpdatesPending
+                        ? await subscriptionRunner.RunStartupUpdatesAsync(token).ConfigureAwait(false)
+                        : await subscriptionRunner.RunDueIntervalUpdatesAsync(DateTimeOffset.Now, token).ConfigureAwait(false);
+                    startupUpdatesPending = false;
+                    if (result.UpdatedSubscriptionIds.Count + result.SkippedSubscriptionIds.Count == 0)
+                    {
+                        return;
+                    }
+                    if (_selection.GetCurrentSubscriptionId() is { } selected && result.UpdatedSubscriptionIds.Contains(selected))
+                    {
+                        await _coreRuntime.ApplyCurrentSettingsAsync(token).ConfigureAwait(false);
+                    }
+                    Publish(status => status with { SubscriptionRevision = status.SubscriptionRevision + 1 });
                 }
-                if (_selection.GetCurrentSubscriptionId() is { } selected && result.UpdatedSubscriptionIds.Contains(selected))
-                {
-                    await _coreRuntime.ApplyCurrentSettingsAsync(token).ConfigureAwait(false);
-                }
-                Publish(status => status with { SubscriptionRevision = status.SubscriptionRevision + 1 });
+                finally { Operations.Release(owner, lease.Value); }
             }, cancellationToken),
             RunLoopAsync("subscription delay tests", TimeSpan.FromMinutes(1),
                 (_, token) => RunDelayAsync(token), cancellationToken),
@@ -128,6 +145,9 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
             return;
         }
 
+        var owner = Guid.NewGuid();
+        var lease = Operations.TryAcquire(owner, new(BackgroundOperationRequest.Delay, []));
+        if (lease is null) return;
         try
         {
             using var tester = new PipeCoreProxyDelayTester(TrayCoreEndpoints.Core, () => _settingsStore.Load().DelayTestUrl, 5000);
@@ -149,6 +169,7 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
         }
         finally
         {
+            Operations.Release(owner, lease.Value);
             _delayPlanner.CompleteRun(interval, DateTimeOffset.Now);
         }
     }
@@ -178,6 +199,20 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
         }
     }
 
+    private void OnOperationsChanged(object? sender, EventArgs args) =>
+        Publish(status => status with { Operations = Operations.Snapshot });
+
+    public void NotifyClientStateChanged(string command) => Publish(status => status with
+    {
+        SettingsRevision = status.SettingsRevision + (command.StartsWith("settings ", StringComparison.Ordinal)
+            || command.StartsWith("dns ", StringComparison.Ordinal) || command.StartsWith("proxy config ", StringComparison.Ordinal)
+            || command is "proxy mode set" or "proxy tun set" ? 1 : 0),
+        ClientSubscriptionRevision = status.ClientSubscriptionRevision + (command.StartsWith("subscription ", StringComparison.Ordinal)
+            || command.StartsWith("dns ", StringComparison.Ordinal) || command.StartsWith("proxy config ", StringComparison.Ordinal)
+            || command == "proxy tun set" ? 1 : 0),
+        ProxyRevision = status.ProxyRevision + (command.StartsWith("settings ", StringComparison.Ordinal) || command == "proxy system set" ? 0 : 1)
+    });
+
     private void Publish(Func<BackgroundTaskStatus, BackgroundTaskStatus> update)
     {
         BackgroundTaskStatus status;
@@ -191,6 +226,7 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        Operations.Changed -= OnOperationsChanged;
         _stopping.Cancel();
         if (_runTask is not null)
         {
