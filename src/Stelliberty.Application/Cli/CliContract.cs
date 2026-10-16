@@ -15,8 +15,13 @@ public sealed record CliSetting(
 {
     public object Schema => new
     {
-        group = Group, name = Name, type = Type, description = Description,
-        choices = Options?.Split('|'), minimum = Minimum, maximum = Maximum,
+        group = Group,
+        name = Name,
+        type = Type,
+        description = Description,
+        choices = Options?.Split('|'),
+        minimum = Minimum,
+        maximum = Maximum,
         default_value = Sensitive ? null : typeof(AppSettings).GetProperty(SettingProperty)?.GetValue(new AppSettings()),
         sensitive = Sensitive,
         effect = Group == "settings" ? "Saved and reflected in the UI; startup settings apply on next start."

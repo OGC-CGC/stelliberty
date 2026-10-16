@@ -155,8 +155,11 @@ internal sealed class CliService(
     {
         var settings = _settings.Load();
         if (call.Command == "proxy mode get")
-            return Ok(new { mode = (await _proxy.GetOutboundModeAsync(token).ConfigureAwait(false))?.ToString().ToLowerInvariant()
-                ?? settings.OutboundMode.ToLowerInvariant() });
+            return Ok(new
+            {
+                mode = (await _proxy.GetOutboundModeAsync(token).ConfigureAwait(false))?.ToString().ToLowerInvariant()
+                ?? settings.OutboundMode.ToLowerInvariant()
+            });
         if (call.Command == "proxy system get")
             return Ok(new { enabled = (await systemProxy.GetStatusAsync(token).ConfigureAwait(false)).IsEnabled, busy = false });
         if (call.Command == "proxy tun get")
@@ -201,7 +204,9 @@ internal sealed class CliService(
         {
             var mode = call.Values[0].ToLowerInvariant() switch
             {
-                "rule" => OutboundMode.Rule, "global" => OutboundMode.Global, "direct" => OutboundMode.Direct,
+                "rule" => OutboundMode.Rule,
+                "global" => OutboundMode.Global,
+                "direct" => OutboundMode.Direct,
                 _ => throw new ArgumentException("Expected rule, global or direct.")
             };
             if (call.DryRun) return new(true, "dry_run", new { mode = mode.ToString().ToLowerInvariant() });
@@ -214,7 +219,7 @@ internal sealed class CliService(
         }
         var config = await new MihomoApiProxyConfigProvider(_proxy).LoadAsync(token).ConfigureAwait(false);
         if (call.Command == "proxy groups") return Ok(config.VisibleGroups.Select(entry => new
-            { entry.Name, entry.Type, selected = entry.DisplaySelectionName, selectable = entry.IsManualSelectable }).ToArray());
+        { entry.Name, entry.Type, selected = entry.DisplaySelectionName, selectable = entry.IsManualSelectable }).ToArray());
         var groupName = call.RequireOption("group");
         var group = config.VisibleGroups.FirstOrDefault(item => item.Name == groupName)
             ?? throw new ArgumentException("Group not found; use proxy groups.");
@@ -249,8 +254,14 @@ internal sealed class CliService(
             config.TryGetEntryDelay(name, out var delay);
             var type = config.Nodes.TryGetValue(name, out var node) ? node.Type
                 : config.Groups.FirstOrDefault(item => item.Name == name)?.Type ?? "Unknown";
-            return new { name, type, selected = group.DisplaySelectionName == name,
-                delay_ms = delay, delay_state = delay is null ? "untested" : delay < 0 ? "failed" : "tested" };
+            return new
+            {
+                name,
+                type,
+                selected = group.DisplaySelectionName == name,
+                delay_ms = delay,
+                delay_state = delay is null ? "untested" : delay < 0 ? "failed" : "tested"
+            };
         }).ToArray());
     }
 
@@ -259,9 +270,16 @@ internal sealed class CliService(
         var current = _selection.GetCurrentSubscriptionId();
         var subscriptions = _subscriptions.LoadSubscriptions();
         if (call.Command == "subscription list") return Ok(subscriptions.Select(entry => new
-            { entry.Id, entry.Name, entry.IsLocalFile, IsCurrent = entry.Id == current, IsUpdating = operations.Snapshot.Any(operation => operation.Request.IsUpdate
-                    && operation.Request.SubscriptionIds.Contains(entry.Id)),
-                entry.LastUpdatedAt, HasError = !string.IsNullOrEmpty(entry.LastError) }).ToArray());
+        {
+            entry.Id,
+            entry.Name,
+            entry.IsLocalFile,
+            IsCurrent = entry.Id == current,
+            IsUpdating = operations.Snapshot.Any(operation => operation.Request.IsUpdate
+                && operation.Request.SubscriptionIds.Contains(entry.Id)),
+            entry.LastUpdatedAt,
+            HasError = !string.IsNullOrEmpty(entry.LastError)
+        }).ToArray());
         var downloader = new HttpRemoteSubscriptionDownloader(() =>
         {
             var settings = _settings.Load();
