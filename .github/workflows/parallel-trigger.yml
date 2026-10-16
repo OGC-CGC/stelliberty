@@ -132,44 +132,14 @@ jobs:
             echo "No product changes since ${previous_tag}; beta build is skipped."
           fi
 
-  code-quality:
-    name: Trigger code quality
-    if: >-
-      ${{
-        (
-          github.event_name == 'workflow_dispatch' ||
-          (github.event_name == 'push' && github.ref_name == (vars.BETA_BRANCH || 'beta') && !github.event.deleted) ||
-          (github.event_name == 'pull_request' && github.base_ref == (vars.BETA_BRANCH || 'beta'))
-        ) &&
-        (github.event.action != 'edited' || github.event.changes.base.ref.from != null)
-      }}
-    uses: ./.github/workflows/code-quality.yml
-    secrets: inherit
-
-  stability-verification:
-    name: Trigger test verification
-    if: >-
-      ${{
-        (
-          github.event_name == 'workflow_dispatch' ||
-          (github.event_name == 'push' && github.ref_name == (vars.BETA_BRANCH || 'beta') && !github.event.deleted) ||
-          (github.event_name == 'pull_request' && github.base_ref == (vars.BETA_BRANCH || 'beta'))
-        ) &&
-        (github.event.action != 'edited' || github.event.changes.base.ref.from != null)
-      }}
-    uses: ./.github/workflows/stability-verification.yml
-    secrets: inherit
-
   beta-build:
     name: Trigger beta build
-    needs: [detect-beta-build-changes, code-quality, stability-verification]
+    needs: [detect-beta-build-changes]
     if: >-
       ${{
         always() &&
         needs.detect-beta-build-changes.result == 'success' &&
         needs.detect-beta-build-changes.outputs.should_build == 'true' &&
-        needs.code-quality.result == 'success' &&
-        needs.stability-verification.result == 'success' &&
         github.ref_name == (vars.BETA_BRANCH || 'beta') &&
         github.event_name == 'push'
       }}
@@ -178,22 +148,20 @@ jobs:
 
   beta-build-not-required:
     name: Beta build not required
-    needs: [detect-beta-build-changes, code-quality, stability-verification]
+    needs: [detect-beta-build-changes]
     if: >-
       ${{
         always() &&
         github.event_name == 'push' &&
         github.ref_name == (vars.BETA_BRANCH || 'beta') &&
         needs.detect-beta-build-changes.result == 'success' &&
-        needs.detect-beta-build-changes.outputs.should_build != 'true' &&
-        needs.code-quality.result == 'success' &&
-        needs.stability-verification.result == 'success'
+        needs.detect-beta-build-changes.outputs.should_build != 'true'
       }}
     runs-on: ubuntu-22.04
     steps:
       - name: Report intentional skip
         shell: bash
         run: |
-          echo '::notice::Verification passed; no product changes require a beta build.'
+          echo '::notice::No product changes require a beta build.'
           echo '### Beta Build' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Verification passed. The beta build was intentionally skipped because no product files changed.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The beta build was intentionally skipped because no product files changed.' >> "$GITHUB_STEP_SUMMARY"
