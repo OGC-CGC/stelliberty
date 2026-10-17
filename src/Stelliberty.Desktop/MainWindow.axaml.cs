@@ -170,6 +170,7 @@ public sealed partial class MainWindow : Window
             || args.Key != Key.Escape
             || args.KeyModifiers != KeyModifiers.None
             || DialogHost.IsOpen
+            || ConnectivityDialogHost.IsOpen
             || UpdateDialogHost.IsOpen
             || DataContext is not MainWindowViewModel viewModel
             || viewModel.SubscriptionPage.Provider.IsProviderSelectorDialogVisible

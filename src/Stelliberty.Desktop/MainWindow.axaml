@@ -4,6 +4,7 @@
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:loc="using:Stelliberty.Desktop.Localization"
         xmlns:views="using:Stelliberty.Desktop.Views"
+        xmlns:dialogs="using:Stelliberty.Desktop.Views.Dialogs"
         xmlns:vm="using:Stelliberty.Presentation.ViewModels"
         x:Class="Stelliberty.Desktop.MainWindow"
         x:CompileBindings="True"
@@ -286,6 +287,18 @@
                                 Grid.RowSpan="2" />
 
     <views:SubscriptionProviderDialog Grid.RowSpan="2" DataContext="{Binding SubscriptionPage.Provider}" />
+
+    <controls:OverlayDialogHost x:Name="ConnectivityDialogHost" Grid.RowSpan="2"
+                                DataContext="{Binding HomePage}" x:DataType="vm:HomePageViewModel"
+                                IsOpen="{Binding IsConnectivityEditorOpen}">
+      <controls:OverlayDialogHost.DialogContent>
+        <controls:DialogPanel PanelWidth="760" IsOpen="{Binding IsConnectivityEditorOpen}">
+          <controls:DialogPanel.DialogContent>
+            <dialogs:ConnectivityEditorView />
+          </controls:DialogPanel.DialogContent>
+        </controls:DialogPanel>
+      </controls:OverlayDialogHost.DialogContent>
+    </controls:OverlayDialogHost>
 
     <controls:OverlayDialogHost x:Name="UpdateDialogHost"
                                 Grid.RowSpan="2"

@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Stelliberty.Desktop.Localization"
+             xmlns:vm="using:Stelliberty.Presentation.ViewModels"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             x:Class="Stelliberty.Desktop.Views.Dialogs.ConnectivityEditorView"
+             x:Name="ConnectivityEditorRoot"
+             x:CompileBindings="True"
+             x:DataType="vm:HomePageViewModel"
+             KeyDown="OnEditorKeyDown">
+  <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12" MaxHeight="500">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Classes="dialog-title" Text="{loc:Loc Home.Connectivity.EditTitle}" />
+      <Button Grid.Column="1" Classes="dialog-close" Content="✕"
+              AutomationProperties.AutomationId="Home.Connectivity.Editor.CloseButton"
+              Command="{Binding CancelConnectivityEditCommand}" />
+    </Grid>
+    <ScrollViewer Grid.Row="1" MaxHeight="340" VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding ConnectivityEditorItems}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ConnectivityCheckEditorItemViewModel">
+            <Border Classes="dialog-section" Padding="12" Margin="0,0,10,0">
+              <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                <CheckBox Grid.RowSpan="2" VerticalAlignment="Center"
+                          ToolTip.Tip="{loc:Loc Home.Connectivity.Enabled}"
+                          IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                <TextBox Grid.Column="1" Classes="dialog-input"
+                         Watermark="{loc:Loc Home.Connectivity.Name}"
+                         Text="{Binding Name, Mode=TwoWay}" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                  <Button Classes="soft-action" Padding="8,4"
+                          ToolTip.Tip="{loc:Loc Home.Connectivity.MoveUp}"
+                          Command="{Binding #ConnectivityEditorRoot.((vm:HomePageViewModel)DataContext).MoveConnectivityCheckUpCommand}"
+                          CommandParameter="{Binding}">
+                    <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ArrowUpLine" />
+                  </Button>
+                  <Button Classes="soft-action" Padding="8,4"
+                          ToolTip.Tip="{loc:Loc Home.Connectivity.MoveDown}"
+                          Command="{Binding #ConnectivityEditorRoot.((vm:HomePageViewModel)DataContext).MoveConnectivityCheckDownCommand}"
+                          CommandParameter="{Binding}">
+                    <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ArrowDownLine" />
+                  </Button>
+                  <Button Classes="soft-action" Padding="8,4"
+                          ToolTip.Tip="{loc:Loc Common.Delete}"
+                          Command="{Binding #ConnectivityEditorRoot.((vm:HomePageViewModel)DataContext).RemoveConnectivityCheckCommand}"
+                          CommandParameter="{Binding}">
+                    <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="DeleteLine" />
+                  </Button>
+                </StackPanel>
+                <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                      ColumnDefinitions="110,*" ColumnSpacing="8">
+                  <ComboBox Classes="dialog-input platform-popup" HorizontalAlignment="Stretch"
+                            ToolTip.Tip="{loc:Loc Home.Connectivity.TestType}"
+                            ItemsSource="{Binding TestTypeOptions}"
+                            SelectedItem="{Binding SelectedTestTypeOption, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ISelectionOption">
+                        <TextBlock Text="{Binding DisplayName}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBox Grid.Column="1" Classes="dialog-input"
+                           Watermark="{Binding AddressWatermark}" Text="{Binding Url, Mode=TwoWay}" />
+                </Grid>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+    <TextBlock Grid.Row="2" Text="{Binding ConnectivityEditorError}"
+               IsVisible="{Binding HasConnectivityEditorError}"
+               Foreground="{DynamicResource AppDangerBrush}" TextWrapping="Wrap" FontSize="12" />
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+      <Button Classes="dialog-secondary" HorizontalAlignment="Left"
+              AutomationProperties.AutomationId="Home.Connectivity.Editor.AddButton"
+              Content="{loc:Loc Home.Connectivity.Add}" Command="{Binding AddConnectivityCheckCommand}" />
+      <Button Grid.Column="1" Classes="dialog-secondary" Content="{loc:Loc Common.Cancel}"
+              Command="{Binding CancelConnectivityEditCommand}" />
+      <Button Grid.Column="2" Classes="dialog-primary" Content="{loc:Loc Common.Save}"
+              AutomationProperties.AutomationId="Home.Connectivity.Editor.SaveButton"
+              Command="{Binding SaveConnectivityCommand}" />
+    </Grid>
+  </Grid>
+</UserControl>

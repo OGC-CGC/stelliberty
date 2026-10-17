@@ -1,3 +1,5 @@
+using Stelliberty.Application.Platform;
+
 namespace Stelliberty.Application.Settings;
 
 public sealed class AppSettings
@@ -110,6 +112,9 @@ public sealed class AppSettings
     public string ProxyNodeSortMode { get; set; } = "Default";
 
     public string DelayTestUrl { get; set; } = "https://www.gstatic.com/generate_204";
+
+    // 旧配置未包含此字段时使用默认项；空列表表示用户主动清空。
+    public IReadOnlyList<NetworkDiagnosticCheck>? ConnectivityChecks { get; set; }
 
     public bool IsAllowLanEnabled { get; set; }
 

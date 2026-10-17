@@ -209,4 +209,18 @@
   <Style Selector="Border.tile-icon.danger iconPacks|PackIconMingCuteIcons">
     <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
   </Style>
+  <Style Selector="Border.connectivity-result">
+    <Setter Property="Background" Value="{DynamicResource AppOverlaySubtleBrush}" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style Selector="TextBlock.connectivity-status">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.connectivity-status.success">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.connectivity-status.failed">
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
 </Styles>

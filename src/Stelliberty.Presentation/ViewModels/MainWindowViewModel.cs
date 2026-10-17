@@ -95,7 +95,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         SystemProxyPlatform systemPlatform = SystemProxyPlatform.Other,
         IClipboardWriter? clipboardWriter = null,
         IAppLogReader? appLogReader = null,
-        IAppLogExporter? appLogExporter = null)
+        IAppLogExporter? appLogExporter = null,
+        INetworkDiagnosticsService? networkDiagnostics = null)
     {
         _settingsStore = settingsStore;
         _localization = localization;
@@ -157,7 +158,23 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             initialServiceModeStatus,
             localization,
             systemPlatform,
-            clipboardWriter);
+            clipboardWriter,
+            networkDiagnostics,
+            _settings.ConnectivityChecks,
+            checks =>
+            {
+                var previous = _settings.ConnectivityChecks;
+                _settings.ConnectivityChecks = checks;
+                try
+                {
+                    _settingsStore.Save(_settings);
+                }
+                catch
+                {
+                    _settings.ConnectivityChecks = previous;
+                    throw;
+                }
+            });
         HomePage.SetTunStateApplyAsync(ApplyTunFromHomeAsync);
         SystemIntegration = new SettingsSystemIntegrationViewModel(
             _settings,

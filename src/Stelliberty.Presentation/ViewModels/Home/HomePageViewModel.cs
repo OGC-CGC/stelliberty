@@ -14,7 +14,7 @@ using Stelliberty.Presentation.Formatting;
 
 namespace Stelliberty.Presentation.ViewModels;
 
-public sealed class HomePageViewModel : ViewModelBase, IDisposable
+public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 {
     private readonly ILocalizationService? _localization;
     private readonly SystemProxyPlatform _systemPlatform;
@@ -99,7 +99,10 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
         ServiceModeStatus? initialServiceModeStatus = null,
         ILocalizationService? localization = null,
         SystemProxyPlatform systemPlatform = SystemProxyPlatform.Other,
-        IClipboardWriter? clipboardWriter = null)
+        IClipboardWriter? clipboardWriter = null,
+        INetworkDiagnosticsService? networkDiagnostics = null,
+        IReadOnlyList<NetworkDiagnosticCheck>? connectivityChecks = null,
+        Action<IReadOnlyList<NetworkDiagnosticCheck>>? saveConnectivityConfiguration = null)
     {
         _localization = localization;
         _systemPlatform = systemPlatform;
@@ -137,6 +140,7 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
         RefreshCoreCommand = new RelayCommand(() => _ = UpdateCoreAsync());
         RestartCoreCommand = new RelayCommand(() => _ = RestartCoreAsync());
         ToggleServiceModeCommand = new RelayCommand(() => _ = ToggleServiceModeAsync());
+        InitializeConnectivity(networkDiagnostics, connectivityChecks, saveConnectivityConfiguration);
 
         SeedZeroHistory();
         _ = RefreshSystemProxyStatusAsync();
@@ -1287,6 +1291,11 @@ public sealed class HomePageViewModel : ViewModelBase, IDisposable
     private void OnLanguageChanged(object? sender, EventArgs args)
     {
         RaiseHomeStateChanged();
+        foreach (var item in ConnectivityChecks.Concat(PublicIpChecks))
+        {
+            item.RefreshPresentation();
+        }
+        OnPropertyChanged(nameof(ConnectivityEditorError));
     }
 
     private string Localize(string key) => _localization?.GetString(key) ?? key;

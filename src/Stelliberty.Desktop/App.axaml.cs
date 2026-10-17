@@ -309,7 +309,8 @@ public sealed partial class App : Avalonia.Application
                 appLogReader: new FileAppLogReader(DesktopApplicationLayout.RunningLogFilePath),
                 appLogExporter: new FileAppLogExporter(
                     DesktopApplicationLayout.RunningLogFilePath,
-                    DesktopApplicationLayout.TrayRunningLogFilePath));
+                    DesktopApplicationLayout.TrayRunningLogFilePath),
+                networkDiagnostics: new NetworkDiagnosticsService());
 #if DEBUG
             LogStartupTrace("Main view model created", startupStartedAt);
 #endif

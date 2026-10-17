@@ -354,7 +354,7 @@ internal sealed class WindowAppearanceService : IDisposable
         var effect = _theme.SelectedWindowEffect;
         var surfaceBrush = new SolidColorBrush(Color.Parse(effect == WindowEffect.FrutigerAero
             ? isLightTheme ? "#99FFFFFF" : "#99000000"
-            : isLightTheme ? "#CCFFFFFF" : "#BB000000"));
+            : isLightTheme ? "#EEFFFFFF" : "#EE000000"));
         var cardSurfaceBrush = new SolidColorBrush(Color.Parse(effect == WindowEffect.FrutigerAero
             ? isLightTheme ? "#66FFFFFF" : "#66000000"
             : isLightTheme ? "#CCFFFFFF" : "#BB191919"));

@@ -381,6 +381,84 @@
         </StackPanel>
       </Border>
 
+      <Border Classes="surface-tile"
+              AutomationProperties.AutomationId="Home.ConnectivityCard">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Border Classes="tile-icon sm" VerticalAlignment="Center">
+              <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="EarthLine" />
+            </Border>
+            <TextBlock Grid.Column="1" Margin="10,0,8,0" Classes="card-title"
+                       Text="{loc:Loc Home.Connectivity.Title}" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+              <Button Classes="soft-action" Padding="12,6"
+                      AutomationProperties.AutomationId="Home.Connectivity.EditButton"
+                      Command="{Binding EditConnectivityCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="{loc:Loc Common.Edit}" FontSize="13" />
+                </StackPanel>
+              </Button>
+              <Button Classes="soft-action" Padding="12,6"
+                      AutomationProperties.AutomationId="Home.Connectivity.TestButton"
+                      Command="{Binding TestConnectivityCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <iconPacks:PackIconMingCuteIcons Width="13" Height="13" Kind="Refresh1Line" />
+                  <TextBlock Text="{loc:Loc Home.Connectivity.Test}" FontSize="13" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Grid>
+          <ItemsControl ItemsSource="{Binding ConnectivityChecks}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <controls:ConnectivityWrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:NetworkDiagnosticItemViewModel">
+                <Border Classes="connectivity-result" ToolTip.Tip="{Binding Error}">
+                  <StackPanel Spacing="7">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                 Foreground="{DynamicResource AppTextPrimaryBrush}" />
+                      <TextBlock Grid.Column="1" Text="{Binding Protocol}" FontSize="10"
+                                 ToolTip.Tip="{Binding ProtocolDescription}"
+                                 VerticalAlignment="Center" Foreground="{DynamicResource AppTextTertiaryBrush}" />
+                    </Grid>
+                    <TextBlock Classes="connectivity-status" Classes.success="{Binding IsSuccessful}"
+                               Classes.failed="{Binding IsFailed}" Text="{Binding ResultText}"
+                               AutomationProperties.AutomationId="{Binding AutomationId}" FontSize="17" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{loc:Loc Home.Connectivity.PublicIp}" Classes="field-label" />
+          <ItemsControl ItemsSource="{Binding PublicIpChecks}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <controls:EvenWrapPanel MinItemWidth="320" UseContentHeight="True"
+                                        ColumnSpacing="8" RowSpacing="8" EdgePadding="0" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:NetworkDiagnosticItemViewModel">
+                <Border Classes="connectivity-result" ToolTip.Tip="{Binding Error}">
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"
+                               Foreground="{DynamicResource AppTextSecondaryBrush}" />
+                    <TextBlock Grid.Column="1" Classes="connectivity-status"
+                               Classes.success="{Binding IsSuccessful}" Classes.failed="{Binding IsFailed}"
+                               Text="{Binding ResultText}" TextWrapping="Wrap" HorizontalAlignment="Right"
+                               AutomationProperties.AutomationId="{Binding AutomationId}" FontSize="14" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
     </StackPanel>
   </ScrollViewer>
 </UserControl>
