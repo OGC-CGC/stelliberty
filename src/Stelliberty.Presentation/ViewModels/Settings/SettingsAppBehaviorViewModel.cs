@@ -78,6 +78,8 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
 
     public string ClearHotkeyText => _localization.GetString("Settings.AppBehavior.Hotkey.Clear");
 
+    public bool IsHotkeysVisible => OperatingSystem.IsWindows();
+
     public IReadOnlyList<string> Items =>
     [
         CliText,
@@ -90,9 +92,9 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
         LazyModeText,
         TitleBarFpsText,
         StartupText,
-        WindowToggleHotkeyText,
-        SystemProxyToggleHotkeyText,
-        TunToggleHotkeyText,
+        .. (IsHotkeysVisible
+            ? new[] { WindowToggleHotkeyText, SystemProxyToggleHotkeyText, TunToggleHotkeyText }
+            : Array.Empty<string>()),
     ];
 
     public bool IsSilentStartEnabled

@@ -139,7 +139,7 @@
       </StackPanel>
     </Border>
   </StackPanel>
-  <StackPanel Spacing="0">
+  <StackPanel Spacing="0" IsVisible="{Binding AppBehavior.IsHotkeysVisible}">
     <TextBlock Classes="surface-group-title" Text="{Binding AppBehavior.HotkeysText}" />
     <Border Classes="surface-group">
       <StackPanel>
