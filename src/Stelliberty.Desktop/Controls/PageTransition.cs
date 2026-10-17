@@ -28,11 +28,11 @@ internal static class PageTransition
         Y2 = 1,
     };
 
-    // 小位移与轻微缩放只作用于合成属性，避免触发布局。
-    public static readonly ITransform EnterFromTransform = TransformOperations.Parse("translate(0px,14px) scale(0.985)");
+    // 轻微缩放只作用于合成属性，避免触发布局。
+    public static readonly ITransform EnterFromTransform = TransformOperations.Parse("translate(0px,0px) scale(0.985)");
     public static readonly ITransform RestTransform = TransformOperations.Parse("translate(0px,0px) scale(1)");
-    public static readonly ITransform LeaveToTransform = TransformOperations.Parse("translate(0px,-4px) scale(0.995)");
-    public static readonly ITransform HeaderEnterFromTransform = TransformOperations.Parse("translate(0px,8px)");
+    public static readonly ITransform LeaveToTransform = TransformOperations.Parse("translate(0px,0px) scale(0.995)");
+    public static readonly ITransform HeaderEnterFromTransform = TransformOperations.Parse("translate(0px,0px)");
     public static readonly ITransform HeaderRestTransform = TransformOperations.Parse("translate(0px,0px)");
 
     public static Transitions CreateEnterTransitions() => new()
