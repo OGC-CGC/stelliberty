@@ -24,24 +24,22 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://stelliberty_ui/Styles/Theme.axaml" />
+        <ResourceInclude Source="avares://stelliberty_ui/Styles/BrandTitle.axaml" />
       </ResourceDictionary.MergedDictionaries>
       <views:PageToViewConverter x:Key="PageToView" />
     </ResourceDictionary>
   </Window.Resources>
 
   <Window.Styles>
-    <Style Selector="TextBlock.brand-title">
-      <Setter Property="FontFamily" Value="Snell Roundhand, avares://stelliberty_ui/Assets/fonts#Noto Sans SC" />
-      <Setter Property="FontSize" Value="27" />
-      <Setter Property="FontStyle" Value="Italic" />
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="LetterSpacing" Value="1" />
+    <Style Selector="Path.brand-title">
+      <Setter Property="Data" Value="{StaticResource SidebarBrandGeometry}" />
       <Setter Property="HorizontalAlignment" Value="Center" />
-    </Style>
-    <Style Selector="TextBlock.brand-title.outline">
-      <Setter Property="Foreground" Value="#CC0F4C81" />
+      <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="IsHitTestVisible" Value="False" />
       <Setter Property="AutomationProperties.AccessibilityView" Value="Raw" />
+    </Style>
+    <Style Selector="Path.brand-title.outline">
+      <Setter Property="Fill" Value="{DynamicResource AppBrandTitleOutlineBrush}" />
     </Style>
     <StyleInclude Source="avares://stelliberty_ui/Styles/ShellStyles.axaml" />
     <StyleInclude Source="avares://stelliberty_ui/Styles/PrimitivesStyles.axaml" />
@@ -132,49 +130,47 @@
               Padding="12,24,12,20"
               Background="Transparent">
         <Grid RowDefinitions="Auto,*,Auto">
-          <Grid Margin="0,4,0,28"
-                HorizontalAlignment="Center"
-                RenderTransformOrigin="50%,50%">
-            <Grid.RenderTransform>
-              <RotateTransform Angle="-2" />
-            </Grid.RenderTransform>
+          <Grid Margin="0,4,0,28" MinHeight="36"
+                HorizontalAlignment="Center">
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform X="-1" Y="-1" /></Path.RenderTransform>
+            </Path>
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform Y="-1" /></Path.RenderTransform>
+            </Path>
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform X="1" Y="-1" /></Path.RenderTransform>
+            </Path>
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform X="-1" /></Path.RenderTransform>
+            </Path>
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform X="1" /></Path.RenderTransform>
+            </Path>
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform X="-1" Y="1" /></Path.RenderTransform>
+            </Path>
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform Y="1" /></Path.RenderTransform>
+            </Path>
+            <Path Classes="brand-title outline">
+              <Path.RenderTransform><TranslateTransform X="1" Y="1" /></Path.RenderTransform>
+            </Path>
 
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform X="-1" Y="-1" /></TextBlock.RenderTransform>
-            </TextBlock>
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform Y="-1" /></TextBlock.RenderTransform>
-            </TextBlock>
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform X="1" Y="-1" /></TextBlock.RenderTransform>
-            </TextBlock>
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform X="-1" /></TextBlock.RenderTransform>
-            </TextBlock>
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform X="1" /></TextBlock.RenderTransform>
-            </TextBlock>
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform X="-1" Y="1" /></TextBlock.RenderTransform>
-            </TextBlock>
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform Y="1" /></TextBlock.RenderTransform>
-            </TextBlock>
-            <TextBlock Classes="brand-title outline" Text="{Binding Title}">
-              <TextBlock.RenderTransform><TranslateTransform X="1" Y="1" /></TextBlock.RenderTransform>
-            </TextBlock>
-
-            <TextBlock Classes="brand-title"
-                       AutomationProperties.AutomationId="Sidebar.BrandText"
-                       Text="{Binding Title}">
-              <TextBlock.Foreground>
+            <Path Classes="brand-title">
+              <Path.Fill>
                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                  <GradientStop Offset="0" Color="#FFF8FFFF" />
-                  <GradientStop Offset="0.38" Color="#FF7DD3FC" />
-                  <GradientStop Offset="1" Color="#FF2563EB" />
+                  <GradientStop Offset="0" Color="{DynamicResource AppBrandTitleStartColor}" />
+                  <GradientStop Offset="0.38" Color="{DynamicResource AppBrandTitleMiddleColor}" />
+                  <GradientStop Offset="1" Color="{DynamicResource AppBrandTitleEndColor}" />
                 </LinearGradientBrush>
-              </TextBlock.Foreground>
-            </TextBlock>
+              </Path.Fill>
+            </Path>
+            <TextBlock AutomationProperties.AutomationId="Sidebar.BrandText"
+                       Text="{Binding Title}"
+                       FontSize="27" Foreground="Transparent"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       IsHitTestVisible="False" />
           </Grid>
 
           <StackPanel Grid.Row="1" Spacing="6">

@@ -114,6 +114,11 @@ internal sealed class SystemAccentColorService : IDisposable
         {
             _window.Resources[key] = brush;
         }
+        var brandTitle = AccentColorPaletteGenerator.GenerateBrandTitle(accent);
+        _window.Resources["AppBrandTitleStartColor"] = brandTitle.Start;
+        _window.Resources["AppBrandTitleMiddleColor"] = brandTitle.Middle;
+        _window.Resources["AppBrandTitleEndColor"] = brandTitle.End;
+        _window.Resources["AppBrandTitleOutlineBrush"] = new SolidColorBrush(brandTitle.Outline, 0.8);
         AppLogger.Info(
             $"Accent color applied: {_theme.AccentMode} source=#{accent.R:X2}{accent.G:X2}{accent.B:X2} accent=#{palette.Accent.R:X2}{palette.Accent.G:X2}{palette.Accent.B:X2}");
     }

@@ -102,6 +102,10 @@
   <SolidColorBrush x:Key="AppAccentBorderBrush" Color="#9960A5FA" />
   <SolidColorBrush x:Key="AppAccentTintBrush" Color="#1F60A5FA" />
   <SolidColorBrush x:Key="AppOnAccentBrush" Color="#FFFFFFFF" />
+  <Color x:Key="AppBrandTitleStartColor">#F8FFFF</Color>
+  <Color x:Key="AppBrandTitleMiddleColor">#7DD3FC</Color>
+  <Color x:Key="AppBrandTitleEndColor">#2563EB</Color>
+  <SolidColorBrush x:Key="AppBrandTitleOutlineBrush" Color="#CC0F4C81" />
   <SolidColorBrush x:Key="AppOnDangerBrush" Color="#FFFFFFFF" />
   <SolidColorBrush x:Key="TitleBarCloseButtonHoverBrush" Color="#DC2626" />
   <SolidColorBrush x:Key="AppSwitchThumbOnBrush" Color="#FFFFFFFF" />

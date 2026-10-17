@@ -37,6 +37,22 @@ internal static class AccentColorPaletteGenerator
         return (lighter + 0.05) / (darker + 0.05);
     }
 
+    public static (Color Start, Color Middle, Color End, Color Outline) GenerateBrandTitle(Color source)
+    {
+        var accent = ToOklch(source);
+        var chroma = NormalizeChroma(accent.Chroma);
+        var hue = double.IsNaN(accent.Hue) ? 0 : accent.Hue;
+
+        Color Recolor(string reference)
+        {
+            var tone = ToOklch(Color.Parse(reference));
+            // 保留原标题各位置的感知明度，以强调色的色相和浓度重新着色。
+            return FromOklch(tone.Lightness, tone.Chroma * chroma / 0.18, hue);
+        }
+
+        return (Recolor("#F8FFFF"), Recolor("#7DD3FC"), Recolor("#2563EB"), Recolor("#0F4C81"));
+    }
+
     private static Color EnsureSurfaceContrast(Color color, double chroma, double hue, Color surface, bool isLightTheme)
     {
         if (ContrastRatio(color, surface) >= 3)
