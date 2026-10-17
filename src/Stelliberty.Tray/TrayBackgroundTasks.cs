@@ -71,7 +71,7 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
         {
             var settings = _settingsStore.Load();
             return (settings.ProxyHost, settings.MixedPort);
-        });
+        }, () => _settingsStore.Load().GetAppUpdateRepositoryUrl());
         var updateScheduler = new AppUpdateAutoCheckScheduler(updateChecker,
             _settingsStore.Load, _settingsStore.Save, () => DateTimeOffset.Now);
         var backupScheduler = new WebDavBackupScheduler(_settingsStore,

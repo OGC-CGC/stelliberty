@@ -64,6 +64,47 @@
         <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+              <TextBlock Classes="settings-row-title" Text="{loc:Loc Settings.Update.Source}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{Binding Update.ActiveRepositoryUrl}"
+                         ToolTip.Tip="{Binding Update.ActiveRepositoryUrl}" TextTrimming="CharacterEllipsis"
+                         MaxWidth="400" HorizontalAlignment="Left" />
+            </StackPanel>
+            <ComboBox Grid.Column="1" MinWidth="160"
+                      AutomationProperties.AutomationId="Settings.UpdateSourceComboBox"
+                      IsEnabled="{Binding !Update.IsChecking}"
+                      ItemsSource="{Binding Update.UpdateSourceOptions}"
+                      SelectedItem="{Binding Update.SelectedUpdateSourceOption, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ISelectionOption">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+        </Border>
+        <Border Classes="settings-row-divider" IsVisible="{Binding Update.IsCustomUpdateSource}" />
+        <Border Classes="settings-inline-row" IsVisible="{Binding Update.IsCustomUpdateSource}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="settings-row-title" Text="{loc:Loc Settings.Update.Source.RepositoryUrl}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <TextBox Classes="settings-input"
+                       AutomationProperties.AutomationId="Settings.CustomUpdateRepositoryTextBox"
+                       IsEnabled="{Binding !Update.IsChecking}"
+                       Watermark="https://github.com/owner/repository"
+                       Text="{Binding Update.CustomRepositoryUrl, Mode=TwoWay}" />
+              <Button Grid.Column="1" Classes="soft-action" Content="{loc:Loc Common.Save}"
+                      AutomationProperties.AutomationId="Settings.SaveUpdateRepositoryButton"
+                      Command="{Binding Update.SaveCustomRepositoryCommand}" />
+            </Grid>
+            <TextBlock Text="{loc:Loc Settings.Update.Source.InvalidUrl}" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource AppDangerBrush}"
+                       IsVisible="{Binding Update.IsCustomRepositoryUrlInvalid}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="settings-row-divider" />
+        <Border Classes="settings-inline-row">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBlock Classes="settings-row-title"
                        Text="{Binding Update.ChannelText}"
                        VerticalAlignment="Center" />

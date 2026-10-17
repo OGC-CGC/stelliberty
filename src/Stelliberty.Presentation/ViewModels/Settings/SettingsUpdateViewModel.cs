@@ -16,6 +16,8 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
     private readonly AppUpdateAutoCheckScheduler? _scheduler;
     private readonly TimeSpan _manualCheckMinimumDuration;
     private readonly RelayCommand _checkCommand;
+    private readonly RelayCommand _saveCustomRepositoryCommand;
+    private string _customRepositoryUrl;
     private string _lastOperation = string.Empty;
     private string _latestVersion = string.Empty;
     private string _latestReleaseUrl = string.Empty;
@@ -33,6 +35,7 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
         TimeSpan? manualCheckMinimumDuration = null)
     {
         _settings = settings;
+        _customRepositoryUrl = settings.CustomAppUpdateRepositoryUrl;
         _settingsStore = settingsStore;
         _localization = localization;
         _now = now;
@@ -41,6 +44,9 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
         _scheduler = checker is null ? null : new AppUpdateAutoCheckScheduler(checker, () => settings, settingsStore.Save, now);
         _localization.LanguageChanged += OnLanguageChanged;
         _checkCommand = new RelayCommand(() => _ = CheckAsync(), () => !IsChecking);
+        _saveCustomRepositoryCommand = new RelayCommand(SaveCustomRepository, () => IsCustomUpdateSource && !IsChecking
+            && GitHubUpdateRepository.TryParse(CustomRepositoryUrl, out _)
+            && !string.Equals(CustomRepositoryUrl.Trim(), _settings.CustomAppUpdateRepositoryUrl, StringComparison.Ordinal));
         CheckCommand = _checkCommand;
         IgnoreLatestVersionCommand = new RelayCommand(IgnoreLatestVersion);
         CloseUpdateDialogCommand = new RelayCommand(() => IsUpdateDialogVisible = false);
@@ -101,6 +107,45 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
         set => SetSetting(_settings.AppUpdateChannel, value.Value, next => _settings.AppUpdateChannel = next);
     }
 
+    public IReadOnlyList<SelectionOption<bool>> UpdateSourceOptions =>
+    [
+        new(false, _localization.GetString("Settings.Update.Source.Default")),
+        new(true, _localization.GetString("Settings.Update.Source.Custom"))
+    ];
+
+    public SelectionOption<bool> SelectedUpdateSourceOption
+    {
+        get => UpdateSourceOptions.First(option => option.Value == IsCustomUpdateSource);
+        set
+        {
+            if (value.Value != IsCustomUpdateSource)
+            {
+                SaveUpdateSource(value.Value, _settings.CustomAppUpdateRepositoryUrl);
+            }
+        }
+    }
+
+    public bool IsCustomUpdateSource => _settings.IsCustomAppUpdateSourceEnabled;
+
+    public string ActiveRepositoryUrl => _settings.GetAppUpdateRepositoryUrl();
+
+    public string CustomRepositoryUrl
+    {
+        get => _customRepositoryUrl;
+        set
+        {
+            if (SetProperty(ref _customRepositoryUrl, value))
+            {
+                OnPropertyChanged(nameof(IsCustomRepositoryUrlInvalid));
+                _saveCustomRepositoryCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool IsCustomRepositoryUrlInvalid => !GitHubUpdateRepository.TryParse(CustomRepositoryUrl, out _);
+
+    public ICommand SaveCustomRepositoryCommand => _saveCustomRepositoryCommand;
+
     public string LastOperation
     {
         get => _lastOperation;
@@ -129,6 +174,7 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _isChecking, value))
             {
                 _checkCommand.RaiseCanExecuteChanged();
+                _saveCustomRepositoryCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -180,8 +226,10 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
 
     public void RefreshFromSettings()
     {
+        _customRepositoryUrl = _settings.CustomAppUpdateRepositoryUrl;
         OnPropertyChanged(string.Empty);
-        RaiseUpdateSummaryChanged();
+        _saveCustomRepositoryCommand.RaiseCanExecuteChanged();
+        ApplyCheckResult(null);
     }
 
     public void Dispose()
@@ -274,6 +322,57 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
         RaiseUpdateSummaryChanged();
     }
 
+    private void SaveCustomRepository()
+    {
+        if (GitHubUpdateRepository.TryParse(CustomRepositoryUrl, out var repository))
+        {
+            SaveUpdateSource(true, repository.RepositoryUrl);
+        }
+    }
+
+    private void SaveUpdateSource(bool isCustom, string repositoryUrl)
+    {
+        var previousMode = _settings.IsCustomAppUpdateSourceEnabled;
+        var previousUrl = _settings.CustomAppUpdateRepositoryUrl;
+        var previousIgnoredVersion = _settings.IgnoredUpdateVersion;
+        var previousCheckTime = _settings.LastAppUpdateCheckTime;
+        var previousSource = _settings.GetAppUpdateRepositoryUrl();
+        _settings.IsCustomAppUpdateSourceEnabled = isCustom;
+        _settings.CustomAppUpdateRepositoryUrl = repositoryUrl;
+        var sourceChanged = !string.Equals(previousSource, _settings.GetAppUpdateRepositoryUrl(), StringComparison.OrdinalIgnoreCase);
+        if (sourceChanged)
+        {
+            _settings.IgnoredUpdateVersion = string.Empty;
+            _settings.LastAppUpdateCheckTime = null;
+        }
+
+        try
+        {
+            _settingsStore.Save(_settings);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _settings.IsCustomAppUpdateSourceEnabled = previousMode;
+            _settings.CustomAppUpdateRepositoryUrl = previousUrl;
+            _settings.IgnoredUpdateVersion = previousIgnoredVersion;
+            _settings.LastAppUpdateCheckTime = previousCheckTime;
+            StatusText = _localization.GetString("Settings.Update.Source.SaveFailed");
+            ToastRequested?.Invoke(this, (StatusText, ToastType.Error));
+            OnPropertyChanged(nameof(SelectedUpdateSourceOption));
+            return;
+        }
+
+        CustomRepositoryUrl = _settings.CustomAppUpdateRepositoryUrl;
+        OnPropertyChanged(nameof(SelectedUpdateSourceOption));
+        OnPropertyChanged(nameof(IsCustomUpdateSource));
+        OnPropertyChanged(nameof(ActiveRepositoryUrl));
+        _saveCustomRepositoryCommand.RaiseCanExecuteChanged();
+        if (sourceChanged)
+        {
+            ApplyCheckResult(null);
+        }
+    }
+
     private void SetSetting<T>(T currentValue, T nextValue, Action<T> assign, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(currentValue, nextValue))
@@ -299,6 +398,8 @@ public sealed class SettingsUpdateViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(ChannelOptions));
         OnPropertyChanged(nameof(SelectedChannelOption));
         OnPropertyChanged(nameof(ChannelText));
+        OnPropertyChanged(nameof(UpdateSourceOptions));
+        OnPropertyChanged(nameof(SelectedUpdateSourceOption));
         RaiseUpdateSummaryChanged();
     }
 

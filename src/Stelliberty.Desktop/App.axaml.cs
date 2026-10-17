@@ -92,7 +92,8 @@ public sealed partial class App : Avalonia.Application
                 {
                     var currentSettings = settingsStore.Load();
                     return (currentSettings.ProxyHost, currentSettings.MixedPort);
-                });
+                },
+                () => settingsStore.Load().GetAppUpdateRepositoryUrl());
             var systemProxyPlatform = CurrentSystemProxyPlatform();
             IUwpLoopbackService uwpLoopbackService = OperatingSystem.IsWindows()
                 ? new WindowsUwpLoopbackService()

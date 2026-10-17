@@ -10,30 +10,37 @@ namespace Stelliberty.Infrastructure.Updates;
 
 public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
 {
-    private static readonly Uri ReleasesApiUri = new("https://api.github.com/repos/Kindness-Kismet/stelliberty/releases?per_page=30");
-    private const string LatestReleasePageUrl = "https://github.com/Kindness-Kismet/stelliberty/releases/latest";
     private static readonly TimeSpan AttemptTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan TotalTimeout = TimeSpan.FromSeconds(15);
 
     private readonly Func<string> _channelProvider;
+    private readonly Func<string> _repositoryUrlProvider;
     private readonly Func<(string Host, int Port)> _coreProxyEndpointProvider;
 
     public GitHubAppUpdateChecker(
         Func<string>? channelProvider = null,
-        Func<(string Host, int Port)>? coreProxyEndpointProvider = null)
+        Func<(string Host, int Port)>? coreProxyEndpointProvider = null,
+        Func<string>? repositoryUrlProvider = null)
     {
         _channelProvider = channelProvider ?? (() => "stable");
+        _repositoryUrlProvider = repositoryUrlProvider ?? (() => GitHubUpdateRepository.DefaultRepositoryUrl);
         _coreProxyEndpointProvider = coreProxyEndpointProvider ?? (() => ("127.0.0.1", AppSettings.DefaultMixedPort));
     }
 
     public async Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
     {
         AppLogger.Info("App update check requested");
+        if (!GitHubUpdateRepository.TryParse(_repositoryUrlProvider(), out var repository))
+        {
+            return new AppUpdateCheckResult(false, null, "Invalid GitHub update repository URL", IsFailure: true);
+        }
+
+        var channel = _channelProvider();
         using var totalCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         totalCancellation.CancelAfter(TotalTimeout);
         Exception? lastFailure = null;
 
-        foreach (var route in BuildRoutes())
+        foreach (var route in BuildRoutes(repository.ReleasesApiUri))
         {
             if (totalCancellation.IsCancellationRequested)
             {
@@ -43,8 +50,8 @@ public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
             try
             {
                 AppLogger.Info($"App update check attempt: route={route.Name}");
-                var releases = await FetchReleasesAsync(route, totalCancellation.Token);
-                var selected = AppUpdateReleaseSelector.Select(releases, _channelProvider(), AppMetadata.Version);
+                var releases = await FetchReleasesAsync(route, repository, totalCancellation.Token);
+                var selected = AppUpdateReleaseSelector.Select(releases, channel, AppMetadata.Version);
                 AppLogger.Info($"App update check completed: route={route.Name}");
                 if (selected is null)
                 {
@@ -83,17 +90,17 @@ public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
         return new AppUpdateCheckResult(false, null, message, IsFailure: true);
     }
 
-    private IReadOnlyList<UpdateRoute> BuildRoutes()
+    private IReadOnlyList<UpdateRoute> BuildRoutes(Uri releasesApiUri)
     {
         var routes = new List<UpdateRoute> { new("direct", null) };
         Uri? systemProxyUri = null;
         try
         {
             var systemProxy = WebRequest.DefaultWebProxy;
-            if (systemProxy is not null && !systemProxy.IsBypassed(ReleasesApiUri))
+            if (systemProxy is not null && !systemProxy.IsBypassed(releasesApiUri))
             {
-                var resolvedProxy = systemProxy.GetProxy(ReleasesApiUri);
-                if (resolvedProxy is not null && !SameEndpoint(resolvedProxy, ReleasesApiUri))
+                var resolvedProxy = systemProxy.GetProxy(releasesApiUri);
+                if (resolvedProxy is not null && !SameEndpoint(resolvedProxy, releasesApiUri))
                 {
                     systemProxyUri = resolvedProxy;
                     routes.Add(new UpdateRoute("system", systemProxy, UseDefaultCredentials: true));
@@ -124,6 +131,7 @@ public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
 
     private static async Task<IReadOnlyList<AppUpdateReleaseInfo>> FetchReleasesAsync(
         UpdateRoute route,
+        GitHubUpdateRepository repository,
         CancellationToken cancellationToken)
     {
         using var handler = new HttpClientHandler
@@ -136,7 +144,7 @@ public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
         using var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         using var attemptCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         attemptCancellation.CancelAfter(AttemptTimeout);
-        using var request = new HttpRequestMessage(HttpMethod.Get, ReleasesApiUri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, repository.ReleasesApiUri);
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue(AppRuntimeNames.FileNameToken, AppMetadata.Version));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         using var response = await client.SendAsync(
@@ -162,11 +170,11 @@ public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
                 throw new HttpRequestException("App update check returned an unexpected response");
             }
 
-            return ReadReleases(document.RootElement);
+            return ReadReleases(document.RootElement, repository.LatestReleasePageUrl);
         }
     }
 
-    private static IReadOnlyList<AppUpdateReleaseInfo> ReadReleases(JsonElement root)
+    private static IReadOnlyList<AppUpdateReleaseInfo> ReadReleases(JsonElement root, string latestReleasePageUrl)
     {
         var releases = new List<AppUpdateReleaseInfo>();
         foreach (var item in root.EnumerateArray())
@@ -177,7 +185,7 @@ public sealed class GitHubAppUpdateChecker : IAppUpdateChecker
                 continue;
             }
 
-            var url = ReadString(item, "html_url") ?? LatestReleasePageUrl;
+            var url = ReadString(item, "html_url") ?? latestReleasePageUrl;
             var isDraft = item.TryGetProperty("draft", out var draft) && draft.ValueKind == JsonValueKind.True;
             var isPre = item.TryGetProperty("prerelease", out var pre) && pre.ValueKind == JsonValueKind.True;
             releases.Add(new AppUpdateReleaseInfo(version, url, isPre, isDraft));

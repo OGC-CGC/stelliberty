@@ -179,6 +179,7 @@ public sealed class JsonAppSettingsStore : IAppSettingsStore
         settings.TunToggleHotkey ??= defaults.TunToggleHotkey;
         settings.AppUpdateCheckInterval ??= defaults.AppUpdateCheckInterval;
         settings.AppUpdateChannel ??= defaults.AppUpdateChannel;
+        settings.CustomAppUpdateRepositoryUrl ??= defaults.CustomAppUpdateRepositoryUrl;
         if (!string.Equals(settings.AppUpdateChannel, "stable", StringComparison.OrdinalIgnoreCase)
             && !string.Equals(settings.AppUpdateChannel, "beta", StringComparison.OrdinalIgnoreCase))
         {

@@ -1,4 +1,5 @@
 using Stelliberty.Application.Platform;
+using Stelliberty.Application.Updates;
 
 namespace Stelliberty.Application.Settings;
 
@@ -80,6 +81,14 @@ public sealed class AppSettings
     public string AppUpdateCheckInterval { get; set; } = "startup";
 
     public string AppUpdateChannel { get; set; } = "stable";
+
+    public bool IsCustomAppUpdateSourceEnabled { get; set; }
+
+    public string CustomAppUpdateRepositoryUrl { get; set; } = GitHubUpdateRepository.DefaultRepositoryUrl;
+
+    public string GetAppUpdateRepositoryUrl() => IsCustomAppUpdateSourceEnabled
+        ? CustomAppUpdateRepositoryUrl
+        : GitHubUpdateRepository.DefaultRepositoryUrl;
 
     public string IgnoredUpdateVersion { get; set; } = string.Empty;
 
