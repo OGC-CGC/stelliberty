@@ -417,6 +417,8 @@
   "Overrides.Format.JavaScript": "JavaScript",
   "Overrides.Dialog.Edit.Title": "Edit Override",
   "Overrides.Field.Name": "Override Name",
+  "Overrides.Field.Subscriptions": "Applies to Configurations",
+  "Overrides.Empty.NoSubscriptions": "No configurations available. Add a configuration first.",
   "Overrides.Field.Url": "Override Address",
   "Overrides.Field.LocalPath": "Local File Path",
   "Overrides.Placeholder.EditName": "Enter an override name",

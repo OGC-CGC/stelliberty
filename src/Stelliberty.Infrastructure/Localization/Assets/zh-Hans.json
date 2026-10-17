@@ -417,6 +417,8 @@
   "Overrides.Format.JavaScript": "JavaScript",
   "Overrides.Dialog.Edit.Title": "编辑覆写",
   "Overrides.Field.Name": "覆写名称",
+  "Overrides.Field.Subscriptions": "生效配置",
+  "Overrides.Empty.NoSubscriptions": "暂无配置，请先添加配置。",
   "Overrides.Field.Url": "覆写地址",
   "Overrides.Field.LocalPath": "本地文件路径",
   "Overrides.Placeholder.EditName": "输入一个覆写名称",

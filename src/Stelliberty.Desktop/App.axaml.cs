@@ -187,7 +187,8 @@ public sealed partial class App : Avalonia.Application
                 overrideUpdater,
                 new FileLocalOverrideFileReader(),
                 overrideFileOpener,
-                localization);
+                localization,
+                subscriptionStore);
 #if DEBUG
             var pipeProxyCoreClient = new PipeCoreProxyClient(TrayCoreEndpoints.Core);
             IProxyCoreClient proxyCoreClient = new TrayRuntimeProxyCoreClient(new ProxyCoreClient(pipeProxyCoreClient));

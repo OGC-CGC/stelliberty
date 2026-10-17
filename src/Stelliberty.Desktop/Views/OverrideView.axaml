@@ -438,96 +438,133 @@
                                 AutomationProperties.AutomationId="Overrides.EditDialog.FormScroll"
                                 VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="16" Margin="24,0,22,0">
-                      <StackPanel Spacing="6">
-                        <TextBlock Classes="dialog-label" Text="{loc:Loc Overrides.Field.Name}" />
-                        <TextBox Classes="dialog-input" Classes.error="{Binding EditDialog.IsNameErrorVisible}"
-                                 AutomationProperties.AutomationId="Overrides.EditDialog.NameBox"
-                                 PlaceholderText="{loc:Loc Overrides.Placeholder.EditName}"
-                                 Text="{Binding EditDialog.Name, Mode=TwoWay}" />
-                        <TextBlock Classes="dialog-error" TextWrapping="Wrap"
-                                   AutomationProperties.AutomationId="Overrides.EditDialog.NameError"
-                                   IsVisible="{Binding EditDialog.IsNameErrorVisible}"
-                                   Text="{Binding EditDialog.NameError}" />
-                      </StackPanel>
-
-                      <StackPanel Spacing="6" IsVisible="{Binding EditDialog.IsForRemoteOverride}">
-                        <TextBlock Classes="dialog-label" Text="{Binding EditDialog.SourceLabel}" />
-                        <TextBox Classes="dialog-input" Classes.error="{Binding EditDialog.IsSourceLocationErrorVisible}"
-                                 AutomationProperties.AutomationId="Overrides.EditDialog.SourceBox"
-                                 PlaceholderText="{Binding EditDialog.SourcePlaceholder}"
-                                 Text="{Binding EditDialog.SourceLocation, Mode=TwoWay}" />
-                        <TextBlock Classes="dialog-error" TextWrapping="Wrap"
-                                   AutomationProperties.AutomationId="Overrides.EditDialog.UrlError"
-                                   IsVisible="{Binding EditDialog.IsSourceLocationErrorVisible}"
-                                   Text="{Binding EditDialog.SourceLocationError}" />
-                      </StackPanel>
-
-                      <Border Classes="dialog-section"
-                              IsVisible="{Binding EditDialog.IsForRemoteOverride}">
-                        <StackPanel Spacing="11">
-                          <StackPanel Orientation="Horizontal" Spacing="8">
-                            <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="CodeLine"
-                                                             Foreground="{DynamicResource AppAccentBrush}"
-                                                             VerticalAlignment="Center" />
-                            <TextBlock Classes="dialog-section-title" Text="{loc:Loc Overrides.Format.Title}" />
-                          </StackPanel>
-                          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                            <ToggleButton Classes="radio-card"
-                                          AutomationProperties.AutomationId="Overrides.EditDialog.FormatYamlButton"
-                                          Command="{Binding EditDialog.SelectYamlFormatCommand}"
-                                          IsChecked="{Binding EditDialog.IsYamlFormatSelected}">
-                              <TextBlock Classes="rc-title" Text="{loc:Loc Overrides.Format.Yaml}" />
-                            </ToggleButton>
-                            <ToggleButton Grid.Column="1"
-                                          Classes="radio-card"
-                                          AutomationProperties.AutomationId="Overrides.EditDialog.FormatJavaScriptButton"
-                                          Command="{Binding EditDialog.SelectJavaScriptFormatCommand}"
-                                          IsChecked="{Binding EditDialog.IsJavaScriptFormatSelected}">
-                              <TextBlock Classes="rc-title" Text="{loc:Loc Overrides.Format.JavaScript}" />
-                            </ToggleButton>
-                          </Grid>
+                      <Grid ColumnDefinitions="110,*" ColumnSpacing="16">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Overrides.Field.Name}"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                          <TextBox Classes="dialog-input" Classes.error="{Binding EditDialog.IsNameErrorVisible}"
+                                   AutomationProperties.AutomationId="Overrides.EditDialog.NameBox"
+                                   PlaceholderText="{loc:Loc Overrides.Placeholder.EditName}"
+                                   Text="{Binding EditDialog.Name, Mode=TwoWay}" />
+                          <TextBlock Classes="dialog-error" TextWrapping="Wrap"
+                                     AutomationProperties.AutomationId="Overrides.EditDialog.NameError"
+                                     IsVisible="{Binding EditDialog.IsNameErrorVisible}"
+                                     Text="{Binding EditDialog.NameError}" />
                         </StackPanel>
-                      </Border>
+                      </Grid>
 
-                      <Border Classes="dialog-section"
-                              IsVisible="{Binding EditDialog.IsForRemoteOverride}">
-                        <StackPanel Spacing="11">
-                          <StackPanel Orientation="Horizontal" Spacing="8">
-                            <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="EarthLine"
-                                                             Foreground="{DynamicResource AppAccentBrush}"
-                                                             VerticalAlignment="Center" />
-                            <TextBlock Classes="dialog-section-title" Text="{loc:Loc Common.ProxyMode.Title}" />
-                          </StackPanel>
-                          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
-                            <ToggleButton Classes="radio-card"
-                                          AutomationProperties.AutomationId="Overrides.EditDialog.Proxy.DirectButton"
-                                          Command="{Binding EditDialog.SelectDirectProxyModeCommand}"
-                                          IsChecked="{Binding EditDialog.IsDirectProxyModeSelected}">
-                              <StackPanel Spacing="2">
-                                <TextBlock Classes="rc-title" Text="{loc:Loc Common.Proxy.Direct.Title}" />
-                              </StackPanel>
-                            </ToggleButton>
-                            <ToggleButton Grid.Column="1"
-                                          Classes="radio-card"
-                                          AutomationProperties.AutomationId="Overrides.EditDialog.Proxy.SystemButton"
-                                          Command="{Binding EditDialog.SelectSystemProxyModeCommand}"
-                                          IsChecked="{Binding EditDialog.IsSystemProxyModeSelected}">
-                              <StackPanel Spacing="2">
-                                <TextBlock Classes="rc-title" Text="{loc:Loc Common.Proxy.System.Title}" />
-                              </StackPanel>
-                            </ToggleButton>
-                            <ToggleButton Grid.Column="2"
-                                          Classes="radio-card"
-                                          AutomationProperties.AutomationId="Overrides.EditDialog.Proxy.CoreButton"
-                                          Command="{Binding EditDialog.SelectCoreProxyModeCommand}"
-                                          IsChecked="{Binding EditDialog.IsCoreProxyModeSelected}">
-                              <StackPanel Spacing="2">
-                                <TextBlock Classes="rc-title" Text="{loc:Loc Common.Proxy.Core.Title}" />
-                              </StackPanel>
-                            </ToggleButton>
-                          </Grid>
+                      <Grid ColumnDefinitions="110,*" ColumnSpacing="16">
+                        <TextBlock Classes="dialog-label" Text="{loc:Loc Overrides.Field.Subscriptions}"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                          <TextBlock Classes="settings-row-subtitle" TextWrapping="Wrap"
+                                     IsVisible="{Binding EditDialog.IsSubscriptionListEmpty}"
+                                     Text="{loc:Loc Overrides.Empty.NoSubscriptions}" />
+                          <ItemsControl ItemsSource="{Binding EditDialog.AvailableSubscriptions}"
+                                        AutomationProperties.AutomationId="Overrides.EditDialog.Subscriptions">
+                            <ItemsControl.Styles>
+                              <Style Selector="CheckBox:checked:not(:disabled) /template/ Border#NormalRectangle">
+                                <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+                              </Style>
+                              <Style Selector="CheckBox:checked:not(:disabled) /template/ PathIcon#CheckGlyph">
+                                <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
+                              </Style>
+                              <Style Selector="CheckBox:unchecked:not(:disabled):pointerover /template/ Border#NormalRectangle">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+                              </Style>
+                            </ItemsControl.Styles>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:OverrideSubscriptionOptionViewModel">
+                                <CheckBox Content="{Binding Name}"
+                                          AutomationProperties.AutomationId="{Binding ToggleAutomationId}"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
                         </StackPanel>
-                      </Border>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="110,*" ColumnSpacing="16"
+                            IsVisible="{Binding EditDialog.IsForRemoteOverride}">
+                        <TextBlock Classes="dialog-label" Text="{Binding EditDialog.SourceLabel}"
+                                   TextWrapping="Wrap" VerticalAlignment="Top" Margin="0,10,0,0" />
+                        <StackPanel Grid.Column="1" Spacing="6">
+                          <TextBox Classes="dialog-input" Classes.error="{Binding EditDialog.IsSourceLocationErrorVisible}"
+                                   AutomationProperties.AutomationId="Overrides.EditDialog.SourceBox"
+                                   PlaceholderText="{Binding EditDialog.SourcePlaceholder}"
+                                   Text="{Binding EditDialog.SourceLocation, Mode=TwoWay}" />
+                          <TextBlock Classes="dialog-error" TextWrapping="Wrap"
+                                     AutomationProperties.AutomationId="Overrides.EditDialog.UrlError"
+                                     IsVisible="{Binding EditDialog.IsSourceLocationErrorVisible}"
+                                     Text="{Binding EditDialog.SourceLocationError}" />
+                        </StackPanel>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="110,*" ColumnSpacing="16"
+                            IsVisible="{Binding EditDialog.IsForRemoteOverride}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" VerticalAlignment="Center">
+                          <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="CodeLine"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1" Classes="dialog-label" Text="{loc:Loc Overrides.Format.Title}"
+                                     TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+                          <ToggleButton Classes="radio-card"
+                                        AutomationProperties.AutomationId="Overrides.EditDialog.FormatYamlButton"
+                                        Command="{Binding EditDialog.SelectYamlFormatCommand}"
+                                        IsChecked="{Binding EditDialog.IsYamlFormatSelected}">
+                            <TextBlock Classes="rc-title" Text="{loc:Loc Overrides.Format.Yaml}" />
+                          </ToggleButton>
+                          <ToggleButton Grid.Column="1"
+                                        Classes="radio-card"
+                                        AutomationProperties.AutomationId="Overrides.EditDialog.FormatJavaScriptButton"
+                                        Command="{Binding EditDialog.SelectJavaScriptFormatCommand}"
+                                        IsChecked="{Binding EditDialog.IsJavaScriptFormatSelected}">
+                            <TextBlock Classes="rc-title" Text="{loc:Loc Overrides.Format.JavaScript}" />
+                          </ToggleButton>
+                        </Grid>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="110,*" ColumnSpacing="16"
+                            IsVisible="{Binding EditDialog.IsForRemoteOverride}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" VerticalAlignment="Center">
+                          <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="EarthLine"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1" Classes="dialog-label" Text="{loc:Loc Common.ProxyMode.Title}"
+                                     TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                          <ToggleButton Classes="radio-card"
+                                        AutomationProperties.AutomationId="Overrides.EditDialog.Proxy.DirectButton"
+                                        Command="{Binding EditDialog.SelectDirectProxyModeCommand}"
+                                        IsChecked="{Binding EditDialog.IsDirectProxyModeSelected}">
+                            <StackPanel Spacing="2">
+                              <TextBlock Classes="rc-title" Text="{loc:Loc Common.Proxy.Direct.Title}" />
+                            </StackPanel>
+                          </ToggleButton>
+                          <ToggleButton Grid.Column="1"
+                                        Classes="radio-card"
+                                        AutomationProperties.AutomationId="Overrides.EditDialog.Proxy.SystemButton"
+                                        Command="{Binding EditDialog.SelectSystemProxyModeCommand}"
+                                        IsChecked="{Binding EditDialog.IsSystemProxyModeSelected}">
+                            <StackPanel Spacing="2">
+                              <TextBlock Classes="rc-title" Text="{loc:Loc Common.Proxy.System.Title}" />
+                            </StackPanel>
+                          </ToggleButton>
+                          <ToggleButton Grid.Column="2"
+                                        Classes="radio-card"
+                                        AutomationProperties.AutomationId="Overrides.EditDialog.Proxy.CoreButton"
+                                        Command="{Binding EditDialog.SelectCoreProxyModeCommand}"
+                                        IsChecked="{Binding EditDialog.IsCoreProxyModeSelected}">
+                            <StackPanel Spacing="2">
+                              <TextBlock Classes="rc-title" Text="{loc:Loc Common.Proxy.Core.Title}" />
+                            </StackPanel>
+                          </ToggleButton>
+                        </Grid>
+                      </Grid>
                     </StackPanel>
                   </ScrollViewer>
 

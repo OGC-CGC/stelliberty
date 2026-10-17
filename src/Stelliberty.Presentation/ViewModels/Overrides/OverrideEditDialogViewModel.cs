@@ -1,6 +1,7 @@
 using Stelliberty.Application.Diagnostics;
 using Stelliberty.Application.Localization;
 using Stelliberty.Domain.Overrides;
+using Stelliberty.Domain.Subscriptions;
 
 namespace Stelliberty.Presentation.ViewModels;
 
@@ -9,7 +10,8 @@ public sealed record OverrideEditCompletedEventArgs(
     string Name,
     string SourceLocation,
     OverrideFormat Format,
-    OverrideUpdateProxyMode UpdateProxyMode);
+    OverrideUpdateProxyMode UpdateProxyMode,
+    IReadOnlyList<string> SelectedSubscriptionIds);
 
 public sealed class OverrideEditDialogViewModel : OverrideDialogBase
 {
@@ -28,6 +30,10 @@ public sealed class OverrideEditDialogViewModel : OverrideDialogBase
 
     public string? OverrideId => _overrideId;
 
+    public IReadOnlyList<OverrideSubscriptionOptionViewModel> AvailableSubscriptions { get; private set; } = [];
+
+    public bool IsSubscriptionListEmpty => AvailableSubscriptions.Count == 0;
+
     public bool IsDialogVisible => _isDialogVisible;
 
     // 本地含空创建与直接导入两种，统一按 IsLocalFile 隐藏路径与代理。
@@ -43,7 +49,7 @@ public sealed class OverrideEditDialogViewModel : OverrideDialogBase
 
     protected override bool IsRemoteSource => IsForRemoteOverride;
 
-    public void Open(OverrideItemViewModel item)
+    public void Open(OverrideItemViewModel item, IReadOnlyList<Subscription>? subscriptions = null)
     {
         _closeReset.Cancel();
         _overrideId = item.Id;
@@ -53,6 +59,10 @@ public sealed class OverrideEditDialogViewModel : OverrideDialogBase
         _sourceLocation = item.SourceLocation;
         _format = item.Format;
         _proxyMode = item.UpdateProxyMode;
+        AvailableSubscriptions = (subscriptions ?? [])
+            .Select(subscription => new OverrideSubscriptionOptionViewModel(
+                subscription.Id, subscription.Name, subscription.OverrideIds.Contains(item.Id, StringComparer.Ordinal)))
+            .ToList();
         ResetValidation();
         RaiseStateChanged();
     }
@@ -83,7 +93,8 @@ public sealed class OverrideEditDialogViewModel : OverrideDialogBase
             return;
         }
 
-        var args = new OverrideEditCompletedEventArgs(_overrideId!, _name, _sourceLocation, _format, _proxyMode);
+        var args = new OverrideEditCompletedEventArgs(_overrideId!, _name, _sourceLocation, _format, _proxyMode,
+            AvailableSubscriptions.Where(item => item.IsSelected).Select(item => item.Id).ToList());
         BeginClose();
         Confirmed?.Invoke(this, args);
         AppLogger.Info($"Override edit submitted: {args.Name}");
@@ -104,6 +115,7 @@ public sealed class OverrideEditDialogViewModel : OverrideDialogBase
     {
         _isDialogVisible = false;
         _overrideId = null;
+        AvailableSubscriptions = [];
         _isLocalFile = false;
         _name = string.Empty;
         _sourceLocation = string.Empty;
@@ -128,6 +140,8 @@ public sealed class OverrideEditDialogViewModel : OverrideDialogBase
     protected override void RaiseStateChanged()
     {
         OnPropertyChanged(nameof(OverrideId));
+        OnPropertyChanged(nameof(AvailableSubscriptions));
+        OnPropertyChanged(nameof(IsSubscriptionListEmpty));
         OnPropertyChanged(nameof(IsDialogVisible));
         OnPropertyChanged(nameof(IsForLocalOverride));
         OnPropertyChanged(nameof(IsForRemoteOverride));

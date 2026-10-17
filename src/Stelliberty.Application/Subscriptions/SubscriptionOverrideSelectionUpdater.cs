@@ -6,6 +6,40 @@ namespace Stelliberty.Application.Subscriptions;
 
 public sealed class SubscriptionOverrideSelectionUpdater(ISubscriptionStore store, IOverrideStore? overrideStore = null)
 {
+    // 从覆写侧修改关联，只改变当前覆写，保留各配置的其他选择和排序。
+    public IReadOnlyList<string> SaveOverrideSubscriptions(string overrideId, IReadOnlyList<string> subscriptionIds)
+    {
+        var selected = subscriptionIds.ToHashSet(StringComparer.Ordinal);
+        var affectedSubscriptionIds = new List<string>();
+        foreach (var subscription in store.LoadSubscriptions())
+        {
+            var wasSelected = subscription.OverrideIds.Contains(overrideId, StringComparer.Ordinal);
+            var isSelected = selected.Contains(subscription.Id);
+            if (wasSelected == isSelected)
+            {
+                continue;
+            }
+
+            var overrideIds = subscription.OverrideIds.Where(id => id != overrideId).ToList();
+            var sortPreference = subscription.OverrideSortPreference.ToList();
+            if (isSelected)
+            {
+                overrideIds.Add(overrideId);
+                if (!sortPreference.Contains(overrideId, StringComparer.Ordinal))
+                {
+                    // 无历史位置时，追加到所有已启用覆写之后。
+                    sortPreference.AddRange(subscription.OverrideIds.Where(id => !sortPreference.Contains(id, StringComparer.Ordinal)));
+                    sortPreference.Add(overrideId);
+                }
+            }
+
+            SaveSelection(subscription.Id, overrideIds, sortPreference);
+            affectedSubscriptionIds.Add(subscription.Id);
+        }
+
+        return affectedSubscriptionIds;
+    }
+
     public Subscription SaveSelection(
         string subscriptionId,
         IReadOnlyList<string> selectedOverrideIds,

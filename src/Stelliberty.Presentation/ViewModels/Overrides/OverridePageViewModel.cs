@@ -2,6 +2,7 @@ using System.Windows.Input;
 using Stelliberty.Application.Diagnostics;
 using Stelliberty.Application.Localization;
 using Stelliberty.Application.Overrides;
+using Stelliberty.Application.Subscriptions;
 using Stelliberty.Domain.Overrides;
 using Stelliberty.Application.Updates;
 using Stelliberty.Presentation.Commands;
@@ -9,8 +10,14 @@ using static Stelliberty.Presentation.ViewModels.OverrideViewModelMapper;
 
 namespace Stelliberty.Presentation.ViewModels;
 
+public sealed record OverridesEditedEventArgs(
+    IReadOnlyList<string> OverrideIds,
+    IReadOnlyList<string> AffectedSubscriptionIds);
+
 public sealed class OverridePageViewModel : ViewModelBase, IDisposable
 {
+    private readonly ISubscriptionStore? _subscriptionStore;
+    private readonly SubscriptionOverrideSelectionUpdater? _selectionUpdater;
     private readonly IOverrideStore? _overrideStore;
     private readonly OverrideImporter? _overrideImporter;
     private readonly OverrideUpdater? _overrideUpdater;
@@ -33,8 +40,11 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
         OverrideUpdater? overrideUpdater = null,
         ILocalOverrideFileReader? localFileReader = null,
         IOverrideFileOpener? overrideFileOpener = null,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        ISubscriptionStore? subscriptionStore = null)
     {
+        _subscriptionStore = subscriptionStore;
+        _selectionUpdater = subscriptionStore is null ? null : new SubscriptionOverrideSelectionUpdater(subscriptionStore, overrideStore);
         _overrideStore = overrideStore;
         _reorderer = overrideStore is null ? null : new OverrideReorderer(overrideStore);
         _metadataUpdater = overrideStore is null ? null : new OverrideMetadataUpdater(overrideStore);
@@ -83,7 +93,7 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
 
     public event EventHandler<(string Message, ToastType Type)>? ToastRequested;
 
-    public event EventHandler<IReadOnlyList<string>>? OverridesEdited;
+    public event EventHandler<OverridesEditedEventArgs>? OverridesEdited;
 
     public event EventHandler<OverrideDeleteResult>? OverrideDeleted;
 
@@ -469,7 +479,7 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        EditDialog.Open(item);
+        EditDialog.Open(item, _subscriptionStore?.LoadSubscriptions());
         RaiseMenuStateChanged();
     }
 
@@ -488,7 +498,8 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
             args.Format,
             args.UpdateProxyMode);
         PersistEditedOverride(updated);
-        OverridesEdited?.Invoke(this, [updated.Id]);
+        var affectedSubscriptionIds = _selectionUpdater?.SaveOverrideSubscriptions(updated.Id, args.SelectedSubscriptionIds) ?? [];
+        OverridesEdited?.Invoke(this, new OverridesEditedEventArgs([updated.Id], affectedSubscriptionIds));
         RaiseOverrideStateChanged();
     }
 
@@ -522,7 +533,7 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
         }
 
         PersistEditedOverride(item, args.Content);
-        OverridesEdited?.Invoke(this, [item.Id]);
+        OverridesEdited?.Invoke(this, new OverridesEditedEventArgs([item.Id], []));
     }
 
     public void ShowDeleteDialog(string? overrideId)

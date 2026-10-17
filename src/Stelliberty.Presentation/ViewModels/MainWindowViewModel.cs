@@ -645,9 +645,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void OnOverridesEdited(object? sender, IReadOnlyList<string> overrideIds)
+    private void OnOverridesEdited(object? sender, OverridesEditedEventArgs args)
     {
-        if (SubscriptionPage.CurrentSubscriptionUsesAnyOverride(overrideIds))
+        if (args.AffectedSubscriptionIds.Count > 0)
+        {
+            SubscriptionPage.RefreshOverrideSelectionFromStore(SubscriptionPage.CurrentSubscriptionId ?? string.Empty);
+        }
+
+        if ((SubscriptionPage.CurrentSubscriptionId is { } currentSubscriptionId
+                && args.AffectedSubscriptionIds.Contains(currentSubscriptionId, StringComparer.Ordinal))
+            || SubscriptionPage.CurrentSubscriptionUsesAnyOverride(args.OverrideIds))
         {
             RefreshSelectedSubscriptionRuntime(SubscriptionPage.CurrentSubscriptionId, "Runtime config refreshed after override edit", "Runtime config refresh failed after override edit");
         }

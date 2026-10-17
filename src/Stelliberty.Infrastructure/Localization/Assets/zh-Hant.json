@@ -417,6 +417,8 @@
   "Overrides.Format.JavaScript": "JavaScript",
   "Overrides.Dialog.Edit.Title": "編輯覆寫",
   "Overrides.Field.Name": "覆寫名稱",
+  "Overrides.Field.Subscriptions": "生效設定檔",
+  "Overrides.Empty.NoSubscriptions": "暫無設定檔，請先新增設定檔。",
   "Overrides.Field.Url": "覆寫網址",
   "Overrides.Field.LocalPath": "本機檔案路徑",
   "Overrides.Placeholder.EditName": "輸入一個覆寫名稱",
