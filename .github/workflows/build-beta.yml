@@ -71,6 +71,13 @@ jobs:
           test -n "${props_version}"
           tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | select(.draft | not) | .tag_name')"
           stable="${props_version}"
+          target=""
+          requested_beta=1
+          if [[ "${props_version}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-beta([0-9]+)$ ]]; then
+            target="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+            requested_beta="$((10#${BASH_REMATCH[4]}))"
+            stable="0.0.0"
+          fi
           while IFS= read -r tag; do
             if [[ "${tag}" =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
               candidate="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
@@ -80,8 +87,11 @@ jobs:
             fi
           done <<< "${tags}"
 
-          IFS=. read -r major minor patch <<< "${stable}"
-          target="${major}.${minor}.$((patch + 1))"
+          if [ -z "${target}" ] || [ "$(printf '%s\n%s\n' "${stable}" "${target}" | sort -V | tail -n 1)" = "${stable}" ]; then
+            IFS=. read -r major minor patch <<< "${stable}"
+            target="${major}.${minor}.$((patch + 1))"
+            requested_beta=1
+          fi
           beta=0
           while IFS= read -r tag; do
             if [[ "${tag}" =~ ^v?${target//./\.}-beta([0-9]+)$ ]] && [ "${BASH_REMATCH[1]}" -gt "${beta}" ]; then
@@ -101,7 +111,11 @@ jobs:
             fi
           fi
 
-          version="${target}-beta$((beta + 1))"
+          next_beta=$((beta + 1))
+          if [ "${requested_beta}" -gt "${next_beta}" ]; then
+            next_beta="${requested_beta}"
+          fi
+          version="${target}-beta${next_beta}"
           printf 'version=%s\ntag=v%s\nprevious_tag=%s\n' "${version}" "${version}" "${previous_tag}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Export beta metadata
