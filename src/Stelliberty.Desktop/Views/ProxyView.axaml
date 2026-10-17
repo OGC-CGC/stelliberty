@@ -15,7 +15,7 @@
         x:DataType="vm:ProxyPageViewModel">
 
     <Grid x:Name="ProxyToolbarHost"
-          Margin="8,0,25,0"
+          Margin="8,6,25,0"
           IsVisible="{Binding HasGroups}"
           ZIndex="10">
       <Border x:Name="ProxyToolbarSurface"

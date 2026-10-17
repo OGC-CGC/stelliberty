@@ -13,7 +13,7 @@
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
                 AutomationProperties.AutomationId="Home.ScrollViewer">
-    <StackPanel DataContext="{Binding HomePage}" Margin="8,2,25,16" Spacing="14"
+    <StackPanel DataContext="{Binding HomePage}" Margin="8,8,25,16" Spacing="14"
                 x:DataType="vm:HomePageViewModel">
 
       <Grid ColumnDefinitions="*,*" ColumnSpacing="14">

@@ -11,38 +11,37 @@
              AutomationProperties.AutomationId="Settings.Root"
              Background="Transparent">
   <Border AutomationProperties.AutomationId="Settings.Page" Background="Transparent">
-    <!-- 页头固定，下方内容区滚动 -->
-    <Grid RowDefinitions="Auto,*" RowSpacing="22">
+    <!-- 页头与设置内容一起滚动，顶部留白随内容滚动。 -->
+    <ScrollViewer x:Name="SettingsScroll"
+                  AutomationProperties.AutomationId="Settings.ScrollViewer"
+                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <Grid RowDefinitions="Auto,Auto" RowSpacing="22" Margin="0,6,0,0">
 
-      <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-        <Button Classes="settings-back"
-                AutomationProperties.AutomationId="Settings.BackButton"
-                IsVisible="{Binding Settings.IsBackVisible}"
-                Command="{Binding Settings.BackCommand}">
-          <iconPacks:PackIconMingCuteIcons Classes="settings-back-icon"
-                                            Kind="ArrowLeftLine" />
-        </Button>
-        <TextBlock x:Name="SettingsHeaderText"
-                   Text="{Binding Settings.HeaderText}"
-                   FontSize="26"
-                   FontWeight="Normal"
-                   VerticalAlignment="Center"
-                   RenderTransformOrigin="50%,50%"
-                   Foreground="{DynamicResource AppTextPrimaryBrush}" />
-      </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+          <Button Classes="settings-back"
+                  AutomationProperties.AutomationId="Settings.BackButton"
+                  IsVisible="{Binding Settings.IsBackVisible}"
+                  Command="{Binding Settings.BackCommand}">
+            <iconPacks:PackIconMingCuteIcons Classes="settings-back-icon"
+                                          Kind="ArrowLeftLine" />
+          </Button>
+          <TextBlock x:Name="SettingsHeaderText"
+                     Text="{Binding Settings.HeaderText}"
+                     FontSize="26"
+                     FontWeight="Normal"
+                     VerticalAlignment="Center"
+                     RenderTransformOrigin="50%,50%"
+                     Foreground="{DynamicResource AppTextPrimaryBrush}" />
+        </StackPanel>
 
-      <!-- 承载全部设置子页面板 -->
-      <ScrollViewer x:Name="SettingsScroll"
-                    Grid.Row="1"
-                    AutomationProperties.AutomationId="Settings.ScrollViewer"
-                    HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid HorizontalAlignment="Stretch" Margin="8,0,25,12">
+        <!-- 承载全部设置子页面板 -->
+        <Grid Grid.Row="1" HorizontalAlignment="Stretch" Margin="8,0,25,12">
           <!-- 设置子页按当前路由创建，避免隐藏面板常驻视觉树。 -->
           <ContentControl x:Name="SettingsContentPanel"
                           HorizontalAlignment="Stretch"
                           RenderTransformOrigin="50%,50%" />
         </Grid>
-      </ScrollViewer>
-    </Grid>
+      </Grid>
+    </ScrollViewer>
   </Border>
 </UserControl>

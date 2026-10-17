@@ -17,7 +17,7 @@
         x:DataType="vm:SubscriptionPageViewModel">
 
       <Border Classes="surface-header"
-            Margin="8,0,25,0"
+            Margin="8,6,25,0"
             AutomationProperties.AutomationId="Subscriptions.Toolbar">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
         <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">

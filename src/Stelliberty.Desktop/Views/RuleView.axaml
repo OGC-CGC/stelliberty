@@ -11,7 +11,7 @@
              Background="Transparent">
   <Grid x:Name="RulePageRoot" RowDefinitions="Auto,*" RowSpacing="16"
         DataContext="{Binding RulePage}" x:DataType="vm:RulePageViewModel">
-    <Border Classes="surface-header" Margin="8,0,25,0" AutomationProperties.AutomationId="Rules.Toolbar">
+    <Border Classes="surface-header" Margin="8,6,25,0" AutomationProperties.AutomationId="Rules.Toolbar">
       <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
         <!-- 主要动作留在标题行，第二行才容得下筛选芯片与搜索框，最小窗宽下不重叠 -->
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
