@@ -197,6 +197,16 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
 
     public string AccentColorSectionTitle => _localization.GetString("Settings.Field.Accent");
 
+    public string AccentHueText => _localization.GetString("Settings.Accent.Hue");
+
+    public string AccentChromaText => _localization.GetString("Settings.Accent.Chroma");
+
+    public string AccentSelectedPreviewText => _localization.GetString("Settings.Accent.SelectedPreview");
+
+    public string LightThemeText => _localization.GetString("Theme.Option.Light");
+
+    public string DarkThemeText => _localization.GetString("Theme.Option.Dark");
+
     public string WindowEffectSectionTitle => _localization.GetString("Settings.Field.WindowEffect");
 
     public string SidebarDividerText => _localization.GetString("Settings.Field.SidebarDivider");
@@ -394,6 +404,11 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         RaiseBackgroundPropertiesChanged();
         OnPropertyChanged(nameof(FieldLabelText));
         OnPropertyChanged(nameof(AccentColorSectionTitle));
+        OnPropertyChanged(nameof(AccentHueText));
+        OnPropertyChanged(nameof(AccentChromaText));
+        OnPropertyChanged(nameof(AccentSelectedPreviewText));
+        OnPropertyChanged(nameof(LightThemeText));
+        OnPropertyChanged(nameof(DarkThemeText));
         OnPropertyChanged(nameof(WindowEffectSectionTitle));
         OnPropertyChanged(nameof(SidebarDividerText));
         OnPropertyChanged(nameof(Options));

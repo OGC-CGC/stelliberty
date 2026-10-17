@@ -10,7 +10,7 @@ internal static class AccentColorPaletteGenerator
     public static AccentColorPalette Generate(Color source, bool isLightTheme)
     {
         var oklch = ToOklch(source);
-        var chroma = NormalizeChroma(oklch.Chroma);
+        var chroma = oklch.Chroma;
         var hue = double.IsNaN(oklch.Hue) ? 0 : oklch.Hue;
         var surface = isLightTheme ? ThemeSurfaceColors.Light : ThemeSurfaceColors.Dark;
         var accentTone = isLightTheme ? 0.54 : 0.78;
@@ -40,7 +40,7 @@ internal static class AccentColorPaletteGenerator
     public static (Color Start, Color Middle, Color End, Color Outline) GenerateBrandTitle(Color source)
     {
         var accent = ToOklch(source);
-        var chroma = NormalizeChroma(accent.Chroma);
+        var chroma = accent.Chroma;
         var hue = double.IsNaN(accent.Hue) ? 0 : accent.Hue;
 
         Color Recolor(string reference)
@@ -75,17 +75,28 @@ internal static class AccentColorPaletteGenerator
         return color;
     }
 
-    private static double NormalizeChroma(double chroma)
+    internal static double GetMaximumChroma(double lightness, double hue)
     {
-        if (chroma < 0.015)
+        // 二分查找当前明度、色相在 sRGB 色域中的边界。
+        var lower = 0d;
+        var upper = 0.5;
+        for (var i = 0; i < 24; i++)
         {
-            return 0;
+            var middle = (lower + upper) / 2;
+            if (IsInGamut(ToLinearRgb(ToOklab(lightness, middle, hue))))
+            {
+                lower = middle;
+            }
+            else
+            {
+                upper = middle;
+            }
         }
 
-        return Math.Clamp(chroma, 0.025, 0.18);
+        return lower;
     }
 
-    private static Color FromOklch(double lightness, double chroma, double hue)
+    internal static Color FromOklch(double lightness, double chroma, double hue)
     {
         for (var i = 0; i < 32; i++)
         {
@@ -102,7 +113,7 @@ internal static class AccentColorPaletteGenerator
         return ToColor(ToLinearRgb(new Oklab(lightness, 0, 0)));
     }
 
-    private static Oklch ToOklch(Color color)
+    internal static Oklch ToOklch(Color color)
     {
         var lab = ToOklab(color);
         var chroma = Math.Sqrt(lab.A * lab.A + lab.B * lab.B);
@@ -190,7 +201,7 @@ internal static class AccentColorPaletteGenerator
 
     private readonly record struct Oklab(double Lightness, double A, double B);
 
-    private readonly record struct Oklch(double Lightness, double Chroma, double Hue);
+    internal readonly record struct Oklch(double Lightness, double Chroma, double Hue);
 
     private readonly record struct LinearRgb(double R, double G, double B);
 }
