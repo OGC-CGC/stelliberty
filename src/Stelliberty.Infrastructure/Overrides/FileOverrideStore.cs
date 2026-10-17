@@ -60,6 +60,12 @@ public sealed class FileOverrideStore(string rootDirectory) : IOverrideStore
         return ContentPath(overrideProfile);
     }
 
+    public DateTimeOffset? GetContentLastModifiedAt(string overrideId)
+    {
+        var path = GetContentPath(overrideId);
+        return File.Exists(path) ? new DateTimeOffset(File.GetLastWriteTimeUtc(path)) : null;
+    }
+
     public void Delete(string overrideId)
     {
         var overrides = LoadOverrides().ToList();

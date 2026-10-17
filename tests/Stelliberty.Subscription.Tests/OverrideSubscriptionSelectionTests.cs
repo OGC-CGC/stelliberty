@@ -76,6 +76,8 @@ public sealed class OverrideSubscriptionSelectionTests
         public void SaveContent(string subscriptionId, string originalContent) => throw new NotSupportedException();
         public string ReadContent(string subscriptionId) => throw new NotSupportedException();
         public string GetContentPath(string subscriptionId) => throw new NotSupportedException();
+
+        public DateTimeOffset? GetContentLastModifiedAt(string subscriptionId) => null;
         public void Delete(string subscriptionId) => throw new NotSupportedException();
     }
 }

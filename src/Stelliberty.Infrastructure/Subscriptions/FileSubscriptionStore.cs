@@ -98,6 +98,12 @@ public sealed class FileSubscriptionStore(string rootDirectory) : ISubscriptionS
         return Path.Combine(_subscriptionsDirectory, $"{subscriptionId}.yaml");
     }
 
+    public DateTimeOffset? GetContentLastModifiedAt(string subscriptionId)
+    {
+        var path = GetContentPath(subscriptionId);
+        return File.Exists(path) ? new DateTimeOffset(File.GetLastWriteTimeUtc(path)) : null;
+    }
+
     private sealed record SubscriptionListFile(IReadOnlyList<Subscription> Subscriptions);
 
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

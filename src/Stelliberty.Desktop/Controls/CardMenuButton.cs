@@ -34,7 +34,6 @@ public sealed class CardMenuButton : Button
     public static readonly StyledProperty<string> MoreItemTextProperty =
         AvaloniaProperty.Register<CardMenuButton, string>(nameof(MoreItemText), "More");
 
-    private const double MenuWidth = 220d;
     private const double WindowMargin = 16d;
     private static readonly TimeSpan OpenDuration = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan CloseDuration = TimeSpan.FromMilliseconds(140);
@@ -67,7 +66,6 @@ public sealed class CardMenuButton : Button
         _menu = new Border
         {
             Classes = { "card-menu-panel" },
-            Width = MenuWidth,
             Child = _itemsPanel,
             RenderTransformOrigin = new RelativePoint(1, 0, RelativeUnit.Relative),
             Transitions = CreateOpenTransitions(),
@@ -312,8 +310,8 @@ public sealed class CardMenuButton : Button
 
         var content = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("24,*"),
-            ColumnSpacing = 14,
+            ColumnDefinitions = new ColumnDefinitions("16,*"),
+            ColumnSpacing = 10,
             Children =
             {
                 icon,
@@ -372,8 +370,9 @@ public sealed class CardMenuButton : Button
             return;
         }
 
-        _menu.Measure(new Size(MenuWidth, double.PositiveInfinity));
         var bounds = _layer.Bounds;
+        _menu.MaxWidth = Math.Max(0, bounds.Width - 2 * WindowMargin);
+        _menu.Measure(new Size(_menu.MaxWidth, double.PositiveInfinity));
         var menuSize = _menu.DesiredSize;
         var left = Math.Clamp(origin.X - menuSize.Width, WindowMargin, Math.Max(WindowMargin, bounds.Width - menuSize.Width - WindowMargin));
         var top = Math.Clamp(origin.Y + 6, WindowMargin, Math.Max(WindowMargin, bounds.Height - menuSize.Height - WindowMargin));

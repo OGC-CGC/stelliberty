@@ -121,11 +121,12 @@
                     <Border Grid.Row="1" Classes="list-info-strip">
                       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                         <iconPacks:PackIconMingCuteIcons Width="13" Height="13"
-                                                         Kind="TimeLine"
+                                                         Kind="{Binding LastUpdatedIconType}"
                                                          VerticalAlignment="Center"
                                                          Foreground="{DynamicResource AppTextTertiaryBrush}" />
                         <TextBlock Grid.Column="1"
                                    Text="{Binding LastUpdatedText}"
+                                   ToolTip.Tip="{Binding LastUpdatedTooltip}"
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                    FontSize="12.5"

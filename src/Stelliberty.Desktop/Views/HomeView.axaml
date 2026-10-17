@@ -39,59 +39,66 @@
               </Button>
             </Grid>
 
-            <StackPanel Grid.Row="1" Margin="0,14,0,0" Spacing="10" IsVisible="{Binding HomeCardHasContent}">
-              <TextBlock Text="{Binding HomeCardNameText}" Classes="home-subscription-name large"
-                         AutomationProperties.AutomationId="Home.SubscriptionNameText" />
-              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <Border Classes="list-pill" Tag="{Binding HomeCardTypeTag}">
-                  <TextBlock Text="{Binding HomeCardTypeText}" />
-                </Border>
-                <Border Classes="list-pill" Tag="{Binding HomeCardSourceFormatTag}">
-                  <TextBlock Text="{Binding HomeCardSourceFormatText}" />
-                </Border>
+            <Grid Grid.Row="1" Margin="0,14,0,0" RowDefinitions="Auto,*" RowSpacing="10"
+                  IsVisible="{Binding HomeCardHasContent}">
+              <StackPanel Spacing="10" VerticalAlignment="Top">
+                <TextBlock Text="{Binding HomeCardNameText}" Classes="home-subscription-name large"
+                           AutomationProperties.AutomationId="Home.SubscriptionNameText" />
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Border Classes="list-pill" Tag="{Binding HomeCardTypeTag}">
+                    <TextBlock Text="{Binding HomeCardTypeText}" />
+                  </Border>
+                  <Border Classes="list-pill" Tag="{Binding HomeCardSourceFormatTag}">
+                    <TextBlock Text="{Binding HomeCardSourceFormatText}" />
+                  </Border>
+                </StackPanel>
               </StackPanel>
-              <Grid Classes="subscription-stat-band" ColumnDefinitions="*,*,*">
-                <StackPanel>
-                  <TextBlock Classes="field-label" Text="{loc:Loc Home.Subscription.Field.Groups}" />
-                  <TextBlock Classes="subscription-stat-value" Text="{Binding HomeCardGroupCountText}" />
-                </StackPanel>
-                <StackPanel Grid.Column="1">
-                  <TextBlock Classes="field-label" Text="{loc:Loc Home.Subscription.Field.Nodes}" />
-                  <TextBlock Classes="subscription-stat-value" Text="{Binding HomeCardNodeCountText}" />
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                  <TextBlock Classes="field-label" Text="{loc:Loc Home.Subscription.Field.AvgDelay}" />
-                  <TextBlock Classes="subscription-stat-value" Text="{Binding HomeCardAverageDelayText}" />
-                </StackPanel>
-              </Grid>
-              <StackPanel Classes="subscription-traffic" IsVisible="{Binding HomeCardHasTrafficInfo}">
-                <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Classes="field-label" Text="{Binding HomeCardTrafficLabel}"
-                             AutomationProperties.AutomationId="Home.SubscriptionTrafficLabel"
-                             ToolTip.Tip="{Binding HomeCardTrafficTooltip}" />
-                  <TextBlock Grid.Column="1" Text="{Binding HomeCardTrafficText}"
-                             AutomationProperties.AutomationId="Home.SubscriptionTrafficText"
-                             ToolTip.Tip="{Binding HomeCardTrafficTooltip}" />
+
+              <StackPanel Grid.Row="1" Spacing="10" VerticalAlignment="Bottom">
+                <Grid Classes="subscription-stat-band" ColumnDefinitions="*,*,*">
+                  <StackPanel>
+                    <TextBlock Classes="field-label" Text="{loc:Loc Home.Subscription.Field.Groups}" />
+                    <TextBlock Classes="subscription-stat-value" Text="{Binding HomeCardGroupCountText}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Classes="field-label" Text="{loc:Loc Home.Subscription.Field.Nodes}" />
+                    <TextBlock Classes="subscription-stat-value" Text="{Binding HomeCardNodeCountText}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2">
+                    <TextBlock Classes="field-label" Text="{loc:Loc Home.Subscription.Field.AvgDelay}" />
+                    <TextBlock Classes="subscription-stat-value" Text="{Binding HomeCardAverageDelayText}" />
+                  </StackPanel>
                 </Grid>
-                <ProgressBar Maximum="1" Height="6" Value="{Binding HomeCardTrafficRatio}"
-                             Foreground="{DynamicResource AppAccentBrush}"
-                             AutomationProperties.AutomationId="Home.SubscriptionTrafficBar"
-                             IsVisible="{Binding HomeCardHasTrafficTotal}" />
+                <StackPanel Classes="subscription-traffic" IsVisible="{Binding HomeCardHasTrafficInfo}">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="field-label" Text="{Binding HomeCardTrafficLabel}"
+                               AutomationProperties.AutomationId="Home.SubscriptionTrafficLabel"
+                               ToolTip.Tip="{Binding HomeCardTrafficTooltip}" />
+                    <TextBlock Grid.Column="1" Text="{Binding HomeCardTrafficText}"
+                               AutomationProperties.AutomationId="Home.SubscriptionTrafficText"
+                               ToolTip.Tip="{Binding HomeCardTrafficTooltip}" />
+                  </Grid>
+                  <ProgressBar Maximum="1" Height="6" Value="{Binding HomeCardTrafficRatio}"
+                               Foreground="{DynamicResource AppAccentBrush}"
+                               AutomationProperties.AutomationId="Home.SubscriptionTrafficBar"
+                               IsVisible="{Binding HomeCardHasTrafficTotal}" />
+                </StackPanel>
+                <Grid Classes="subscription-time-row" ColumnDefinitions="*,*">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <iconPacks:PackIconMingCuteIcons Kind="{Binding HomeCardUpdatedIconType}" />
+                    <TextBlock Text="{Binding HomeCardUpdatedText}"
+                               ToolTip.Tip="{Binding HomeCardUpdatedTooltip}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                              HorizontalAlignment="Right" IsVisible="{Binding HomeCardHasExpireInfo}">
+                    <iconPacks:PackIconMingCuteIcons Kind="CalendarLine" />
+                    <TextBlock Text="{Binding HomeCardExpireText}"
+                               AutomationProperties.AutomationId="Home.SubscriptionExpireText"
+                               ToolTip.Tip="{Binding HomeCardExpireTooltip}" />
+                  </StackPanel>
+                </Grid>
               </StackPanel>
-              <Grid Classes="subscription-time-row" ColumnDefinitions="*,*">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <iconPacks:PackIconMingCuteIcons Kind="TimeLine" />
-                  <TextBlock Text="{Binding HomeCardUpdatedText}" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                            HorizontalAlignment="Right" IsVisible="{Binding HomeCardHasExpireInfo}">
-                  <iconPacks:PackIconMingCuteIcons Kind="CalendarLine" />
-                  <TextBlock Text="{Binding HomeCardExpireText}"
-                             AutomationProperties.AutomationId="Home.SubscriptionExpireText"
-                             ToolTip.Tip="{Binding HomeCardExpireTooltip}" />
-                </StackPanel>
-              </Grid>
-            </StackPanel>
+            </Grid>
           </Grid>
         </Border>
 

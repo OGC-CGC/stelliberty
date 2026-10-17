@@ -11,6 +11,8 @@ public interface IOverrideStore
 
     string GetContentPath(string overrideId);
 
+    DateTimeOffset? GetContentLastModifiedAt(string overrideId);
+
     void SaveOverrides(IReadOnlyList<OverrideProfile> overrides);
 
     void Delete(string overrideId);

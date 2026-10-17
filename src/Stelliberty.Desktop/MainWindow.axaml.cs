@@ -37,6 +37,7 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<AppNavigationPage, ContentControl> _pageHosts = new();
     private readonly Dictionary<AppNavigationPage, Dictionary<string, Vector>> _pageScrollOffsets = new();
     private readonly DispatcherTimer _hiddenReleaseTimer;
+    private readonly DispatcherTimer _relativeTimeTimer;
     private IReadOnlyDictionary<SettingsSubPage, Vector>? _settingsScrollOffsets;
     private bool _pageHostsReady;
     private ContentControl? _visiblePageHost;
@@ -64,6 +65,8 @@ public sealed partial class MainWindow : Window
         _windowStateService = new WindowStateService(settingsStore, settings);
         _hiddenReleaseTimer = new DispatcherTimer { Interval = HiddenReleaseDelay };
         _hiddenReleaseTimer.Tick += OnHiddenReleaseTimerTick;
+        _relativeTimeTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        _relativeTimeTimer.Tick += OnRelativeTimeTimerTick;
         InitializeComponent();
         ApplyPlatformWindowDecorations();
         DataContextChanged += OnDataContextChanged;
@@ -150,6 +153,7 @@ public sealed partial class MainWindow : Window
             DispatcherPriority.Background);
 #endif
         _hasOpened = true;
+        _relativeTimeTimer.Start();
         if (DataContext is MainWindowViewModel viewModel)
         {
             _systemAccentColorService.Attach(this, viewModel.Theme);
@@ -881,6 +885,8 @@ public sealed partial class MainWindow : Window
         CancelPendingPageTransition();
         _hiddenReleaseTimer.Stop();
         _hiddenReleaseTimer.Tick -= OnHiddenReleaseTimerTick;
+        _relativeTimeTimer.Stop();
+        _relativeTimeTimer.Tick -= OnRelativeTimeTimerTick;
         CloseAccentPicker();
         _visiblePageHost = null;
         ClearPageHostContents();
@@ -1033,6 +1039,12 @@ public sealed partial class MainWindow : Window
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
     }
 
+    private void OnRelativeTimeTimerTick(object? sender, EventArgs args)
+    {
+        _attachedViewModel?.SubscriptionPage.RefreshRelativeTimes();
+        _attachedViewModel?.OverridePage.RefreshRelativeTimes();
+    }
+
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs args)
     {
         if (args.Property == WindowStateProperty)
@@ -1048,6 +1060,8 @@ public sealed partial class MainWindow : Window
         if (IsVisible)
         {
             _hiddenReleaseTimer.Stop();
+            OnRelativeTimeTimerTick(this, EventArgs.Empty);
+            _relativeTimeTimer.Start();
             if (_attachedViewModel is not null)
             {
                 // 隐藏可能中断首次加载，恢复时按当前导航重建完整显示状态。
@@ -1057,6 +1071,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        _relativeTimeTimer.Stop();
         if (_isShutdownRequested || _isShutdownPreparing)
         {
             return;

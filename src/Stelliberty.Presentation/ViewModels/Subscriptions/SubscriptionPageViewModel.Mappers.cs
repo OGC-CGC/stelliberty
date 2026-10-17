@@ -34,7 +34,10 @@ public sealed partial class SubscriptionPageViewModel
             sourceFormat: subscription.SourceFormat,
             localization: _localization,
             hasTrafficInfo: subscription.TrafficInfo is not null,
-            providerSnapshot: _providerSnapshots.GetValueOrDefault(subscription.Id));
+            providerSnapshot: _providerSnapshots.GetValueOrDefault(subscription.Id),
+            getLocalLastModifiedAt: subscription.IsLocalFile && _subscriptionStore is not null
+                ? () => _subscriptionStore.GetContentLastModifiedAt(subscription.Id)
+                : null);
     }
 
     private static SubscriptionOverrideOptionViewModel ToOverrideOption(OverrideProfile overrideProfile)

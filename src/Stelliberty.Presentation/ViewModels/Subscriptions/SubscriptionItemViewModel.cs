@@ -10,6 +10,8 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
     private bool _isCurrent;
     private bool _isUpdating;
     private readonly ILocalizationService? _localization;
+    private readonly Func<DateTimeOffset?>? _getLocalLastModifiedAt;
+    private DateTimeOffset? _localLastModifiedAt;
     private readonly bool _hasSubscriptionTrafficInfo;
     private SubscriptionProviderSnapshot? _providerSnapshot;
     private SubscriptionProviderTrafficSummary? _providerSummary;
@@ -38,12 +40,15 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         SubscriptionSourceFormat sourceFormat = SubscriptionSourceFormat.StandardClash,
         ILocalizationService? localization = null,
         bool hasTrafficInfo = false,
-        SubscriptionProviderSnapshot? providerSnapshot = null)
+        SubscriptionProviderSnapshot? providerSnapshot = null,
+        Func<DateTimeOffset?>? getLocalLastModifiedAt = null)
     {
         Id = id;
         Name = name;
         SourceLocation = sourceLocation;
         IsLocalFile = isLocalFile;
+        _getLocalLastModifiedAt = getLocalLastModifiedAt;
+        _localLastModifiedAt = getLocalLastModifiedAt?.Invoke();
         UserAgent = userAgent;
         AgeSecretKey = ageSecretKey;
         AutoTestDelayIntervalMinutes = autoTestDelayIntervalMinutes;
@@ -160,7 +165,24 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         _ => Localize("Subscriptions.Proxy.Direct")
     };
 
-    public string LastUpdatedText => LastUpdatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? Localize("Common.NotUpdated");
+    private DateTimeOffset? DisplayedLastUpdatedAt => IsLocalFile ? _localLastModifiedAt : LastUpdatedAt;
+
+    public string LastUpdatedIconType => IsLocalFile ? "FileLine" : "Download3Line";
+
+    public string LastUpdatedText => RelativeTime.Format(DisplayedLastUpdatedAt, _localization);
+
+    public string LastUpdatedTooltip => DisplayedLastUpdatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? Localize("Common.NotUpdated");
+
+    public void RefreshRelativeTime()
+    {
+        if (IsLocalFile)
+        {
+            _localLastModifiedAt = _getLocalLastModifiedAt?.Invoke();
+        }
+
+        OnPropertyChanged(nameof(LastUpdatedText));
+        OnPropertyChanged(nameof(LastUpdatedTooltip));
+    }
 
     public string OverrideSummaryText => OverrideCount > 0
         ? string.Format(Localize("Subscriptions.Override.Count"), OverrideCount)
@@ -211,7 +233,9 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         ? DateTimeOffset.FromUnixTimeSeconds(info.Expire).ToLocalTime().ToString("yyyy-MM-dd")
         : Localize("Common.Unknown");
 
-    public bool IsExpireInfoVisible => !IsLocalFile || HasProviderTraffic || TrafficExpire > 0;
+    public bool IsExpireInfoVisible => !IsLocalFile;
+
+    public bool IsTrafficInfoVisible => !IsLocalFile;
 
     public int LastUpdatedInfoColumnSpan => IsExpireInfoVisible ? 1 : 2;
 
@@ -290,7 +314,8 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
             SourceFormat,
             _localization,
             _hasSubscriptionTrafficInfo,
-            _providerSnapshot);
+            _providerSnapshot,
+            _getLocalLastModifiedAt);
     }
 
     public void ApplyProviderSnapshot(SubscriptionProviderSnapshot snapshot)
@@ -354,6 +379,7 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(AutoTestDelayText));
         OnPropertyChanged(nameof(UpdateProxyText));
         OnPropertyChanged(nameof(LastUpdatedText));
+        OnPropertyChanged(nameof(LastUpdatedTooltip));
         OnPropertyChanged(nameof(OverrideSummaryText));
         OnPropertyChanged(nameof(ChainProxySummaryText));
         RefreshTrafficLanguage();

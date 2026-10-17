@@ -4,7 +4,7 @@
   <Styles.Resources>
     <Thickness x:Key="ComboBoxPopupBorderPadding">0</Thickness>
     <Thickness x:Key="ComboBoxPopupBorderMargin">12</Thickness>
-    <CornerRadius x:Key="ComboBoxPopupBoxCornerRadius">10</CornerRadius>
+    <CornerRadius x:Key="ComboBoxPopupBoxCornerRadius">16</CornerRadius>
     <BoxShadows x:Key="ComboBoxPopupBoxShadow">0 4 12 -2 #26000000</BoxShadows>
   </Styles.Resources>
 
@@ -31,7 +31,7 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="ItemsPanel">
       <ItemsPanelTemplate>
-        <StackPanel Margin="4" Spacing="4" />
+        <StackPanel Margin="4" Spacing="2" />
       </ItemsPanelTemplate>
     </Setter>
   </Style>
@@ -51,10 +51,10 @@
   </Style>
 
   <Style Selector="ComboBoxItem">
-    <Setter Property="MinHeight" Value="36" />
-    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="10,5" />
     <Setter Property="Margin" Value="0" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
     <Setter Property="FontSize" Value="13" />

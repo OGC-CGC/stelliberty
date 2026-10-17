@@ -6,7 +6,10 @@ namespace Stelliberty.Presentation.ViewModels;
 
 internal static class OverrideViewModelMapper
 {
-    public static OverrideItemViewModel ToOverrideItem(OverrideProfile overrideProfile, ILocalizationService? localization = null)
+    public static OverrideItemViewModel ToOverrideItem(
+        OverrideProfile overrideProfile,
+        ILocalizationService? localization = null,
+        IOverrideStore? overrideStore = null)
     {
         return new OverrideItemViewModel(
             overrideProfile.Id,
@@ -17,6 +20,9 @@ internal static class OverrideViewModelMapper
             overrideProfile.UpdateProxyMode,
             isCreatedBlank: string.IsNullOrWhiteSpace(overrideProfile.SourceLocation),
             lastUpdatedAt: overrideProfile.LastUpdatedAt,
-            localization: localization);
+            localization: localization,
+            getLocalLastModifiedAt: overrideProfile.SourceType == OverrideSourceType.Local && overrideStore is not null
+                ? () => overrideStore.GetContentLastModifiedAt(overrideProfile.Id)
+                : null);
     }
 }

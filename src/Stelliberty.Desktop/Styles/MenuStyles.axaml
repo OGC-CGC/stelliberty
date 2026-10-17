@@ -1,23 +1,23 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Style Selector="Border.card-menu-panel">
-    <Setter Property="Padding" Value="8" />
+    <Setter Property="Padding" Value="4" />
     <Setter Property="Background" Value="{DynamicResource AppPopupSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="16" />
     <Setter Property="BoxShadow" Value="{DynamicResource AppDropdownShadow}" />
   </Style>
 
   <Style Selector="Button.card-menu-row">
-    <Setter Property="MinHeight" Value="44" />
-    <Setter Property="Padding" Value="14,11" />
-    <Setter Property="Margin" Value="0,2" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">

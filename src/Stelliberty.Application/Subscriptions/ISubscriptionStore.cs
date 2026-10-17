@@ -18,5 +18,7 @@ public interface ISubscriptionStore
     // 为 shell 功能暴露正文文件路径，不泄露目录结构。
     string GetContentPath(string subscriptionId);
 
+    DateTimeOffset? GetContentLastModifiedAt(string subscriptionId);
+
     void Delete(string subscriptionId);
 }

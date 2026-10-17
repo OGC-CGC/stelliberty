@@ -99,6 +99,14 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<OverrideItemViewModel> Overrides => _overrides.ToList();
 
+    public void RefreshRelativeTimes()
+    {
+        foreach (var item in _overrides)
+        {
+            item.RefreshRelativeTime();
+        }
+    }
+
     public string? CurrentOverrideId => _currentOverrideId;
 
     public PageLoadingState Loading { get; } = new();
@@ -162,7 +170,7 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
         var currentOverrideId = _currentOverrideId;
         var deleteDialogOverrideId = _deleteDialogOverrideId;
         _overrides.Clear();
-        _overrides.AddRange(overrideProfiles.Select(overrideProfile => ToOverrideItem(overrideProfile, _localization)));
+        _overrides.AddRange(overrideProfiles.Select(overrideProfile => ToOverrideItem(overrideProfile, _localization, _overrideStore)));
         _currentOverrideId = _overrides.Any(item => item.Id == currentOverrideId) ? currentOverrideId : null;
         _deleteDialogOverrideId = _overrides.Any(item => item.Id == deleteDialogOverrideId) ? deleteDialogOverrideId : null;
         RaiseOverrideStateChanged();
@@ -192,7 +200,7 @@ public sealed class OverridePageViewModel : ViewModelBase, IDisposable
 
     public OverrideItemViewModel ApplyImportedOverride(OverrideProfile overrideProfile)
     {
-        var item = ToOverrideItem(overrideProfile, _localization);
+        var item = ToOverrideItem(overrideProfile, _localization, _overrideStore);
         AddOverride(item);
         AddDialog.Close();
         return item;

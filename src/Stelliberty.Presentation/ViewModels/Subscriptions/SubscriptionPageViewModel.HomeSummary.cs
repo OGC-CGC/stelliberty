@@ -22,6 +22,22 @@ public sealed partial class SubscriptionPageViewModel
     public string HomeCardUpdatedText => CurrentSubscription?.LastUpdatedText
         ?? Localize("Common.NotUpdated");
 
+    public string HomeCardUpdatedTooltip => CurrentSubscription?.LastUpdatedTooltip
+        ?? Localize("Common.NotUpdated");
+
+    public string HomeCardUpdatedIconType => CurrentSubscription?.LastUpdatedIconType ?? "Download3Line";
+
+    public void RefreshRelativeTimes()
+    {
+        foreach (var subscription in _subscriptions)
+        {
+            subscription.RefreshRelativeTime();
+        }
+
+        OnPropertyChanged(nameof(HomeCardUpdatedText));
+        OnPropertyChanged(nameof(HomeCardUpdatedTooltip));
+    }
+
     public string HomeCardExpireText => CurrentSubscription is null
         ? Localize("Common.Unknown")
         : CurrentSubscription.ExpireText;
@@ -38,7 +54,8 @@ public sealed partial class SubscriptionPageViewModel
 
     public double HomeCardTrafficRatio => CurrentSubscription?.TrafficUsageRatio ?? 0;
 
-    public bool HomeCardHasTrafficInfo => CurrentSubscription is { HasTrafficInfo: true } or { HasProviderTraffic: true };
+    public bool HomeCardHasTrafficInfo => CurrentSubscription is { IsLocalFile: false }
+        and ({ HasTrafficInfo: true } or { HasProviderTraffic: true });
 
     public bool HomeCardHasTrafficTotal => CurrentSubscription?.HasTrafficTotal == true;
 
@@ -72,6 +89,8 @@ public sealed partial class SubscriptionPageViewModel
         OnPropertyChanged(nameof(HomeCardSourceFormatText));
         OnPropertyChanged(nameof(HomeCardSourceFormatTag));
         OnPropertyChanged(nameof(HomeCardUpdatedText));
+        OnPropertyChanged(nameof(HomeCardUpdatedTooltip));
+        OnPropertyChanged(nameof(HomeCardUpdatedIconType));
         OnPropertyChanged(nameof(HomeCardExpireText));
         OnPropertyChanged(nameof(HomeCardTrafficText));
         OnPropertyChanged(nameof(HomeCardTrafficLabel));

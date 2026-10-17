@@ -1,6 +1,7 @@
 using Stelliberty.Application.Localization;
 using Stelliberty.Application.Overrides;
 using Stelliberty.Domain.Overrides;
+using Stelliberty.Presentation.Formatting;
 
 namespace Stelliberty.Presentation.ViewModels;
 
@@ -11,6 +12,8 @@ public sealed class OverrideItemViewModel : ViewModelBase
     private OverrideFormat _format;
     private OverrideUpdateProxyMode _updateProxyMode;
     private bool _isUpdating;
+    private readonly Func<DateTimeOffset?>? _getLocalLastModifiedAt;
+    private DateTimeOffset? _localLastModifiedAt;
 
     public OverrideItemViewModel(
         string id,
@@ -21,13 +24,16 @@ public sealed class OverrideItemViewModel : ViewModelBase
         OverrideUpdateProxyMode updateProxyMode = OverrideUpdateProxyMode.Direct,
         bool isCreatedBlank = false,
         DateTimeOffset? lastUpdatedAt = null,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        Func<DateTimeOffset?>? getLocalLastModifiedAt = null)
     {
         Id = id;
         _name = name;
         _sourceLocation = sourceLocation;
         _format = format;
         IsLocalFile = isLocalFile;
+        _getLocalLastModifiedAt = getLocalLastModifiedAt;
+        _localLastModifiedAt = getLocalLastModifiedAt?.Invoke();
         _updateProxyMode = updateProxyMode;
         IsCreatedBlank = isCreatedBlank;
         LastUpdatedAt = lastUpdatedAt;
@@ -82,7 +88,24 @@ public sealed class OverrideItemViewModel : ViewModelBase
 
     public string SourcePillTag => IsLocalFile ? "local" : "remote";
 
-    public string LastUpdatedText => LastUpdatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? Localize("Common.NotUpdated");
+    private DateTimeOffset? DisplayedLastUpdatedAt => IsLocalFile ? _localLastModifiedAt : LastUpdatedAt;
+
+    public string LastUpdatedIconType => IsLocalFile ? "FileLine" : "Download3Line";
+
+    public string LastUpdatedText => RelativeTime.Format(DisplayedLastUpdatedAt, Localization);
+
+    public string LastUpdatedTooltip => DisplayedLastUpdatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? Localize("Common.NotUpdated");
+
+    public void RefreshRelativeTime()
+    {
+        if (IsLocalFile)
+        {
+            _localLastModifiedAt = _getLocalLastModifiedAt?.Invoke();
+        }
+
+        OnPropertyChanged(nameof(LastUpdatedText));
+        OnPropertyChanged(nameof(LastUpdatedTooltip));
+    }
 
     public string RowAutomationId => $"Overrides.Row.{Id}";
 
@@ -139,6 +162,7 @@ public sealed class OverrideItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(FormatText));
         OnPropertyChanged(nameof(SourceText));
         OnPropertyChanged(nameof(LastUpdatedText));
+        OnPropertyChanged(nameof(LastUpdatedTooltip));
         OnPropertyChanged(nameof(MenuOptions));
     }
 
