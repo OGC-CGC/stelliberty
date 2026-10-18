@@ -4,5 +4,7 @@ public enum ConnectionFilterLevel
 {
     All,
     Direct,
-    Proxy
+    Proxy,
+    Active,
+    Disconnected
 }

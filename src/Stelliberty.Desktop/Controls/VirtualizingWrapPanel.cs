@@ -46,10 +46,13 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel
     public static readonly StyledProperty<double> EdgePaddingProperty =
         AvaloniaProperty.Register<VirtualizingWrapPanel, double>(nameof(EdgePadding), 4d);
 
+    public static readonly StyledProperty<bool> SingleColumnProperty =
+        AvaloniaProperty.Register<VirtualizingWrapPanel, bool>(nameof(SingleColumn));
+
     static VirtualizingWrapPanel()
     {
         AffectsMeasure<VirtualizingWrapPanel>(MinItemWidthProperty, ItemHeightProperty,
-            RowSpacingProperty, ColumnSpacingProperty, EdgePaddingProperty);
+            RowSpacingProperty, ColumnSpacingProperty, EdgePaddingProperty, SingleColumnProperty);
     }
 
     public VirtualizingWrapPanel()
@@ -62,6 +65,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel
     public double RowSpacing { get => GetValue(RowSpacingProperty); set => SetValue(RowSpacingProperty, value); }
     public double ColumnSpacing { get => GetValue(ColumnSpacingProperty); set => SetValue(ColumnSpacingProperty, value); }
     public double EdgePadding { get => GetValue(EdgePaddingProperty); set => SetValue(EdgePaddingProperty, value); }
+    public bool SingleColumn { get => GetValue(SingleColumnProperty); set => SetValue(SingleColumnProperty, value); }
 
     private void OnEffectiveViewportChanged(object? sender, EffectiveViewportChangedEventArgs e)
     {
@@ -96,7 +100,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel
         var inner = Math.Max(0, availableWidth - 2 * EdgePadding);
         var columnSpacing = ColumnSpacing;
         var step = MinItemWidth + columnSpacing;
-        var columns = step > 0 ? Math.Max(1, (int)Math.Floor((inner + columnSpacing) / step)) : 1;
+        var columns = !SingleColumn && step > 0 ? Math.Max(1, (int)Math.Floor((inner + columnSpacing) / step)) : 1;
         var itemWidth = (inner - (columns - 1) * columnSpacing) / columns;
         return (columns, Math.Max(0, itemWidth));
     }

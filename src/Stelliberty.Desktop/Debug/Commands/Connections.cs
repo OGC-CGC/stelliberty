@@ -71,6 +71,8 @@ internal static partial class DebugCommands
     {
         return value.ToLowerInvariant() switch
         {
+            "active" => ConnectionFilterLevel.Active,
+            "disconnected" => ConnectionFilterLevel.Disconnected,
             "direct" => ConnectionFilterLevel.Direct,
             "proxy" => ConnectionFilterLevel.Proxy,
             _ => ConnectionFilterLevel.All

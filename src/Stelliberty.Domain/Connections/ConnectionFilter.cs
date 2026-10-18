@@ -9,6 +9,8 @@ public sealed class ConnectionFilter
     {
         IEnumerable<ConnectionInfo> filtered = level switch
         {
+            ConnectionFilterLevel.Active => connections.Where(connection => connection.IsActive),
+            ConnectionFilterLevel.Disconnected => connections.Where(connection => !connection.IsActive),
             ConnectionFilterLevel.Direct => connections.Where(connection => connection.IsDirect),
             ConnectionFilterLevel.Proxy => connections.Where(connection => !connection.IsDirect),
             _ => connections

@@ -27,6 +27,8 @@ public sealed class ConnectionRowViewModel : ViewModelBase
 
     public string Id => _connection.Id;
 
+    public bool IsActive => _connection.IsActive;
+
     public string RowAutomationId => $"Connections.Row.{Id}";
 
     public string CloseAutomationId => $"Connections.Row.{Id}.CloseButton";
@@ -62,7 +64,7 @@ public sealed class ConnectionRowViewModel : ViewModelBase
         _ => "neutral"
     };
 
-    public string DurationText => FormatDuration(_connection.Start, _now ?? DateTimeOffset.Now);
+    public string DurationText => FormatDuration(_connection.Start, _connection.DisconnectedAt ?? _now ?? DateTimeOffset.Now);
 
     public string Rule => _connection.Rule;
 
@@ -74,9 +76,15 @@ public sealed class ConnectionRowViewModel : ViewModelBase
 
     public string DownloadSpeedText => $"↓ {ByteSize.Format(_connection.DownloadSpeed)}/s";
 
+    public string SpeedText => $"{UploadSpeedText}  {DownloadSpeedText}";
+
+    public string UploadAmountText => ByteSize.Format(_connection.Upload);
+
+    public string DownloadAmountText => ByteSize.Format(_connection.Download);
+
     public string TrafficText => $"{ByteSize.Format(_connection.Upload)} / {ByteSize.Format(_connection.Download)}";
 
-    public string ChainSummaryText => string.Join(" / ", _connection.RoutePath);
+    public string ChainSummaryText => string.Join(" → ", _connection.RoutePath);
 
     private static string FormatDuration(DateTimeOffset start, DateTimeOffset now)
     {

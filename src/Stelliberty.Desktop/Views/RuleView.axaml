@@ -103,7 +103,7 @@
                     Command="{Binding ResetRuleOrderCommand}"
                     IsEnabled="{Binding CanResetRuleOrder}"
                     ToolTip.Tip="{loc:Loc Rules.Action.ResetOrder}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="EraserAiLine" />
+              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="EraserLine" />
             </Button>
           </StackPanel>
         </Grid>

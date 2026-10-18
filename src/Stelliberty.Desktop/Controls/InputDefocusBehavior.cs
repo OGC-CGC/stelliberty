@@ -50,6 +50,7 @@ public static class InputDefocusBehavior
     internal static bool IsInsideInteractiveControl(Visual source)
     {
         return source.FindAncestorOfType<TextBox>(includeSelf: true) is not null
+            || source.FindAncestorOfType<SelectableTextBlock>(includeSelf: true) is not null
             || source.FindAncestorOfType<CodeEditor>(includeSelf: true) is not null
             || source.FindAncestorOfType<Button>(includeSelf: true) is not null
             || source.FindAncestorOfType<ToggleButton>(includeSelf: true) is not null

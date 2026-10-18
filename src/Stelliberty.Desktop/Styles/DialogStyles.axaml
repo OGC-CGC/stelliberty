@@ -486,20 +486,20 @@
   </Style>
 
   <!-- 连接详情行 -->
-  <Style Selector="TextBlock.connection-detail-value">
+  <Style Selector="SelectableTextBlock.connection-detail-value">
     <Setter Property="FontSize" Value="12.5" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
-  <Style Selector="TextBlock.connection-detail-value[Tag=mono]">
-    <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
+  <Style Selector="SelectableTextBlock.connection-detail-value[Tag=mono]">
+    <Setter Property="FontFamily" Value="avares://stelliberty_ui/Assets/fonts#Maple Mono CN" />
     <Setter Property="FontSize" Value="12" />
   </Style>
-  <Style Selector="TextBlock.connection-detail-value[Tag=accent]">
+  <Style Selector="SelectableTextBlock.connection-detail-value[Tag=accent]">
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
     <Setter Property="FontWeight" Value="Normal" />
   </Style>
-  <Style Selector="TextBlock.connection-detail-value[Tag=muted]">
+  <Style Selector="SelectableTextBlock.connection-detail-value[Tag=muted]">
     <Setter Property="Foreground" Value="{DynamicResource AppTextTertiaryBrush}" />
   </Style>
 

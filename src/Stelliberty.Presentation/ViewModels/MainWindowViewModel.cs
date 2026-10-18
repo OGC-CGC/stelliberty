@@ -192,7 +192,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         // 模式偏好是应用级状态；先注入主页和代理基线，再加载订阅。
         HomePage.ApplyOutboundMode(OutboundModeParser.TryParse(_settings.OutboundMode) ?? Domain.Proxies.OutboundMode.Rule);
         HomePage.RefreshNetworkConnection();
-        ConnectionPage = connectionPage ?? new ConnectionPageViewModel(homeProxyClient, _now, localization);
+        ConnectionPage = connectionPage ?? new ConnectionPageViewModel(
+            homeProxyClient, _now, localization,
+            _settings.ConnectionSortMode, _settings.IsConnectionSortDescending,
+            (mode, descending) =>
+            {
+                _settings.ConnectionSortMode = mode;
+                _settings.IsConnectionSortDescending = descending;
+                _settingsStore.Save(_settings);
+            },
+            _settings.ConnectionPageLayout,
+            layout =>
+            {
+                _settings.ConnectionPageLayout = layout;
+                _settingsStore.Save(_settings);
+            });
         ProxyPage = proxyPage ?? new ProxyPageViewModel(localization: localization);
         HomePage.PropertyChanged += OnHomePagePropertyChanged;
         // 初始化代理页出站模式和核心运行状态。
@@ -720,6 +734,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void SyncRestoredSettingsPages()
     {
+        ConnectionPage.RefreshSortPreferences(_settings.ConnectionSortMode, _settings.IsConnectionSortDescending);
+        ConnectionPage.RefreshLayoutPreference(_settings.ConnectionPageLayout);
         Language.RefreshFromSettings();
         Theme.RefreshFromSettings();
         AppBehavior.RefreshFromSettings();
@@ -774,11 +790,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             HomePage.RefreshRuntime();
         }
-        else if (CurrentPage == NavigationPage.Connections
-            && !ConnectionPage.IsMonitoringPaused
-            && !ConnectionPage.Loading.IsLoading)
+        if (!ConnectionPage.Loading.IsLoading)
         {
-            // 连接是动态数据；可见且未暂停页面每秒拉取，避免入口为空。
+            // 持续采样连接；页面暂停只冻结显示，仍记录后台断开事件。
             _ = ConnectionPage.RefreshConnectionsAsync();
         }
     }

@@ -13,12 +13,25 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
 {
     private readonly DialogCloseResetScheduler _detailCloseReset = new();
     private readonly ConnectionFilter _filter = new();
+    private readonly ConnectionSorter _sorter = new();
     private readonly ConnectionListReducer _reducer = new();
     private readonly IProxyCoreClient? _coreClient;
     private readonly ILocalizationService? _localization;
     private readonly Func<DateTimeOffset> _now;
+    private readonly Action<string, bool>? _persistSort;
+    private readonly Action<string>? _persistLayout;
+    private bool _isListLayout;
+    private ConnectionSortMode _sortMode;
+    private bool _sortDescending;
+    private IReadOnlyList<SelectionOption<ConnectionSortMode>> _sortOptions = [];
+    private bool _isRefreshingSortOptions;
     private ConnectionListState _state = ConnectionListState.Initial;
+    // 后台采样与页面快照分离，暂停只冻结页面数据。
+    private ConnectionListState _displayState = ConnectionListState.Initial;
+    private CoreTrafficRate? _sampledTrafficRate;
+    private DateTimeOffset? _displayTime;
     private ConnectionFilterLevel _filterLevel = ConnectionFilterLevel.All;
+    private ConnectionFilterLevel _routeFilterLevel = ConnectionFilterLevel.All;
     private string _searchKeyword = string.Empty;
     private ConnectionInfo? _selectedConnection;
     private bool _isDetailVisible;
@@ -31,6 +44,9 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     private long _totalDownloadSpeed;
     private CoreTrafficRate? _latestTrafficRate;
     private IReadOnlyList<ConnectionDetailGroupViewModel> _detailGroups = [];
+    private ConnectionDetailRowViewModel? _detailTrafficRow;
+    private ConnectionDetailRowViewModel? _detailSpeedRow;
+    private ConnectionDetailRowViewModel? _detailDurationRow;
     private IReadOnlyList<string> _detailLines = [];
     private string _detailText = string.Empty;
     private IReadOnlyList<ConnectionInfo> _filteredConnections = [];
@@ -41,11 +57,22 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     private string _detailSummaryDuration = string.Empty;
     private string _detailSummaryRule = string.Empty;
 
-    public ConnectionPageViewModel(IProxyCoreClient? coreClient = null, Func<DateTimeOffset>? now = null, ILocalizationService? localization = null)
+    public ConnectionPageViewModel(
+        IProxyCoreClient? coreClient = null,
+        Func<DateTimeOffset>? now = null,
+        ILocalizationService? localization = null,
+        string initialSortMode = "Default",
+        bool initialSortDescending = false,
+        Action<string, bool>? persistSort = null,
+        string initialLayout = "Grid",
+        Action<string>? persistLayout = null)
     {
         _coreClient = coreClient;
         _localization = localization;
         _now = now ?? (() => DateTimeOffset.Now);
+        _persistSort = persistSort;
+        _persistLayout = persistLayout;
+        _sortOptions = CreateSortOptions();
         if (_localization is not null)
         {
             _localization.LanguageChanged += OnLanguageChanged;
@@ -53,20 +80,154 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         ShowAllConnectionsCommand = new RelayCommand(() => SetFilterLevel(ConnectionFilterLevel.All));
         ShowDirectConnectionsCommand = new RelayCommand(() => SetFilterLevel(ConnectionFilterLevel.Direct));
         ShowProxyConnectionsCommand = new RelayCommand(() => SetFilterLevel(ConnectionFilterLevel.Proxy));
+        ShowActiveConnectionsCommand = new RelayCommand(() => SetFilterLevel(ConnectionFilterLevel.Active));
+        ShowDisconnectedConnectionsCommand = new RelayCommand(() => SetFilterLevel(ConnectionFilterLevel.Disconnected));
+        SelectRouteFilterCommand = new RelayCommand<ConnectionFilterMenuItemViewModel>(option =>
+        {
+            if (option is not null)
+            {
+                SetRouteFilterLevel(option.Level);
+            }
+        });
         RefreshConnectionsCommand = new RelayCommand(() => RefreshConnectionsAsync().SafeFireAndForget("RefreshConnections"));
         TogglePauseCommand = new RelayCommand(TogglePause);
         CloseConnectionCommand = new RelayCommand<string>(connectionId => CloseConnectionAsync(connectionId).SafeFireAndForget("CloseConnection"));
         CloseAllConnectionsCommand = new RelayCommand(() => CloseAllConnectionsAsync().SafeFireAndForget("CloseAllConnections"));
         ShowDetailCommand = new RelayCommand<string>(ShowDetail);
         CloseDetailCommand = new RelayCommand(CloseDetail);
+        ToggleSortDirectionCommand = new RelayCommand(() => SetSorting(_sortMode, !_sortDescending));
+        SelectSortModeCommand = new RelayCommand<ConnectionSortMenuItemViewModel>(option =>
+        {
+            if (option is not null)
+            {
+                SetSorting(option.Mode, _sortDescending);
+            }
+        });
+        SortAscendingCommand = new RelayCommand(() => SetSorting(_sortMode, false));
+        SortDescendingCommand = new RelayCommand(() => SetSorting(_sortMode, true));
+        ToggleLayoutCommand = new RelayCommand(ToggleLayout);
+        RefreshSortPreferences(initialSortMode, initialSortDescending);
+        RefreshLayoutPreference(initialLayout);
     }
 
     public PageLoadingState Loading { get; } = new();
-    public IReadOnlyList<ConnectionInfo> Connections => _state.Connections;
+    public IReadOnlyList<ConnectionInfo> Connections => _displayState.Connections;
+
+    private IEnumerable<ConnectionInfo> DisplayConnections =>
+        Connections.Concat(_displayState.DisconnectedConnections);
 
     public IReadOnlyList<ConnectionInfo> FilteredConnections => _filteredConnections;
 
     public IReadOnlyList<ConnectionRowViewModel> FilteredConnectionRows => _visibleConnectionRows;
+
+    public bool IsListLayout => _isListLayout;
+
+    public double CardItemHeight => _isListLayout ? 157 : 213;
+
+    public string LayoutToggleIcon => _isListLayout ? "LayoutGridLine" : "Rows4Line";
+
+    public string LayoutToggleTooltip => Localize(_isListLayout
+        ? "Connections.Layout.SwitchToGrid"
+        : "Connections.Layout.SwitchToList");
+
+    public ICommand ToggleLayoutCommand { get; }
+
+    private void ToggleLayout()
+    {
+        var layout = _isListLayout ? "Grid" : "List";
+        _persistLayout?.Invoke(layout);
+        RefreshLayoutPreference(layout);
+    }
+
+    public void RefreshLayoutPreference(string layout)
+    {
+        _isListLayout = string.Equals(layout, "List", StringComparison.OrdinalIgnoreCase);
+        OnPropertyChanged(nameof(IsListLayout));
+        OnPropertyChanged(nameof(CardItemHeight));
+        OnPropertyChanged(nameof(LayoutToggleIcon));
+        OnPropertyChanged(nameof(LayoutToggleTooltip));
+    }
+
+    public IReadOnlyList<SelectionOption<ConnectionSortMode>> SortOptions => _sortOptions;
+
+    private IReadOnlyList<SelectionOption<ConnectionSortMode>> CreateSortOptions() =>
+        Enum.GetValues<ConnectionSortMode>()
+            .Select(mode => new SelectionOption<ConnectionSortMode>(mode, Localize($"Connections.Sort.{mode}")))
+            .ToArray();
+
+    public SelectionOption<ConnectionSortMode> SelectedSortOption
+    {
+        get => SortOptions.First(option => option.Value == _sortMode);
+        set
+        {
+            if (value is not null && !_isRefreshingSortOptions)
+            {
+                SetSorting(value.Value, _sortDescending);
+            }
+        }
+    }
+
+    public bool IsSortActive => _sortMode != ConnectionSortMode.Default;
+
+    public IReadOnlyList<ConnectionSortMenuItemViewModel> SortMenuOptions =>
+        SortOptions.Select(option => new ConnectionSortMenuItemViewModel(
+            option.Value, option.DisplayName, option.Value == _sortMode, SelectSortModeCommand)).ToArray();
+
+    public bool IsSortAscending => !_sortDescending;
+
+    public bool IsSortDescending => _sortDescending;
+
+    public string SortMenuTooltip => $"{SelectedSortOption.DisplayName} · {SortDirectionTooltip}";
+
+    public ICommand SelectSortModeCommand { get; }
+
+    public ICommand SortAscendingCommand { get; }
+
+    public ICommand SortDescendingCommand { get; }
+
+    public string SortDirectionIcon => _sortDescending ? "ArrowDownLine" : "ArrowUpLine";
+
+    public string SortDirectionTooltip => Localize(_sortDescending
+        ? "Connections.Sort.Descending"
+        : "Connections.Sort.Ascending");
+
+    public ICommand ToggleSortDirectionCommand { get; }
+
+    public void RefreshSortPreferences(string mode, bool descending)
+    {
+        _sortMode = Enum.TryParse<ConnectionSortMode>(mode, out var parsed) && Enum.IsDefined(parsed)
+            ? parsed
+            : ConnectionSortMode.Default;
+        _sortDescending = descending;
+        RaiseSortStateChanged();
+    }
+
+    private void SetSorting(ConnectionSortMode mode, bool descending)
+    {
+        if (_sortMode == mode && _sortDescending == descending)
+        {
+            return;
+        }
+
+        _persistSort?.Invoke(mode.ToString(), descending);
+        _sortMode = mode;
+        _sortDescending = descending;
+        RaiseSortStateChanged();
+    }
+
+    private void RaiseSortStateChanged()
+    {
+        RefreshFilteredConnections();
+        OnPropertyChanged(nameof(SelectedSortOption));
+        OnPropertyChanged(nameof(IsSortActive));
+        OnPropertyChanged(nameof(SortMenuOptions));
+        OnPropertyChanged(nameof(IsSortAscending));
+        OnPropertyChanged(nameof(IsSortDescending));
+        OnPropertyChanged(nameof(SortMenuTooltip));
+        OnPropertyChanged(nameof(SortDirectionIcon));
+        OnPropertyChanged(nameof(SortDirectionTooltip));
+        OnPropertyChanged(nameof(FilteredConnections));
+    }
 
     public int TotalConnectionCount => Connections.Count;
 
@@ -92,9 +253,44 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     public bool IsDirectConnectionsSelected => _filterLevel == ConnectionFilterLevel.Direct;
     public bool IsProxyConnectionsSelected => _filterLevel == ConnectionFilterLevel.Proxy;
 
+    public bool IsActiveConnectionsSelected => _filterLevel == ConnectionFilterLevel.Active;
+    public bool IsDisconnectedConnectionsSelected => _filterLevel == ConnectionFilterLevel.Disconnected;
+
+    public bool IsRouteFilterActive => _routeFilterLevel != ConnectionFilterLevel.All;
+
+    public IReadOnlyList<ConnectionFilterMenuItemViewModel> RouteFilterOptions =>
+    [
+        new(ConnectionFilterLevel.All, Localize("Common.Filter.All"), _routeFilterLevel == ConnectionFilterLevel.All),
+        new(ConnectionFilterLevel.Direct, Localize("Connections.Filter.Direct"), _routeFilterLevel == ConnectionFilterLevel.Direct),
+        new(ConnectionFilterLevel.Proxy, Localize("Connections.Filter.Proxy"), _routeFilterLevel == ConnectionFilterLevel.Proxy)
+    ];
+
+    public string RouteFilterTooltip => $"{Localize("Connections.Filter.Route")}: {RouteFilterOptions.First(option => option.IsSelected).DisplayName}";
+
+    public ICommand SelectRouteFilterCommand { get; }
+
+    private void SetRouteFilterLevel(ConnectionFilterLevel level)
+    {
+        if (_routeFilterLevel == level)
+        {
+            return;
+        }
+
+        _routeFilterLevel = level;
+        RaiseRouteFilterStateChanged();
+        RaiseConnectionStateChanged();
+    }
+
+    private void RaiseRouteFilterStateChanged()
+    {
+        OnPropertyChanged(nameof(RouteFilterOptions));
+        OnPropertyChanged(nameof(IsRouteFilterActive));
+        OnPropertyChanged(nameof(RouteFilterTooltip));
+    }
+
     public bool IsEmptyVisible => _filteredConnections.Count == 0;
 
-    public string EmptyText => Connections.Count == 0
+    public string EmptyText => !DisplayConnections.Any()
         ? Localize("Connections.Empty.NoConnections")
         : Localize("Connections.Empty.NoMatches");
 
@@ -136,6 +332,8 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     public ICommand ShowAllConnectionsCommand { get; }
     public ICommand ShowDirectConnectionsCommand { get; }
     public ICommand ShowProxyConnectionsCommand { get; }
+    public ICommand ShowActiveConnectionsCommand { get; }
+    public ICommand ShowDisconnectedConnectionsCommand { get; }
     public ICommand RefreshConnectionsCommand { get; }
     public ICommand TogglePauseCommand { get; }
     public ICommand CloseConnectionCommand { get; }
@@ -145,15 +343,13 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
 
     public void ApplyIncoming(IReadOnlyList<ConnectionInfo> connections, CoreTrafficRate? trafficRate = null, bool updateTrafficRate = true)
     {
-        var wasPaused = _state.IsMonitoringPaused;
         _state = _reducer.ApplyIncoming(_state, connections, _now());
-        if (!wasPaused && updateTrafficRate)
+        if (updateTrafficRate)
         {
-            _latestTrafficRate = trafficRate;
+            _sampledTrafficRate = trafficRate;
         }
 
-        SyncSelectedConnectionDetail();
-        RaiseConnectionStateChanged();
+        PublishSampledState();
         Loading.CompleteInitialLoad();
     }
 
@@ -187,15 +383,33 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void ApplyTrafficRate(CoreTrafficRate? trafficRate)
+    private void PublishSampledState()
     {
-        if (trafficRate is null || _state.IsMonitoringPaused)
+        if (_state.IsMonitoringPaused)
         {
             return;
         }
 
-        _latestTrafficRate = trafficRate;
-        RaiseTotalSpeedChanged();
+        _displayState = _state;
+        _displayTime = _now();
+        _latestTrafficRate = _sampledTrafficRate;
+        SyncSelectedConnectionDetail();
+        RaiseConnectionStateChanged();
+    }
+
+    private void ApplyTrafficRate(CoreTrafficRate? trafficRate)
+    {
+        if (trafficRate is null)
+        {
+            return;
+        }
+
+        _sampledTrafficRate = trafficRate;
+        if (!_state.IsMonitoringPaused)
+        {
+            _latestTrafficRate = trafficRate;
+            RaiseTotalSpeedChanged();
+        }
     }
 
     public void SetFilterLevel(ConnectionFilterLevel level)
@@ -212,7 +426,9 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     public void TogglePause()
     {
         _state = _reducer.TogglePause(_state);
-        RaiseConnectionStateChanged();
+        PublishSampledState();
+        OnPropertyChanged(nameof(IsMonitoringPaused));
+        OnPropertyChanged(nameof(MonitoringToggleTooltip));
     }
 
     public void CloseConnection(string? connectionId)
@@ -232,7 +448,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (Connections.All(connection => connection.Id != connectionId))
+        if (_state.Connections.All(connection => connection.Id != connectionId))
         {
             return;
         }
@@ -249,9 +465,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
             _closedConnectionIds.RemoveAt(0);
         }
 
-        _state = result.State;
-        CloseDetailWhenSelectedConnectionIsMissing();
-        RaiseConnectionStateChanged();
+        RecordClosedConnections(_state.Connections.Where(connection => connection.Id != connectionId).ToList());
     }
 
     public async Task CloseAllConnectionsAsync()
@@ -263,24 +477,31 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         }
 
         _hasClosedAllConnections = true;
-        _state = result.State;
-        CloseDetailWhenSelectedConnectionIsMissing();
-        RaiseConnectionStateChanged();
+        RecordClosedConnections([]);
     }
 
     // 外部核心操作可能关闭全部连接；同步本地状态时不再二次调用核心。
     public void ApplyAllConnectionsClosed()
     {
-        var result = new ConnectionOperations(_state.Connections).CloseAllConnections(_state.IsMonitoringPaused);
         _hasClosedAllConnections = true;
-        _state = result.State;
-        CloseDetailWhenSelectedConnectionIsMissing();
-        RaiseConnectionStateChanged();
+        RecordClosedConnections([]);
+    }
+
+    private void RecordClosedConnections(IReadOnlyList<ConnectionInfo> remainingConnections)
+    {
+        // 关闭操作不是流量采样，保留其他连接的速率和采样基准。
+        var sampledAt = _state.SampledAt;
+        _state = _reducer.ApplyIncoming(_state, remainingConnections, _now()) with
+        {
+            Connections = remainingConnections,
+            SampledAt = sampledAt
+        };
+        PublishSampledState();
     }
 
     public void ShowDetail(string? connectionId)
     {
-        var connection = Connections.FirstOrDefault(connection => connection.Id == connectionId);
+        var connection = DisplayConnections.FirstOrDefault(connection => connection.Id == connectionId);
         if (connection is null)
         {
             BeginCloseDetail();
@@ -298,16 +519,6 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         BeginCloseDetail();
     }
 
-    private void CloseDetailWhenSelectedConnectionIsMissing()
-    {
-        if (_selectedConnection is null || Connections.Any(connection => connection.Id == _selectedConnection.Id))
-        {
-            return;
-        }
-
-        BeginCloseDetail();
-    }
-
     private void SyncSelectedConnectionDetail()
     {
         if (_selectedConnection is null || !_isDetailVisible)
@@ -315,15 +526,24 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var currentConnection = Connections.FirstOrDefault(connection => connection.Id == _selectedConnection.Id);
+        var currentConnection = DisplayConnections.FirstOrDefault(connection => connection.Id == _selectedConnection.Id);
         if (currentConnection is null)
         {
             BeginCloseDetail();
             return;
         }
 
-        _selectedConnection = currentConnection;
-        RaiseDetailStateChanged();
+        // 固定信息使用打开详情时的快照，仅同步时长和流量数据。
+        _selectedConnection = _selectedConnection with
+        {
+            Start = currentConnection.Start,
+            DisconnectedAt = currentConnection.DisconnectedAt,
+            Upload = currentConnection.Upload,
+            Download = currentConnection.Download,
+            UploadSpeed = currentConnection.UploadSpeed,
+            DownloadSpeed = currentConnection.DownloadSpeed
+        };
+        RefreshDetailMetrics();
     }
 
     private void BeginCloseDetail()
@@ -376,7 +596,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         }
 
         var metadata = connection.Metadata;
-        var row = new ConnectionRowViewModel(connection, _now());
+        var row = new ConnectionRowViewModel(connection, _displayTime ?? _now());
         var sourceAddress = FormatEndpoint(metadata.SourceIp, metadata.SourcePort);
         var destinationAddress = FormatEndpoint(
             string.IsNullOrWhiteSpace(metadata.DestinationIp) ? metadata.Host : metadata.DestinationIp,
@@ -387,6 +607,10 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
             : metadata.Description;
         var ruleText = $"{connection.Rule} {connection.RulePayload}".Trim();
 
+        _detailTrafficRow = Row(Localize("Connections.Detail.Total"), row.TrafficText);
+        _detailSpeedRow = Row(Localize("Connections.Detail.Speed"), $"{row.UploadSpeedText}  {row.DownloadSpeedText}");
+        _detailDurationRow = Row(Localize("Connections.Card.Duration"), row.DurationText);
+
         var groups = new[]
         {
             Group(Localize("Connections.Detail.Group.Basic"), [
@@ -396,26 +620,26 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
                 Row(Localize("Connections.Detail.Network"), metadata.Network.ToUpperInvariant())
             ]),
             Group(Localize("Connections.Detail.Group.Address"), [
-                Row(Localize("Connections.Detail.Source"), sourceAddress, "mono"),
+                Row(Localize("Connections.Detail.Source"), sourceAddress, canCopy: true),
                 Row(Localize("Connections.Detail.SourceGeoIp"), string.Join(", ", metadata.SourceGeoIp)),
                 Row(Localize("Connections.Detail.SourceAsn"), metadata.SourceIpAsn, "muted"),
-                Row(Localize("Connections.Detail.Destination"), destinationAddress, "mono"),
+                Row(Localize("Connections.Detail.Destination"), destinationAddress, canCopy: true),
                 Row(Localize("Connections.Detail.DestinationGeoIp"), string.Join(", ", metadata.DestinationGeoIp)),
                 Row(Localize("Connections.Detail.DestinationAsn"), metadata.DestinationIpAsn, "muted"),
-                Row(Localize("Connections.Detail.RemoteDestination"), metadata.RemoteDestination, "mono"),
-                Row(Localize("Connections.Detail.Host"), metadata.Host, "mono"),
-                Row(Localize("Connections.Detail.SniffHost"), metadata.SniffHost, "accent")
+                Row(Localize("Connections.Detail.RemoteDestination"), metadata.RemoteDestination, canCopy: true),
+                Row(Localize("Connections.Detail.Host"), metadata.Host, canCopy: true),
+                Row(Localize("Connections.Detail.SniffHost"), metadata.SniffHost, "accent", canCopy: true)
             ]),
             Group(Localize("Connections.Detail.Group.Inbound"), [
                 Row(Localize("Connections.Detail.InboundName"), metadata.InboundName),
-                Row(Localize("Connections.Detail.InboundAddress"), inboundAddress, "mono"),
+                Row(Localize("Connections.Detail.InboundAddress"), inboundAddress, canCopy: true),
                 Row(Localize("Connections.Detail.InboundUser"), metadata.InboundUser)
             ]),
             Group(Localize("Connections.Detail.Group.Process"), [
                 Row(Localize("Connections.Card.Process"), metadata.Process, "accent"),
-                Row(Localize("Connections.Detail.Path"), metadata.ProcessPath, "mono"),
-                // UID 仅 Unix 有意义，Windows 核心恒返回 0，置空由 Group 过滤
-                Row("UID", OperatingSystem.IsWindows() ? string.Empty : metadata.Uid?.ToString() ?? string.Empty, "mono")
+                Row(Localize("Connections.Detail.Path"), metadata.ProcessPath, canCopy: true),
+                // Windows 不显示 UID；缺失或为 0 时置空，由 Group 过滤。
+                Row("UID", OperatingSystem.IsWindows() || metadata.Uid is null or 0 ? string.Empty : metadata.Uid.Value.ToString(), canCopy: true)
             ]),
             Group(Localize("Connections.Detail.Group.Rule"), [
                 Row(Localize("Connections.Card.Rule"), ruleText),
@@ -424,17 +648,17 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
                 Row(Localize("Connections.Card.Chain"), row.ChainSummaryText, "accent")
             ]),
             Group(Localize("Connections.Detail.Group.Advanced"), [
-                Row("DSCP", metadata.Dscp == 0 ? string.Empty : metadata.Dscp.ToString(), "mono"),
+                Row("DSCP", metadata.Dscp == 0 ? string.Empty : metadata.Dscp.ToString()),
                 Row(Localize("Connections.Detail.DnsMode"), metadata.DnsMode),
                 Row(Localize("Connections.Detail.SpecialProxy"), metadata.SpecialProxy),
                 Row(Localize("Connections.Detail.SpecialRules"), metadata.SpecialRules)
             ]),
             Group(Localize("Connections.Detail.Group.Traffic"), [
-                Row(Localize("Connections.Detail.Total"), row.TrafficText, "mono"),
-                Row(Localize("Connections.Detail.Speed"), $"{row.UploadSpeedText}  {row.DownloadSpeedText}", "mono")
+                _detailTrafficRow,
+                _detailSpeedRow
             ]),
             Group(Localize("Connections.Detail.Group.Meta"), [
-                Row(Localize("Connections.Card.Duration"), FormatDuration(connection.Start, _now()), "mono"),
+                _detailDurationRow,
                 Row(Localize("Connections.Detail.ConnectionId"), connection.Id, "mono")
             ])
         };
@@ -446,9 +670,9 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         return new ConnectionDetailGroupViewModel(title, rows.Where(item => !string.IsNullOrWhiteSpace(item.Value)).ToList());
     }
 
-    private static ConnectionDetailRowViewModel Row(string label, string value, string emphasis = "")
+    private static ConnectionDetailRowViewModel Row(string label, string value, string emphasis = "", bool canCopy = false)
     {
-        return new ConnectionDetailRowViewModel(label, value, emphasis);
+        return new ConnectionDetailRowViewModel(label, value, emphasis, canCopy);
     }
 
     private static string FormatEndpoint(string host, string port)
@@ -502,8 +726,10 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     // 缓存筛选行，让匹配的 Id 序列复用 VM 并保留滚动状态。
     private void RefreshFilteredConnections()
     {
-        _filteredConnections = _filter.Apply(_state.Connections, _filterLevel, _searchKeyword);
-        var now = _now();
+        var now = _displayTime ?? _now();
+        var filtered = _filter.Apply(DisplayConnections.ToList(), _filterLevel, _searchKeyword);
+        filtered = _filter.Apply(filtered, _routeFilterLevel, string.Empty);
+        _filteredConnections = _sorter.Apply(filtered, _sortMode, _sortDescending, now);
         if (ConnectionRowsMatch(_filteredConnections))
         {
             for (var index = 0; index < _filteredConnections.Count; index++)
@@ -563,6 +789,8 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsAllConnectionsSelected));
         OnPropertyChanged(nameof(IsDirectConnectionsSelected));
         OnPropertyChanged(nameof(IsProxyConnectionsSelected));
+        OnPropertyChanged(nameof(IsActiveConnectionsSelected));
+        OnPropertyChanged(nameof(IsDisconnectedConnectionsSelected));
         OnPropertyChanged(nameof(SearchKeyword));
         OnPropertyChanged(nameof(IsEmptyVisible));
         OnPropertyChanged(nameof(EmptyText));
@@ -570,12 +798,15 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(ClosedConnectionIds));
     }
 
-    // 仅在选择或语言变化时重建详情视图，不随列表刷新重建。
+    // 仅在打开、关闭详情或切换语言时重建固定内容。
     private void RebuildSelectedConnectionDetail()
     {
         if (_selectedConnection is null)
         {
             _detailGroups = [];
+            _detailTrafficRow = null;
+            _detailSpeedRow = null;
+            _detailDurationRow = null;
             _detailLines = [];
             _detailText = string.Empty;
             _detailSummaryChain = string.Empty;
@@ -586,7 +817,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var row = new ConnectionRowViewModel(_selectedConnection, _now());
+        var row = new ConnectionRowViewModel(_selectedConnection, _displayTime ?? _now());
         _detailGroups = BuildDetailGroups(_selectedConnection);
         _detailLines = BuildDetailLinesFromGroups(_detailGroups);
         _detailText = BuildDetailTextFromGroups(_detailGroups);
@@ -597,6 +828,29 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         _detailSummaryDownload = row.DownloadSpeedText;
         _detailSummaryDuration = row.DurationText;
         _detailSummaryRule = $"{_selectedConnection.Rule} {_selectedConnection.RulePayload}".Trim();
+    }
+
+    private void RefreshDetailMetrics()
+    {
+        if (_selectedConnection is null)
+        {
+            return;
+        }
+
+        var row = new ConnectionRowViewModel(_selectedConnection, _displayTime ?? _now());
+        var changed = SetProperty(ref _detailSummaryUpload, row.UploadSpeedText, nameof(DetailSummaryUpload));
+        changed |= SetProperty(ref _detailSummaryDownload, row.DownloadSpeedText, nameof(DetailSummaryDownload));
+        changed |= SetProperty(ref _detailSummaryDuration, row.DurationText, nameof(DetailSummaryDuration));
+        changed |= _detailTrafficRow?.UpdateValue(row.TrafficText) ?? false;
+        changed |= _detailSpeedRow?.UpdateValue($"{row.UploadSpeedText}  {row.DownloadSpeedText}") ?? false;
+        changed |= _detailDurationRow?.UpdateValue(row.DurationText) ?? false;
+        if (changed)
+        {
+            _detailLines = BuildDetailLinesFromGroups(_detailGroups);
+            _detailText = BuildDetailTextFromGroups(_detailGroups);
+            OnPropertyChanged(nameof(SelectedConnectionDetailLines));
+            OnPropertyChanged(nameof(SelectedConnectionDetailText));
+        }
     }
 
     private void RaiseDetailStateChanged()
@@ -625,8 +879,23 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
 
     private void OnLanguageChanged(object? sender, EventArgs args)
     {
+        // 替换本地化选项时，忽略下拉框清空或重选产生的临时回写。
+        _isRefreshingSortOptions = true;
+        try
+        {
+            _sortOptions = CreateSortOptions();
+            OnPropertyChanged(nameof(SortOptions));
+            OnPropertyChanged(nameof(SelectedSortOption));
+        }
+        finally
+        {
+            _isRefreshingSortOptions = false;
+        }
         RaiseConnectionStateChanged();
+        RaiseSortStateChanged();
         RaiseDetailStateChanged();
+        RaiseRouteFilterStateChanged();
+        OnPropertyChanged(nameof(LayoutToggleTooltip));
     }
 
     private string Localize(string key) => _localization?.GetString(key) ?? key;

@@ -24,8 +24,6 @@
                     Stretch="Uniform"
                     Fill="{TemplateBinding Foreground}"
                     UseLayoutRounding="False" />
-              <iconPacks:PackIconLayerView Layers="{TemplateBinding Layers}"
-                                           Foreground="{TemplateBinding Foreground}" />
             </Grid>
           </Viewbox>
         </Grid>

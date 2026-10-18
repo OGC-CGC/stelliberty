@@ -71,8 +71,33 @@ public sealed class MonitoringBusinessRulesTests
         Assert.Equal(["proxy-via-group"], proxy.Select(connection => connection.Id));
     }
 
-    [Fact(DisplayName = "Connection reducer freezes when paused and clamps sample window")]
-    public void ConnectionReducerFreezesWhenPausedAndClampsSampleWindow()
+    [Fact(DisplayName = "Route filtering composes with connection state and search")]
+    public void RouteFilteringComposesWithConnectionStateAndSearch()
+    {
+        var filter = new ConnectionFilter();
+        IReadOnlyList<ConnectionInfo> connections =
+        [
+            new("active-direct", Metadata: new(Host: "example.com"), Chains: ["DIRECT"]),
+            new("active-proxy", Metadata: new(Host: "example.com"), Chains: ["HK", "Proxy"]),
+            new("closed-proxy", Metadata: new(Host: "example.com"), Chains: ["HK", "Proxy"],
+                DisconnectedAt: DateTimeOffset.UnixEpoch),
+            new("other-proxy", Metadata: new(Host: "other.test"), Chains: ["HK", "Proxy"])
+        ];
+
+        var active = filter.Apply(connections, ConnectionFilterLevel.Active, "example.com");
+        Assert.Equal(new[] { "active-proxy" }, filter.Apply(active, ConnectionFilterLevel.Proxy,
+            string.Empty).Select(connection => connection.Id));
+        Assert.Equal(new[] { "active-direct" }, filter.Apply(active, ConnectionFilterLevel.Direct,
+            string.Empty).Select(connection => connection.Id));
+        var closed = filter.Apply(connections, ConnectionFilterLevel.Disconnected, "example.com");
+        Assert.Equal(new[] { "closed-proxy" }, filter.Apply(closed, ConnectionFilterLevel.Proxy,
+            string.Empty).Select(connection => connection.Id));
+        Assert.Empty(filter.Apply(closed, ConnectionFilterLevel.Direct, string.Empty));
+        Assert.Equal(active, filter.Apply(active, ConnectionFilterLevel.All, string.Empty));
+    }
+
+    [Fact(DisplayName = "Connection reducer keeps sampling when display is paused and clamps sample window")]
+    public void ConnectionReducerKeepsSamplingWhenPausedAndClampsSampleWindow()
     {
         var reducer = new ConnectionListReducer();
         var first = reducer.ApplyIncoming(
@@ -84,14 +109,113 @@ public sealed class MonitoringBusinessRulesTests
             [Connection("c1", upload: 1000, download: 500)],
             DateTimeOffset.UnixEpoch.AddMilliseconds(100));
         var paused = reducer.TogglePause(second);
-        var frozen = reducer.ApplyIncoming(
+        var sampled = reducer.ApplyIncoming(
             paused,
             [Connection("c1", upload: 2000, download: 1000)],
             DateTimeOffset.UnixEpoch.AddSeconds(1));
 
         Assert.Equal(4000, second.Connections[0].UploadSpeed);
         Assert.Equal(2000, second.Connections[0].DownloadSpeed);
-        Assert.Equal(second.Connections[0].Upload, frozen.Connections[0].Upload);
+        Assert.Equal(2000, sampled.Connections[0].Upload);
+        Assert.True(sampled.IsMonitoringPaused);
+        Assert.Equal(DateTimeOffset.UnixEpoch.AddSeconds(1), sampled.SampledAt);
+    }
+
+    [Fact(DisplayName = "Disconnected connections retain their last data and original disconnect time while paused")]
+    public void DisconnectedConnectionsRetainLastDataAndDisconnectTimeWhilePaused()
+    {
+        var reducer = new ConnectionListReducer();
+        var first = reducer.ApplyIncoming(ConnectionListState.Initial,
+            [Connection("c1", upload: 100, download: 200)], DateTimeOffset.UnixEpoch);
+        var disconnectedAt = DateTimeOffset.UnixEpoch.AddSeconds(1);
+        var closed = reducer.ApplyIncoming(reducer.TogglePause(first), [], disconnectedAt);
+        var later = reducer.ApplyIncoming(closed, [], disconnectedAt.AddMinutes(1));
+
+        var connection = Assert.Single(later.DisconnectedConnections);
+        Assert.Empty(later.Connections);
+        Assert.False(connection.IsActive);
+        Assert.Equal(disconnectedAt, connection.DisconnectedAt);
+        Assert.Equal(100, connection.Upload);
+        Assert.Equal(200, connection.Download);
+        Assert.Equal(0, connection.UploadSpeed);
+        Assert.Equal(0, connection.DownloadSpeed);
+        var filter = new ConnectionFilter();
+        Assert.Empty(filter.Apply([connection], ConnectionFilterLevel.Active, string.Empty));
+        Assert.Single(filter.Apply([connection], ConnectionFilterLevel.Disconnected, string.Empty));
+        Assert.Empty(filter.Apply([connection], ConnectionFilterLevel.Disconnected, "no-match"));
+    }
+
+    [Fact(DisplayName = "Disconnected history keeps the latest 500 entries and removes reactivated IDs")]
+    public void DisconnectedHistoryKeepsLatest500AndRemovesReactivatedIds()
+    {
+        var reducer = new ConnectionListReducer();
+        var state = ConnectionListState.Initial;
+        for (var index = 0; index < 501; index++)
+        {
+            var time = DateTimeOffset.UnixEpoch.AddSeconds(index * 2);
+            state = reducer.ApplyIncoming(state, [Connection($"c{index}", upload: 0, download: 0)], time);
+            state = reducer.ApplyIncoming(state, [], time.AddSeconds(1));
+        }
+
+        Assert.Equal(500, state.DisconnectedConnections.Count);
+        Assert.Equal("c500", state.DisconnectedConnections[0].Id);
+        Assert.DoesNotContain(state.DisconnectedConnections, connection => connection.Id == "c0");
+        state = reducer.ApplyIncoming(state, [Connection("c500", upload: 0, download: 0)], DateTimeOffset.UnixEpoch.AddHours(1));
+        Assert.True(Assert.Single(state.Connections).IsActive);
+        Assert.DoesNotContain(state.DisconnectedConnections, connection => connection.Id == "c500");
+    }
+
+    [Theory(DisplayName = "Connection sort fields support ascending and descending numeric order")]
+    [InlineData(ConnectionSortMode.StartTime)]
+    [InlineData(ConnectionSortMode.Duration)]
+    [InlineData(ConnectionSortMode.UploadSpeed)]
+    [InlineData(ConnectionSortMode.DownloadSpeed)]
+    [InlineData(ConnectionSortMode.UploadAmount)]
+    [InlineData(ConnectionSortMode.DownloadAmount)]
+    public void ConnectionSortFieldsSupportAscendingAndDescendingOrder(ConnectionSortMode mode)
+    {
+        var now = DateTimeOffset.UnixEpoch.AddMinutes(1);
+        var low = new ConnectionInfo("low", Upload: 10, Download: 20,
+            UploadSpeed: 1, DownloadSpeed: 2, Start: DateTimeOffset.UnixEpoch.AddSeconds(10));
+        var high = new ConnectionInfo("high", Upload: 1000, Download: 2000,
+            UploadSpeed: 100, DownloadSpeed: 200,
+            Start: mode == ConnectionSortMode.Duration
+                ? DateTimeOffset.UnixEpoch
+                : DateTimeOffset.UnixEpoch.AddSeconds(20));
+        var sorter = new ConnectionSorter();
+
+        Assert.Equal(new[] { "low", "high" },
+            sorter.Apply([high, low], mode, false, now).Select(connection => connection.Id));
+        Assert.Equal(new[] { "high", "low" },
+            sorter.Apply([low, high], mode, true, now).Select(connection => connection.Id));
+    }
+
+    [Fact(DisplayName = "Connection sorting preserves default order and resolves equal values by ID")]
+    public void ConnectionSortingPreservesDefaultOrderAndResolvesEqualValuesById()
+    {
+        var sorter = new ConnectionSorter();
+        ConnectionInfo[] connections = [Connection("b", 100, 200), Connection("a", 100, 200)];
+
+        Assert.Same(connections, sorter.Apply(connections, ConnectionSortMode.Default, false, DateTimeOffset.UnixEpoch));
+        Assert.Equal(new[] { "a", "b" }, sorter.Apply(connections, ConnectionSortMode.Default,
+            true, DateTimeOffset.UnixEpoch).Select(connection => connection.Id));
+        Assert.Equal(new[] { "a", "b" }, sorter.Apply(connections, ConnectionSortMode.UploadAmount,
+            true, DateTimeOffset.UnixEpoch).Select(connection => connection.Id));
+    }
+
+    [Fact(DisplayName = "Disconnected connections sort by frozen duration and zero speed")]
+    public void DisconnectedConnectionsSortByFrozenDurationAndZeroSpeed()
+    {
+        var sorter = new ConnectionSorter();
+        var active = new ConnectionInfo("active", Start: DateTimeOffset.UnixEpoch, UploadSpeed: 5, DownloadSpeed: 10);
+        var disconnected = new ConnectionInfo("disconnected", Start: DateTimeOffset.UnixEpoch,
+            DisconnectedAt: DateTimeOffset.UnixEpoch.AddSeconds(10), UploadSpeed: 1000, DownloadSpeed: 2000);
+        foreach (var mode in new[] { ConnectionSortMode.Duration, ConnectionSortMode.UploadSpeed, ConnectionSortMode.DownloadSpeed })
+        {
+            Assert.Equal(new[] { "active", "disconnected" },
+                sorter.Apply([disconnected, active], mode, true, DateTimeOffset.UnixEpoch.AddMinutes(1))
+                    .Select(connection => connection.Id));
+        }
     }
 
     [Fact(DisplayName = "Core log parser handles JSON and text lines with explicit fallback time")]

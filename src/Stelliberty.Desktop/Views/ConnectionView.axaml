@@ -9,6 +9,20 @@
              x:DataType="vm:MainWindowViewModel"
              controls:InputDefocusBehavior.IsEnabled="True"
              Background="Transparent">
+  <UserControl.Styles>
+    <Style Selector="Grid.connection-card-stats">
+      <Setter Property="Grid.Row" Value="2" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+    </Style>
+    <Style Selector="Border.connection-card.list-layout Grid.connection-card-header">
+      <Setter Property="Grid.ColumnSpan" Value="2" />
+    </Style>
+    <Style Selector="Border.connection-card.list-layout Grid.connection-card-stats">
+      <Setter Property="Grid.Row" Value="1" />
+      <Setter Property="Grid.Column" Value="1" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+    </Style>
+  </UserControl.Styles>
   <Grid x:Name="ConnectionPageRoot"
         RowDefinitions="Auto,*" RowSpacing="16"
         DataContext="{Binding ConnectionPage}"
@@ -17,7 +31,7 @@
       <Border Classes="surface-header"
             Margin="8,6,25,0"
             AutomationProperties.AutomationId="Connections.Toolbar">
-      <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
+      <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
           <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -73,32 +87,16 @@
                     Command="{Binding ShowAllConnectionsCommand}"
                     Content="{loc:Loc Common.Filter.All}" />
             <Button Classes="list-chip"
-                    Classes.selected="{Binding IsDirectConnectionsSelected}"
-                    AutomationProperties.AutomationId="Connections.Filter.DirectButton"
-                    Command="{Binding ShowDirectConnectionsCommand}"
-                    Content="{loc:Loc Connections.Filter.Direct}" />
+                    Classes.selected="{Binding IsActiveConnectionsSelected}"
+                    AutomationProperties.AutomationId="Connections.Filter.ActiveButton"
+                    Command="{Binding ShowActiveConnectionsCommand}"
+                    Content="{loc:Loc Connections.Filter.Active}" />
             <Button Classes="list-chip"
-                    Classes.selected="{Binding IsProxyConnectionsSelected}"
-                    AutomationProperties.AutomationId="Connections.Filter.ProxyButton"
-                    Command="{Binding ShowProxyConnectionsCommand}"
-                    Content="{loc:Loc Connections.Filter.Proxy}" />
+                    Classes.selected="{Binding IsDisconnectedConnectionsSelected}"
+                    AutomationProperties.AutomationId="Connections.Filter.DisconnectedButton"
+                    Command="{Binding ShowDisconnectedConnectionsCommand}"
+                    Content="{loc:Loc Connections.Filter.Disconnected}" />
           </StackPanel>
-
-          <TextBox Grid.Column="1"
-                   Classes="list-search"
-                   AutomationProperties.AutomationId="Connections.SearchBox"
-                   PlaceholderText="{loc:Loc Connections.Search.Placeholder}"
-                   Text="{Binding SearchKeyword, Mode=TwoWay}"
-                   MinWidth="220" MaxWidth="360"
-                   HorizontalAlignment="Right">
-            <TextBox.InnerLeftContent>
-              <Border Padding="10,0,4,0">
-                <iconPacks:PackIconMingCuteIcons Width="14" Height="14"
-                                                   Kind="SearchLine"
-                                                   Foreground="{DynamicResource AppTextSecondaryBrush}" />
-              </Border>
-            </TextBox.InnerLeftContent>
-          </TextBox>
 
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
             <Button Classes="toolbar-icon"
@@ -121,7 +119,85 @@
                     ToolTip.Tip="{loc:Loc Connections.Action.CloseAll}">
               <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="CloseLine" />
             </Button>
+            <Button Classes="toolbar-icon"
+                    AutomationProperties.AutomationId="Connections.ToggleLayoutButton"
+                    Command="{Binding ToggleLayoutCommand}"
+                    ToolTip.Tip="{Binding LayoutToggleTooltip}">
+              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="{Binding LayoutToggleIcon}" />
+            </Button>
           </StackPanel>
+        </Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <TextBox
+                   Classes="list-search"
+                   AutomationProperties.AutomationId="Connections.SearchBox"
+                   PlaceholderText="{loc:Loc Connections.Search.Placeholder}"
+                   Text="{Binding SearchKeyword, Mode=TwoWay}"
+                   HorizontalAlignment="Stretch">
+            <TextBox.InnerLeftContent>
+              <Border Padding="10,0,4,0">
+                <iconPacks:PackIconMingCuteIcons Width="14" Height="14"
+                                                   Kind="SearchLine"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}" />
+              </Border>
+            </TextBox.InnerLeftContent>
+          </TextBox>
+          <controls:CardMenuButton Grid.Column="1"
+                                   Classes="toolbar-icon"
+                                   Classes.filter-active="{Binding IsRouteFilterActive}"
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="Connections.RouteFilterButton"
+                                   ShowItemIcons="False"
+                                   ItemsSource="{Binding RouteFilterOptions}"
+                                   ItemCommand="{Binding SelectRouteFilterCommand}"
+                                   ToolTip.Tip="{Binding RouteFilterTooltip}">
+            <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="FilterLine" />
+          </controls:CardMenuButton>
+          <controls:CardMenuButton Grid.Column="2"
+                                   Classes="toolbar-icon"
+                                   Classes.filter-active="{Binding IsSortActive}"
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="Connections.SortMenuButton"
+                                   ToolTip.Tip="{Binding SortMenuTooltip}">
+            <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="ListOrderedLine" />
+            <controls:CardMenuButton.MenuContent>
+              <ScrollViewer MaxHeight="440" HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto">
+                <StackPanel MinWidth="180" Spacing="4">
+                  <ItemsControl ItemsSource="{Binding SortMenuOptions}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ConnectionSortMenuItemViewModel">
+                        <Button Classes="card-menu-row"
+                                Classes.selected="{Binding IsSelected}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Command="{Binding SelectCommand}"
+                                CommandParameter="{Binding}"
+                                Content="{Binding DisplayName}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Border Height="1" Margin="6,4" Background="{DynamicResource AppBorderBrush}" />
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                    <Button Classes="card-menu-row"
+                            Classes.selected="{Binding IsSortAscending}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            AutomationProperties.AutomationId="Connections.SortAscendingButton"
+                            Command="{Binding SortAscendingCommand}"
+                            Content="{loc:Loc Connections.Sort.Ascending}" />
+                    <Button Grid.Column="1" Classes="card-menu-row"
+                            Classes.selected="{Binding IsSortDescending}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            AutomationProperties.AutomationId="Connections.SortDescendingButton"
+                            Command="{Binding SortDescendingCommand}"
+                            Content="{loc:Loc Connections.Sort.Descending}" />
+                  </Grid>
+                </StackPanel>
+              </ScrollViewer>
+            </controls:CardMenuButton.MenuContent>
+          </controls:CardMenuButton>
         </Grid>
       </Grid>
     </Border>
@@ -150,34 +226,50 @@
                       ItemsSource="{Binding FilteredConnectionRows}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <controls:VirtualizingWrapPanel MinItemWidth="344" ItemHeight="182" ColumnSpacing="12" RowSpacing="12" EdgePadding="0" />
+              <controls:VirtualizingWrapPanel MinItemWidth="344"
+                                            ItemHeight="{Binding CardItemHeight}"
+                                            SingleColumn="{Binding IsListLayout}"
+                                            ColumnSpacing="12" RowSpacing="12" EdgePadding="0" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ConnectionRowViewModel">
-              <Border Classes="surface-card">
+              <Border Classes="surface-card connection-card"
+                      Classes.list-layout="{Binding #ConnectionPageRoot.((vm:ConnectionPageViewModel)DataContext).IsListLayout}">
                 <Grid>
                   <Button Classes="card-hit-area"
                           AutomationProperties.AutomationId="{Binding RowAutomationId}"
                           Command="{Binding #ConnectionPageRoot.((vm:ConnectionPageViewModel)DataContext).ShowDetailCommand}"
                           CommandParameter="{Binding Id}" />
 
-                  <Grid Margin="16" RowDefinitions="Auto,*,Auto" RowSpacing="12" IsHitTestVisible="False">
-                    <Grid ColumnDefinitions="Auto,*,36" ColumnSpacing="10">
-                      <Border Classes="list-pill" Tag="{Binding NetworkPillTag}">
+                  <controls:ConnectionCardGrid Margin="16"
+                                               IsListLayout="{Binding #ConnectionPageRoot.((vm:ConnectionPageViewModel)DataContext).IsListLayout}">
+                    <Grid Classes="connection-card-header" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                      <Border Classes="list-pill" Tag="{Binding NetworkPillTag}" VerticalAlignment="Center" IsHitTestVisible="False">
                         <TextBlock AutomationProperties.AutomationId="{Binding NetworkAutomationId}"
                                    Text="{Binding NetworkLabel}" />
                       </Border>
                       <TextBlock Grid.Column="1"
+                                 IsHitTestVisible="False"
                                  Text="{Binding DisplayAddress}"
                                  Foreground="{DynamicResource AppTextPrimaryBrush}"
                                  FontWeight="Normal"
                                  FontSize="14"
                                  TextTrimming="CharacterEllipsis"
                                  VerticalAlignment="Center" />
+                      <Button Grid.Column="2" Classes="toolbar-icon"
+                              Width="28" Height="28" MinWidth="28" MinHeight="28"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              IsVisible="{Binding IsActive}"
+                              AutomationProperties.AutomationId="{Binding CloseAutomationId}"
+                              Command="{Binding #ConnectionPageRoot.((vm:ConnectionPageViewModel)DataContext).CloseConnectionCommand}"
+                              CommandParameter="{Binding Id}">
+                        <iconPacks:PackIconMingCuteIcons Classes="icon" Width="12" Height="12" Kind="CloseLine" />
+                      </Button>
                     </Grid>
 
-                    <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
+                    <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="5" VerticalAlignment="Top" IsHitTestVisible="False">
                       <Grid ColumnDefinitions="72,*" ColumnSpacing="8"
                             IsVisible="{Binding IsProcessVisible}">
                         <TextBlock Text="{loc:Loc Connections.Card.Process}"
@@ -210,53 +302,52 @@
                                    FontSize="12"
                                    TextTrimming="CharacterEllipsis" />
                       </Grid>
+                      <Grid Grid.Row="3" ColumnDefinitions="72,*" ColumnSpacing="8">
+                        <TextBlock Text="{loc:Loc Connections.Detail.Speed}"
+                                   Classes="metric-label"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding SpeedText}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   FontSize="12"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                      </Grid>
                     </Grid>
 
-                    <Grid Grid.Row="2" ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
-                      <Border Classes="list-mini-stat">
+                    <Grid Classes="connection-card-stats" ColumnDefinitions="*,*,*" ColumnSpacing="8" IsHitTestVisible="False">
+                      <Border Classes="list-mini-stat" VerticalAlignment="Bottom">
                         <StackPanel Spacing="2">
-                          <TextBlock Classes="metric-label" Text="{loc:Loc Common.Upload}" />
-                          <TextBlock Text="{Binding UploadSpeedText}"
+                          <TextBlock Classes="metric-label" Text="{loc:Loc Connections.Card.UploadAmount}" />
+                          <TextBlock Text="{Binding UploadAmountText}"
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
                                      FontSize="12"
                                      FontWeight="Normal"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                       </Border>
-                      <Border Grid.Column="1" Classes="list-mini-stat">
+                      <Border Grid.Column="1" Classes="list-mini-stat" VerticalAlignment="Bottom">
                         <StackPanel Spacing="2">
-                          <TextBlock Classes="metric-label" Text="{loc:Loc Common.Download}" />
-                          <TextBlock Text="{Binding DownloadSpeedText}"
+                          <TextBlock Classes="metric-label" Text="{loc:Loc Connections.Card.DownloadAmount}" />
+                          <TextBlock Text="{Binding DownloadAmountText}"
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
                                      FontSize="12"
                                      FontWeight="Normal"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                       </Border>
-                      <Border Grid.Column="2" Classes="list-mini-stat" MinWidth="82">
+                      <Border Grid.Column="2" Classes="list-mini-stat" VerticalAlignment="Bottom">
                         <StackPanel Spacing="2">
                           <TextBlock Classes="metric-label" Text="{loc:Loc Connections.Card.Duration}" />
                           <TextBlock AutomationProperties.AutomationId="{Binding DurationAutomationId}"
                                      Text="{Binding DurationText}"
                                      Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                     FontFamily="Consolas"
                                      FontSize="12"
                                      FontWeight="Normal" />
                         </StackPanel>
                       </Border>
                     </Grid>
-                  </Grid>
-
-                  <Button Classes="toolbar-icon"
-                          Width="28" Height="28"
-                          HorizontalAlignment="Right"
-                          VerticalAlignment="Top"
-                          Margin="0,16,16,0"
-                          AutomationProperties.AutomationId="{Binding CloseAutomationId}"
-                          Command="{Binding #ConnectionPageRoot.((vm:ConnectionPageViewModel)DataContext).CloseConnectionCommand}"
-                          CommandParameter="{Binding Id}">
-                    <iconPacks:PackIconMingCuteIcons Classes="icon" Width="12" Height="12" Kind="CloseLine" />
-                  </Button>
+                  </controls:ConnectionCardGrid>
                 </Grid>
               </Border>
             </DataTemplate>
@@ -298,7 +389,7 @@
                                                            VerticalAlignment="Center" />
                           <TextBlock Classes="dialog-section-title" Text="{loc:Loc Connections.Card.Chain}" />
                         </StackPanel>
-                        <TextBlock FontSize="16" FontWeight="Normal"
+                        <SelectableTextBlock FontSize="16" FontWeight="Normal"
                                    Foreground="{DynamicResource AppAccentBrush}"
                                    TextWrapping="Wrap"
                                    AutomationProperties.AutomationId="Connections.Detail.SummaryChain"
@@ -306,7 +397,7 @@
                         <Border Background="{DynamicResource AppInputBrush}" CornerRadius="10" Padding="12,8">
                           <StackPanel Spacing="3">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Connections.Card.Rule}" />
-                            <TextBlock Foreground="{DynamicResource AppTextPrimaryBrush}"
+                            <SelectableTextBlock Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        Text="{Binding DetailSummaryRule}"
                                        TextWrapping="Wrap"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryRule" />
@@ -315,21 +406,21 @@
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                           <StackPanel Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Common.Upload}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="Normal"
+                            <SelectableTextBlock FontWeight="Normal"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryUpload"
                                        Text="{Binding DetailSummaryUpload}" />
                           </StackPanel>
                           <StackPanel Grid.Column="1" Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Common.Download}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="Normal"
+                            <SelectableTextBlock FontWeight="Normal"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryDownload"
                                        Text="{Binding DetailSummaryDownload}" />
                           </StackPanel>
                           <StackPanel Grid.Column="2" Spacing="2">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Connections.Card.Duration}" />
-                            <TextBlock FontFamily="Consolas" FontWeight="Normal"
+                            <SelectableTextBlock FontWeight="Normal"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        AutomationProperties.AutomationId="Connections.Detail.SummaryDuration"
                                        Text="{Binding DetailSummaryDuration}" />
@@ -354,12 +445,23 @@
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate x:DataType="vm:ConnectionDetailRowViewModel">
                                     <Border Classes="connection-detail-row dense">
-                                      <Grid ColumnDefinitions="104,*" ColumnSpacing="12">
-                                        <TextBlock Classes="dialog-label" Text="{Binding Label}" />
-                                        <TextBlock Grid.Column="1"
+                                      <Grid ColumnDefinitions="104,*,Auto" ColumnSpacing="12">
+                                        <TextBlock Classes="dialog-label" Text="{Binding Label}"
+                                                   VerticalAlignment="Center" />
+                                        <SelectableTextBlock Grid.Column="1"
                                                    Classes="connection-detail-value"
+                                                   VerticalAlignment="Center"
                                                    Tag="{Binding Emphasis}"
                                                    Text="{Binding Value}" />
+                                        <Button Grid.Column="2"
+                                                Classes="toolbar-icon"
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding CanCopy}"
+                                                CommandParameter="{Binding Value}"
+                                                Click="OnCopyValueClicked"
+                                                ToolTip.Tip="{loc:Loc Common.Copy}">
+                                          <iconPacks:PackIconMingCuteIcons Classes="icon" Width="14" Height="14" Kind="Copy2Line" />
+                                        </Button>
                                       </Grid>
                                     </Border>
                                   </DataTemplate>

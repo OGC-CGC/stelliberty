@@ -206,6 +206,8 @@ public sealed class JsonAppSettingsStore : IAppSettingsStore
 
         settings.LastCoreVersion ??= defaults.LastCoreVersion;
         settings.DelayTestUrl ??= defaults.DelayTestUrl;
+        settings.ConnectionSortMode ??= defaults.ConnectionSortMode;
+        settings.ConnectionPageLayout ??= defaults.ConnectionPageLayout;
         settings.LanAuthenticationUserName ??= defaults.LanAuthenticationUserName;
         settings.LanAuthenticationPassword ??= defaults.LanAuthenticationPassword;
         settings.LanAllowedIps ??= defaults.LanAllowedIps;

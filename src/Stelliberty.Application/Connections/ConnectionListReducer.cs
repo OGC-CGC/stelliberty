@@ -14,13 +14,20 @@ public sealed class ConnectionListReducer
     // mihomo 只暴露累计字节，速率按每个 Id 的差值计算。
     public ConnectionListState ApplyIncoming(ConnectionListState state, IReadOnlyList<ConnectionInfo> connections, DateTimeOffset sampledAt)
     {
-        if (state.IsMonitoringPaused)
-        {
-            return state;
-        }
-
         var connectionsWithSpeed = ComputeSpeeds(state, connections, sampledAt);
-        return state with { Connections = connectionsWithSpeed, SampledAt = sampledAt };
+        var activeIds = connections.Select(connection => connection.Id).ToHashSet(StringComparer.Ordinal);
+        var disconnected = state.Connections
+            .Where(connection => !activeIds.Contains(connection.Id))
+            .Select(connection => connection with { DisconnectedAt = sampledAt, UploadSpeed = 0, DownloadSpeed = 0 })
+            .Concat(state.DisconnectedConnections.Where(connection => !activeIds.Contains(connection.Id)))
+            .Take(500)
+            .ToList();
+        return state with
+        {
+            Connections = connectionsWithSpeed,
+            DisconnectedConnections = disconnected,
+            SampledAt = sampledAt
+        };
     }
 
     private static IReadOnlyList<ConnectionInfo> ComputeSpeeds(ConnectionListState state, IReadOnlyList<ConnectionInfo> connections, DateTimeOffset sampledAt)

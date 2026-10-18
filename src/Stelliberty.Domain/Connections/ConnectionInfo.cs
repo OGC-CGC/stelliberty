@@ -10,8 +10,11 @@ public sealed record ConnectionInfo(
     ConnectionMetadata? Metadata = null,
     IReadOnlyList<string>? Chains = null,
     string Rule = "",
-    string RulePayload = "")
+    string RulePayload = "",
+    DateTimeOffset? DisconnectedAt = null)
 {
+    public bool IsActive => DisconnectedAt is null;
+
     public ConnectionMetadata Metadata { get; init; } = Metadata ?? new ConnectionMetadata();
 
     public IReadOnlyList<string> Chains { get; init; } = Chains ?? [];

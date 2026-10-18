@@ -34,6 +34,12 @@ public sealed class CardMenuButton : Button
     public static readonly StyledProperty<string> MoreItemTextProperty =
         AvaloniaProperty.Register<CardMenuButton, string>(nameof(MoreItemText), "More");
 
+    public static readonly StyledProperty<bool> ShowItemIconsProperty =
+        AvaloniaProperty.Register<CardMenuButton, bool>(nameof(ShowItemIcons), true);
+
+    public static readonly StyledProperty<Control?> MenuContentProperty =
+        AvaloniaProperty.Register<CardMenuButton, Control?>(nameof(MenuContent));
+
     private const double WindowMargin = 16d;
     private static readonly TimeSpan OpenDuration = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan CloseDuration = TimeSpan.FromMilliseconds(140);
@@ -92,6 +98,18 @@ public sealed class CardMenuButton : Button
         set => SetValue(MoreItemTextProperty, value);
     }
 
+    public bool ShowItemIcons
+    {
+        get => GetValue(ShowItemIconsProperty);
+        set => SetValue(ShowItemIconsProperty, value);
+    }
+
+    public Control? MenuContent
+    {
+        get => GetValue(MenuContentProperty);
+        set => SetValue(MenuContentProperty, value);
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -140,6 +158,8 @@ public sealed class CardMenuButton : Button
             OpenButton = this;
         }
 
+        _menu.Child = MenuContent ?? _itemsPanel;
+        _menu.DataContext = DataContext;
         ReloadItems();
         _pageIndex = 0;
         RenderPage();
@@ -290,17 +310,7 @@ public sealed class CardMenuButton : Button
     {
         var isMore = ReferenceEquals(item, MoreMenuItem.Instance);
         var menuItem = item as ICardMenuItemViewModel;
-        var iconType = ParseIconType(isMore ? "ListExpansionLine" : menuItem?.IconType ?? "More2Line");
         var text = isMore ? MoreItemText : menuItem?.DisplayName ?? string.Empty;
-
-        var icon = new PackIconMingCuteIcons
-        {
-            Classes = { "card-menu-icon" },
-            Width = 16,
-            Height = 16,
-            Kind = iconType,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
         var label = new TextBlock
         {
             Classes = { "card-menu-text" },
@@ -310,15 +320,13 @@ public sealed class CardMenuButton : Button
 
         var content = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("16,*"),
-            ColumnSpacing = 10,
+            ColumnDefinitions = new ColumnDefinitions(ShowItemIcons ? "16,*" : "*"),
+            ColumnSpacing = ShowItemIcons ? 10 : 0,
             Children =
             {
-                icon,
                 label,
             },
         };
-        Grid.SetColumn(label, 1);
 
         var button = new Button
         {
@@ -335,7 +343,25 @@ public sealed class CardMenuButton : Button
             button.Classes.Add("danger");
         }
 
-        icon.Bind(ForegroundProperty, button.GetObservable(ForegroundProperty), BindingPriority.Style);
+        if (menuItem?.IsSelected == true)
+        {
+            button.Classes.Add("selected");
+        }
+
+        if (ShowItemIcons)
+        {
+            var icon = new PackIconMingCuteIcons
+            {
+                Classes = { "card-menu-icon" },
+                Width = 16,
+                Height = 16,
+                Kind = ParseIconType(isMore ? "ListExpansionLine" : menuItem?.IconType ?? "More2Line"),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            content.Children.Add(icon);
+            Grid.SetColumn(label, 1);
+            icon.Bind(ForegroundProperty, button.GetObservable(ForegroundProperty), BindingPriority.Style);
+        }
         label.Bind(TextBlock.ForegroundProperty, button.GetObservable(ForegroundProperty), BindingPriority.Style);
         button.Click += OnItemClick;
         return button;

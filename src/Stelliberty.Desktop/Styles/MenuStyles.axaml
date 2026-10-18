@@ -41,4 +41,8 @@
   <Style Selector="Button.card-menu-row.danger">
     <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
   </Style>
+  <Style Selector="Button.card-menu-row.selected">
+    <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
 </Styles>

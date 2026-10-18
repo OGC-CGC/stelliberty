@@ -9,4 +9,6 @@ public interface ICardMenuItemViewModel
     string AutomationId { get; }
 
     bool IsDanger { get; }
+
+    bool IsSelected => false;
 }

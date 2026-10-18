@@ -8,5 +8,7 @@ public sealed record ConnectionListState(
     string SearchKeyword,
     DateTimeOffset SampledAt = default)
 {
+    public IReadOnlyList<ConnectionInfo> DisconnectedConnections { get; init; } = [];
+
     public static ConnectionListState Initial { get; } = new([], false, ConnectionFilterLevel.All, string.Empty);
 }
