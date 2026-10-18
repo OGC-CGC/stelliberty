@@ -30,18 +30,25 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         "BackgroundImageTransparency",
         "AccentColorMode",
         "AccentColor",
+        "IsSidebarDividerVisible",
         "IsMinimizeToTrayEnabled",
+        "IsLightweightModeEnabled",
+        "LightweightModeShutdownDelaySeconds",
         "IsTrayDoubleClickEnabled",
         "IsLazyModeEnabled",
         "IsTitleBarFpsVisible",
         "IsAutoCheckUpdateEnabled",
         "AppUpdateCheckInterval",
+        "AppUpdateChannel",
+        "IsCustomAppUpdateSourceEnabled",
+        "CustomAppUpdateRepositoryUrl",
         "IgnoredUpdateVersion",
         "IsUnifiedDelayEnabled",
         "OutboundMode",
         "ProxyPageLayout",
         "ProxyNodeSortMode",
         "DelayTestUrl",
+        "ConnectivityChecks",
         "IsAllowLanEnabled",
         "LanAuthenticationUserName",
         "LanAuthenticationPassword",
@@ -98,6 +105,9 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         "WindowEffect",
         "IsSilentStartEnabled",
         "IsAutoStartEnabled",
+        "WindowToggleHotkey",
+        "SystemProxyToggleHotkey",
+        "TunToggleHotkey",
         "IsWebDavBackupEnabled",
         "WebDavUrl",
         "WebDavUserName",
@@ -266,7 +276,7 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
 
         // 覆盖模式只替换可迁移数据。
         // 本机运行状态和平台集成状态必须继续由当前机器持有。
-        var currentLocalSettings = ReadLocalSettings();
+        var currentSettings = ReadSettingsToPreserve();
         DeleteUserDataEntry(PathConventions.SettingsFileName);
         foreach (var entryName in UserDataEntries)
         {
@@ -288,12 +298,12 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
             restored++;
         }
 
-        RestoreLocalSettings(currentLocalSettings);
+        RestorePreservedSettings(currentSettings);
         AppLogger.Info($"Data backup overwrite restored: {backupPath} restored={restored}");
         return (restored, 0);
     }
 
-    private Dictionary<string, JsonNode?> ReadLocalSettings()
+    private Dictionary<string, JsonNode?> ReadSettingsToPreserve()
     {
         var settingsPath = Path.Combine(appDataDirectory, PathConventions.SettingsFileName);
         if (!File.Exists(settingsPath))
@@ -306,7 +316,7 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
             var settings = JsonNode.Parse(File.ReadAllText(settingsPath))?.AsObject();
             return settings is null
                 ? []
-                : LocalSettingKeys
+                : LocalSettingKeys.Concat(BackupSettingKeys)
                     .Where(settings.ContainsKey)
                     .ToDictionary(key => key, key => settings[key]?.DeepClone());
         }
@@ -340,9 +350,9 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         File.WriteAllText(settingsPath, portableSettings.ToJsonString());
     }
 
-    private void RestoreLocalSettings(IReadOnlyDictionary<string, JsonNode?> localSettings)
+    private void RestorePreservedSettings(IReadOnlyDictionary<string, JsonNode?> currentSettings)
     {
-        if (localSettings.Count == 0)
+        if (currentSettings.Count == 0)
         {
             return;
         }
@@ -350,14 +360,17 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         var settingsPath = Path.Combine(appDataDirectory, PathConventions.SettingsFileName);
         try
         {
-            // 备份缺失设置时，只用本机状态重建最小 settings.json。
+            // 本机设置始终保留；可迁移设置仅在备份缺少字段时保留当前值。
             var settings = File.Exists(settingsPath)
                 ? JsonNode.Parse(File.ReadAllText(settingsPath))?.AsObject() ?? new JsonObject()
                 : new JsonObject();
 
-            foreach (var pair in localSettings)
+            foreach (var pair in currentSettings)
             {
-                settings[pair.Key] = pair.Value?.DeepClone();
+                if (LocalSettingKeys.Contains(pair.Key, StringComparer.Ordinal) || !settings.ContainsKey(pair.Key))
+                {
+                    settings[pair.Key] = pair.Value?.DeepClone();
+                }
             }
 
             File.WriteAllText(settingsPath, settings.ToJsonString());
