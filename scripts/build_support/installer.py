@@ -262,18 +262,15 @@ def build_macos_app_bundle(
 
 
 def pack_dmg(metadata: AppMetadata, configuration: str, app_path: Path, base_name: str) -> Path:
+    background_path = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "macos" / "dmg" / "background.tiff"
+    require_file(background_path)
     output_path = PACKAGES_DIR / f"{base_name}.dmg"
     run_checked([
-        "hdiutil",
-        "create",
-        "-volname",
-        display_name(metadata, configuration),
-        "-srcfolder",
-        str(app_path),
-        "-ov",
-        "-format",
-        "UDZO",
-        str(output_path),
+        sys.executable, "-m", "dmgbuild",
+        "-s", str(MACOS_INSTALLER_TEMPLATE_DIR / "dmg-settings.py"),
+        "-D", f"app={app_path}",
+        "-D", f"background={background_path}",
+        display_name(metadata, configuration), str(output_path),
     ])
     require_file(output_path)
     return output_path

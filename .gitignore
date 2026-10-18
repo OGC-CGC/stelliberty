@@ -28,6 +28,7 @@
 !/src/**/*.ico
 !/src/**/*.png
 !/src/**/*.icns
+!/src/Stelliberty.Desktop/Assets/macos/dmg/background.tiff
 !/src/Stelliberty.Desktop/Assets/macos/app_icon.icon/Assets/*.svg
 !/src/Stelliberty.Desktop/Assets/macos/tray/*.svg
 !/src/Stelliberty.Desktop/Assets/linux/tray/*.svg
