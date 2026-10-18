@@ -357,8 +357,16 @@ jobs:
           path: build/packages/*.dmg
           if-no-files-found: error
 
+      - name: Upload Linux beta AppImage
+        if: matrix.os_family == 'linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: stelliberty-beta-${{ matrix.platform }}
+          path: build/packages/*.AppImage
+          if-no-files-found: error
+
       - name: Upload beta artifacts
-        if: matrix.os_family != 'macos'
+        if: matrix.os_family == 'windows'
         uses: actions/upload-artifact@v7
         with:
           name: stelliberty-beta-${{ matrix.platform }}
@@ -402,9 +410,6 @@ jobs:
           files: |
             artifacts/**/*.zip
             artifacts/**/*.exe
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
-            artifacts/**/*.pkg.tar.zst
             artifacts/**/*.AppImage
             artifacts/**/*.dmg
           draft: true
