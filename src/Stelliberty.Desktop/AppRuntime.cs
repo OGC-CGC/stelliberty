@@ -35,6 +35,7 @@ internal static class AppRuntime
     {
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .UseWaylandWithFallback()
             .With(CreateFontManagerOptions());
 
         builder = builder.LogToTrace();
