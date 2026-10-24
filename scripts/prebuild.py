@@ -10,17 +10,22 @@ sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 import argparse
 import gzip
+import hashlib
+import http.client
 import io
 import json
 import shutil
+import ssl
 import subprocess
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from build_support.clean import clean_outputs
-from build_support.console import header, print_summary
+from build_support.console import header, print_summary, warn
 from build_support.fonts import ensure_app_fonts
 from build_support.help import MultilineHelpFormatter, format_choice_help
 from build_support.layout import service_binary_name
@@ -61,6 +66,9 @@ MIHOMO_ASSET_KEY: dict[str, str] = {
     "macos-x64": "darwin-amd64",
     "macos-arm64": "darwin-arm64",
 }
+
+DOWNLOAD_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 2.0
 
 def main() -> None:
     args = parse_args()
@@ -146,6 +154,8 @@ def fetch_mihomo_core(rid: str, target_dir: Path) -> Path:
     print(f"  Asset {asset['name']}", flush=True)
 
     payload = read_bytes(asset["browser_download_url"])
+    expected_digest = asset.get("digest", "").removeprefix("sha256:").lower()
+    verify_sha256(asset["name"], payload, expected_digest)
     core_bytes = extract_core_bytes(asset["name"], payload)
 
     core_binary_name = "clash-mihomo-core.exe" if rid.startswith("win") else "clash-mihomo-core"
@@ -183,8 +193,9 @@ def fetch_geo_files(target_dir: Path) -> list[Path]:
             for remote_name, local_name in GEO_FILES.items()
         }
         for future in as_completed(futures):
-            target, size = future.result()
-            print(f"  {target.name:<14}  {format_bytes(size)}", flush=True)
+            target, size, cached = future.result()
+            suffix = "  cached" if cached else ""
+            print(f"  {target.name:<14}  {format_bytes(size)}{suffix}", flush=True)
             saved.append(target)
     return saved
 
@@ -221,19 +232,50 @@ def build_service_binaries(rid: str, target_dir: Path, configurations: list[str]
         saved.append(destination)
     return saved
 
-def _fetch_one_geo(remote_name: str, local_name: str, target_dir: Path) -> tuple[Path, int]:
-    payload = read_bytes(f"{GEO_RELEASE}/{remote_name}")
+def _fetch_one_geo(remote_name: str, local_name: str, target_dir: Path) -> tuple[Path, int, bool]:
+    expected_digest = read_sha256(remote_name)
     target = target_dir / local_name
+    if target.exists() and sha256_file(target) == expected_digest:
+        return target, target.stat().st_size, True
+
+    payload = read_bytes(f"{GEO_RELEASE}/{remote_name}")
+    verify_sha256(remote_name, payload, expected_digest)
     target.write_bytes(payload)
-    return target, len(payload)
+    return target, len(payload), False
+
+def read_sha256(remote_name: str) -> str:
+    text = read_bytes(f"{GEO_RELEASE}/{remote_name}.sha256sum").decode("utf-8")
+    return text.split()[0].lower()
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def verify_sha256(name: str, payload: bytes, expected_digest: str) -> None:
+    actual_digest = hashlib.sha256(payload).hexdigest()
+    if expected_digest and actual_digest != expected_digest:
+        raise SystemExit(f"Checksum mismatch for {name}: expected {expected_digest}, got {actual_digest}")
 
 def read_json(url: str) -> dict:
     return json.loads(read_bytes(url).decode("utf-8"))
 
 def read_bytes(url: str) -> bytes:
     request = urllib.request.Request(url, headers=github_headers())
-    with urllib.request.urlopen(request, timeout=120) as response:
-        return response.read()
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                return response.read()
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, http.client.HTTPException, ssl.SSLError, TimeoutError, ConnectionError) as error:
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise
+            name = url.rsplit("/", 1)[-1]
+            print(warn(f"  Retry {attempt}/{DOWNLOAD_ATTEMPTS - 1} {name}: {error}"), flush=True)
+            time.sleep(RETRY_DELAY_SECONDS * attempt)
 
 def github_headers() -> dict[str, str]:
     headers = {"Accept": "application/vnd.github+json"}
