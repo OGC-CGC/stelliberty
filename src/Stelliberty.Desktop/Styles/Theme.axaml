@@ -6,6 +6,7 @@
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
       <SolidColorBrush x:Key="AppRootSurfaceBrush" Color="#EFEFEF" />
+      <SolidColorBrush x:Key="AppBaseColorBrush" Color="#EFEFEF" />
       <SolidColorBrush x:Key="AppDialogSurfaceBrush" Color="#EFEFEF" />
       <SolidColorBrush x:Key="AppPopupSurfaceBrush" Color="#EFEFEF" />
       <SolidColorBrush x:Key="ComboBoxPopupBackground" Color="#EFEFEF" />
@@ -52,6 +53,7 @@
 
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="AppRootSurfaceBrush" Color="#212121" />
+      <SolidColorBrush x:Key="AppBaseColorBrush" Color="#212121" />
       <SolidColorBrush x:Key="AppDialogSurfaceBrush" Color="#212121" />
       <SolidColorBrush x:Key="AppPopupSurfaceBrush" Color="#212121" />
       <SolidColorBrush x:Key="ComboBoxPopupBackground" Color="#212121" />
