@@ -96,7 +96,7 @@ def main() -> None:
         geo_paths = fetch_geo_files(target_dir)
 
     with timed_step("Fetch font assets"):
-        font_paths = ensure_app_fonts()
+        font_paths = ensure_app_fonts(platform_name == "Linux")
         for path in font_paths:
             print(f"  {path.name:<14}  {format_bytes(path.stat().st_size)}", flush=True)
 
