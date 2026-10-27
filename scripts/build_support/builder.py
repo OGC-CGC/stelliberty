@@ -22,7 +22,8 @@ def build(request: BuildRequest) -> None:
         generate_bindings()
 
     with timed_step("Prepare font assets"):
-        for path in ensure_app_fonts():
+        include_medium = any(name.startswith("linux") for name, _ in request.platforms)
+        for path in ensure_app_fonts(include_medium):
             print(f"  Font {path.name}", flush=True)
 
     for platform_name, target in request.platforms:

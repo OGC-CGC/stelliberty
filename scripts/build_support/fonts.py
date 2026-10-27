@@ -7,6 +7,7 @@ from zipfile import ZipFile
 from build_support.paths import ROOT
 
 FONT_DIR = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "fonts"
+MEDIUM_FONT_DIR = FONT_DIR.parent / "fonts-medium"
 MAPLE_MONO_ARCHIVE = "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-CN-unhinted.zip"
 MAPLE_MONO_FILES = (
     ("MapleMono-CN-Regular.ttf", "MapleMono-CN-Regular.ttf", 16 * 1024 * 1024),
@@ -36,8 +37,18 @@ FONT_ASSETS = [
     ),
 ]
 
+# Avalonia 不支持可变字体轴，正文要加重一档只能换静态 Medium 实例。
+# 该文件仅 Linux 构建打包（csproj 按 RuntimeIdentifier 过滤）。
+MEDIUM_FONT_ASSETS = [
+    FontAsset(
+        "NotoSansSC-Medium.otf",
+        "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/SC/NotoSansSC-Medium.otf",
+        4 * 1024 * 1024,
+    ),
+]
 
-def ensure_app_fonts() -> list[Path]:
+
+def ensure_app_fonts(include_medium: bool = False) -> list[Path]:
     paths: list[Path] = []
     FONT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -65,6 +76,17 @@ def ensure_app_fonts() -> list[Path]:
                 raise RuntimeError(f"Downloaded font asset is unexpectedly small: {asset.name}")
             path.write_bytes(payload)
         paths.append(path)
+
+    if include_medium:
+        MEDIUM_FONT_DIR.mkdir(parents=True, exist_ok=True)
+        for asset in MEDIUM_FONT_ASSETS:
+            path = MEDIUM_FONT_DIR / asset.name
+            if not is_valid_font(path, asset.min_bytes):
+                payload = read_font_bytes(asset)
+                if len(payload) < asset.min_bytes:
+                    raise RuntimeError(f"Downloaded font asset is unexpectedly small: {asset.name}")
+                path.write_bytes(payload)
+            paths.append(path)
 
     for legacy_name in LEGACY_FONT_FILES:
         legacy_path = FONT_DIR / legacy_name

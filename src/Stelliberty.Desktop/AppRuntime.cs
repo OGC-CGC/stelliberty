@@ -11,7 +11,9 @@ namespace Stelliberty.Desktop;
 
 internal static class AppRuntime
 {
-    private static string AppFontFamily => $"avares://{AppRuntimeNames.UiResourceAuthority}/Assets/fonts#Noto Sans SC";
+    private static string AppFontFamily => OperatingSystem.IsLinux()
+        ? $"avares://{AppRuntimeNames.UiResourceAuthority}/Assets/fonts-medium#Noto Sans SC"
+        : $"avares://{AppRuntimeNames.UiResourceAuthority}/Assets/fonts#Noto Sans SC";
 
     public static void RunUi(string[] args)
     {
@@ -35,6 +37,7 @@ internal static class AppRuntime
     {
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .UseWaylandWithFallback()
             .With(CreateFontManagerOptions());
 
         builder = builder.LogToTrace();

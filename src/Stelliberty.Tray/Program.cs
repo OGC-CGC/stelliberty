@@ -49,6 +49,7 @@ internal static class Program
     {
         var builder = AppBuilder.Configure<TrayApplication>()
             .UsePlatformDetect()
+            .UseWaylandWithFallback()
             .LogToTrace();
 
         if (OperatingSystem.IsMacOS())

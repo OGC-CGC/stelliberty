@@ -92,6 +92,8 @@ public sealed partial class MainWindow : Window
         if (OperatingSystem.IsLinux())
         {
             WindowDecorations = Avalonia.Controls.WindowDecorations.BorderOnly;
+            // Linux 合成器不保证模糊；垫一层不透明底色，避免窗口 alpha 透出桌面。
+            BaseColorLayer.IsVisible = true;
         }
     }
 #if DEBUG
