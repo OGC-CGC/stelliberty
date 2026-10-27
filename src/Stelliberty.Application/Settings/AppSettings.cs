@@ -44,6 +44,8 @@ public sealed class AppSettings
 
     public bool IsSidebarDividerVisible { get; set; } = true;
 
+    public bool IsSidebarCollapsed { get; set; } = true;
+
     public double? WindowWidth { get; set; }
 
     public double? WindowHeight { get; set; }

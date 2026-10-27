@@ -103,6 +103,76 @@
     <Setter Property="Foreground" Value="{DynamicResource DebugBadgeForegroundBrush}" />
   </Style>
 
+  <Style Selector="Border.sidebar-width">
+    <Setter Property="Width" Value="220" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Width" Duration="0:0:0.24" Easing="CubicEaseInOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Window.sidebar-collapsed Border.sidebar-width">
+    <Setter Property="Width" Value="76" />
+  </Style>
+
+  <Style Selector="Button.sidebar-toggle">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                CornerRadius="8">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Image.sidebar-app-icon">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="RenderTransform" Value="translateX(-44px)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.24" Easing="CubicEaseInOut" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.24" Easing="CubicEaseInOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Window.sidebar-collapsed Image.sidebar-app-icon">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="RenderTransform" Value="translateX(0px)" />
+  </Style>
+  <Style Selector="Grid.sidebar-brand">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.24" Easing="CubicEaseInOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Window.sidebar-collapsed Grid.sidebar-brand">
+    <!-- 保留文字 Logo 的高度占位，避免收起后顶部 Auto 行变矮。 -->
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+
+  <Style Selector="Window.sidebar-collapsed TextBlock.nav-label">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="Button.nav-item">
+    <Setter Property="ToolTip.ServiceEnabled" Value="False" />
+  </Style>
+  <Style Selector="Window.sidebar-collapsed Button.nav-item">
+    <Setter Property="ToolTip.ServiceEnabled" Value="True" />
+  </Style>
+
   <Style Selector="Button.nav-item">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="CornerRadius" Value="12" />
@@ -250,6 +320,12 @@
   </Style>
 
   <Style Selector="TextBlock.nav-label" x:DataType="vm:MainWindowViewModel">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.24" Easing="CubicEaseInOut" />
+      </Transitions>
+    </Setter>
     <Setter Property="FontSize" Value="14" />
     <Setter Property="LetterSpacing" Value="{Binding NavLabelLetterSpacing}" />
     <Setter Property="HorizontalAlignment" Value="Center" />

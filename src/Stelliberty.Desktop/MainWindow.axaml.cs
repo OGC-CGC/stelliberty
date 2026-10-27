@@ -27,6 +27,22 @@ namespace Stelliberty.Desktop;
 
 public sealed partial class MainWindow : Window
 {
+    private const double SidebarAutoCollapseWidth = 1040;
+    private const double SidebarEdgeFadeHeight = 36;
+    private readonly LinearGradientBrush _sidebarEdgeFadeMask = new()
+    {
+        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+        EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+        GradientStops = new GradientStops
+        {
+            new GradientStop(Colors.Transparent, 0),
+            new GradientStop(Colors.Black, 0),
+            new GradientStop(Colors.Black, 1),
+            new GradientStop(Colors.Transparent, 1)
+        }
+    };
+    internal bool IsSidebarManuallyCollapsed { get; private set; }
+
     // 隐藏后等待：轻量模式结束 UI 进程，常规模式回收页面视觉树。
     private static readonly TimeSpan HiddenReleaseDelay = TimeSpan.FromSeconds(AppSettings.DefaultLightweightModeShutdownDelaySeconds);
     private static readonly TimeSpan PageLoadingMinVisible = TimeSpan.FromMilliseconds(300);
@@ -62,6 +78,7 @@ public sealed partial class MainWindow : Window
 
     public MainWindow(IAppSettingsStore? settingsStore, AppSettings? settings)
     {
+        IsSidebarManuallyCollapsed = settings?.IsSidebarCollapsed ?? true;
         _windowStateService = new WindowStateService(settingsStore, settings);
         _hiddenReleaseTimer = new DispatcherTimer { Interval = HiddenReleaseDelay };
         _hiddenReleaseTimer.Tick += OnHiddenReleaseTimerTick;
@@ -74,6 +91,7 @@ public sealed partial class MainWindow : Window
         Opened += OnOpened;
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
         _windowStateService.Attach(this);
+        UpdateSidebarState();
         UpdateWindowStateVisuals();
 #if DEBUG
         AttachDevBadge();
@@ -750,6 +768,67 @@ public sealed partial class MainWindow : Window
         BeginMoveDrag(args);
     }
 
+    private void OnSidebarScrollChanged(object? sender, ScrollChangedEventArgs args)
+    {
+        if (sender is not ScrollViewer scrollViewer)
+        {
+            return;
+        }
+
+        var viewportHeight = scrollViewer.Viewport.Height;
+        var remainingHeight = scrollViewer.Extent.Height - scrollViewer.Offset.Y - viewportHeight;
+        var hasContentAbove = scrollViewer.Offset.Y > 0;
+        var hasContentBelow = remainingHeight > 0;
+        if (viewportHeight <= 0 || (!hasContentAbove && !hasContentBelow))
+        {
+            scrollViewer.OpacityMask = null;
+            return;
+        }
+
+        // 只处理导航滚动区域，底部固定的设置按钮不参与渐隐。
+        var fadeOffset = Math.Min(0.5, SidebarEdgeFadeHeight / viewportHeight);
+        var stops = _sidebarEdgeFadeMask.GradientStops;
+        stops[0].Color = hasContentAbove ? Colors.Transparent : Colors.Black;
+        stops[1].Offset = hasContentAbove ? fadeOffset : 0;
+        stops[2].Offset = hasContentBelow ? 1 - fadeOffset : 1;
+        stops[3].Color = hasContentBelow ? Colors.Transparent : Colors.Black;
+        scrollViewer.OpacityMask = _sidebarEdgeFadeMask;
+    }
+
+    private void OnSidebarToggleClicked(object? sender, RoutedEventArgs args)
+    {
+        var isCollapsed = Classes.Contains("sidebar-collapsed");
+        IsSidebarManuallyCollapsed = !isCollapsed;
+        if (isCollapsed && CurrentSidebarWindowWidth < SidebarAutoCollapseWidth)
+        {
+            if (WindowState != WindowState.Normal)
+            {
+                WindowState = WindowState.Normal;
+            }
+
+            Width = SidebarAutoCollapseWidth;
+        }
+
+        UpdateSidebarState();
+        _windowStateService.SaveNow();
+    }
+
+    private double CurrentSidebarWindowWidth => Bounds.Width > 0 ? Bounds.Width : Width;
+
+    private void UpdateSidebarState()
+    {
+        // 窄窗口只临时折叠，持久化始终使用用户手动选择的状态。
+        var isCollapsed = IsSidebarManuallyCollapsed || CurrentSidebarWindowWidth < SidebarAutoCollapseWidth;
+        if (isCollapsed)
+        {
+            Classes.Add("sidebar-collapsed");
+        }
+        else
+        {
+            Classes.Remove("sidebar-collapsed");
+        }
+    }
+
     private void OnMinimizeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
     {
         WindowState = WindowState.Minimized;
@@ -1050,6 +1129,11 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs args)
     {
+        if (args.Property == BoundsProperty || args.Property == WidthProperty)
+        {
+            UpdateSidebarState();
+        }
+
         if (args.Property == WindowStateProperty)
         {
             UpdateWindowStateVisuals();

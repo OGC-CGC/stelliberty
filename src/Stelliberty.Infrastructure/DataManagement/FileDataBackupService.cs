@@ -105,6 +105,7 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         "WindowWidth",
         "WindowHeight",
         "IsWindowMaximized",
+        "IsSidebarCollapsed",
         "WindowEffect",
         "IsSilentStartEnabled",
         "IsAutoStartEnabled",

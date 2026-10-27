@@ -56,6 +56,7 @@ internal sealed class WindowStateService : IDisposable
         _settings.WindowWidth = size.Value.Width;
         _settings.WindowHeight = size.Value.Height;
         _settings.IsWindowMaximized = isMaximized;
+        _settings.IsSidebarCollapsed = _window.IsSidebarManuallyCollapsed;
         _settingsStore.Save(_settings);
         AppLogger.Debug($"Saved window state: {size.Value.Width}x{size.Value.Height} maximized={isMaximized}");
     }
