@@ -1,12 +1,14 @@
 <div align="center">
 
-# Stelliberty Remake
+# SBproxy
 
 [![English](https://img.shields.io/badge/English-red?style=flat-square)](README.md)
 &nbsp;
 [![简体中文](https://img.shields.io/badge/简体中文-blue?style=flat-square)](.github/docs/README.zh-CN.md)
 
 <br>
+
+A fork of a fork of [Stelliberty](https://github.com/Kindness-Kismet/stelliberty). Information identifying the source fork has been removed at its request.
 
 [![Avalonia](https://img.shields.io/badge/Avalonia-UI-9b4fdb?logo=avaloniaui&logoColor=white&style=flat-square)](https://avaloniaui.net)
 [![.NET 11](https://img.shields.io/badge/.NET-11-512BD4?logo=dotnet&logoColor=white&style=flat-square)](https://dotnet.microsoft.com)
@@ -26,7 +28,7 @@
 |---|---|
 | ![Settings light](.github/images/settings-light.png) | ![Settings dark](.github/images/settings-dark.png) |
 
-Stelliberty is a cross-platform desktop proxy client for Windows, Linux, and macOS.
+SBproxy is a cross-platform desktop proxy client for Windows, Linux, and macOS.
 
 Import Clash-standard and Base64 subscriptions. It starts quickly and uses little resources. On Windows and macOS, platform-level frosted window effects are available, with a simple native look.
 
@@ -36,19 +38,33 @@ Import Clash-standard and Base64 subscriptions. It starts quickly and uses littl
 
 ## Navigation
 
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [FAQ](#-faq)
-- [Development Guide](#-development-guide)
-  - [Architecture](#architecture)
-  - [C# Conventions](#c-conventions)
-  - [Rust Conventions](#rust-conventions)
-  - [Avalonia / MVVM](#avalonia--mvvm)
-  - [Control Test IDs](#control-test-ids)
-  - [Build & Test](#build--test)
-- [PR Guidelines](#-pr-guidelines)
-- [License](#-license)
-- [Friends](#-friends)
+- [SBproxy](#sbproxy)
+  - [Navigation](#navigation)
+  - [📦 Installation](#-installation)
+    - [Download](#download)
+    - [System Requirements](#system-requirements)
+  - [🚀 Quick Start](#-quick-start)
+  - [❓ FAQ](#-faq)
+    - [App will not start or appears unresponsive after installation?](#app-will-not-start-or-appears-unresponsive-after-installation)
+    - [UWP Loopback \& Administrator Privileges](#uwp-loopback--administrator-privileges)
+    - [Do system proxy / virtual network require admin?](#do-system-proxy--virtual-network-require-admin)
+  - [🛠 Development Guide](#-development-guide)
+    - [Prerequisites](#prerequisites)
+    - [Architecture](#architecture)
+    - [C# Conventions](#c-conventions)
+    - [Rust Conventions](#rust-conventions)
+    - [Avalonia / MVVM](#avalonia--mvvm)
+    - [Control Test IDs](#control-test-ids)
+    - [Build \& Test](#build--test)
+      - [1. Prebuild](#1-prebuild)
+      - [2. Pre-build Tests](#2-pre-build-tests)
+      - [3. Build](#3-build)
+      - [4. Formatting](#4-formatting)
+  - [PR](#pr)
+  - [📄 License](#-license)
+    - [Open Source Commitment](#open-source-commitment)
+    - [Commercial Use Restrictions](#commercial-use-restrictions)
+  - [Thanks](#thanks)
 
 <br>
 
@@ -60,21 +76,21 @@ Import Clash-standard and Base64 subscriptions. It starts quickly and uses littl
 
 ### Download
 
-Grab the package for your platform from the **[Releases page](https://github.com/Kindness-Kismet/stelliberty/releases/latest)**:
+Grab the package for your platform from the **[Releases page](https://github.com/OGC-CGC/stelliberty/releases/latest)**:
 
 | Platform | Recommended | Alternative |
 |---|---|---|
 | Windows · x64 / arm64 | `*-setup.exe` (installer) | `*.zip` (portable) |
-| Linux · x64 / arm64 | `*.AppImage` | `*.zip` · `*.deb` · `*.rpm` · `*.pkg.tar.zst` |
-| macOS · x64 / arm64 | `*.dmg` | `*.pkg` |
+| Linux · x64 / arm64 | `*.AppImage` | |
+| macOS · x64 / arm64 | `*.dmg` | |
 
 ### System Requirements
 
 | Platform | Minimum |
 |---|---|
-| Windows | 10 (1809+) or 11 · x64 / arm64 |
-| Linux | glibc desktop with fontconfig + X11 |
-| macOS | 22+ · Intel / Apple Silicon |
+| Windows | Windows 10 1809 or later |
+| Linux | X11/Wayland-based desktop environment |
+| macOS | macOS 13+ |
 
 <br>
 
@@ -90,6 +106,8 @@ Grab the package for your platform from the **[Releases page](https://github.com
 
 Config format is fully compatible with Clash Meta — see the [mihomo documentation](https://wiki.metacubex.one/en/config/) for details.
 
+Agents can control the app through the CLI: [Agent CLI Help](.github/docs/CLI.zh-CN.md).
+
 <br>
 
 ---
@@ -100,14 +118,14 @@ Config format is fully compatible with Clash Meta — see the [mihomo documentat
 
 ### App will not start or appears unresponsive after installation?
 
-Install the .NET 11 Runtime, then start Stelliberty again:
+Install the .NET 11 Runtime, then restart the app.
 
 - General: [Microsoft download](https://dotnet.microsoft.com/download/dotnet/11.0)
 - Arch Linux and derivatives: AUR package [`dotnet-core-preview-bin`](https://aur.archlinux.org/packages/dotnet-core-preview-bin)
 
 ### UWP Loopback & Administrator Privileges
 
-UWP apps on Windows (e.g. Microsoft Store apps) are blocked from accessing the local proxy loopback address by default. Stelliberty provides a **UWP loopback exemption** toggle to remove this restriction.
+UWP apps on Windows (e.g. Microsoft Store apps) are blocked from accessing the local proxy loopback address by default. Enable **UWP loopback exemption** to remove this restriction.
 
 Notes:
 
@@ -135,7 +153,7 @@ Notes:
 |---|---|---|
 | .NET SDK | `11.0.x` | https://dotnet.microsoft.com/download/dotnet/11.0 |
 | Rust | stable (rustup) | https://rustup.rs |
-| Python | `3.x` | https://www.python.org/downloads/ |
+| Python | `3.10+` | https://www.python.org/downloads/ |
 
 ### Architecture
 
@@ -149,6 +167,7 @@ src/Stelliberty.Application     Use cases, service & capability interfaces
 src/Stelliberty.Domain          Entities, value objects, domain rules
 src/Stelliberty.Infrastructure  File system, persistence, external services, IPC transport and clients
 src/Stelliberty.Native          C# wrappers over the native FFI layer
+src/Stelliberty.Cli             CLI program for controlling the app
 native/hub                      Native library: config override, parsing, capabilities
 native/service                  Service mode
 scripts/                        build.py · prebuild.py · test.py
@@ -158,7 +177,9 @@ Dependency directions: `Desktop → Presentation → Application → Domain` and
 
 `Infrastructure` and `Native` implement interfaces defined by `Application`; `Application` has no dependency on desktop, Avalonia, or FFI details.
 
-Opening the window again reuses the active UI session. By default, hiding to the tray keeps the UI process alive. Lightweight Mode releases the UI process when hidden and creates a new session when reopened; the background runtime continues in both modes. Full application exit is coordinated by the tray. Startup integration, installers, and elevated restarts all use the tray entry point, and `scripts/build.py` packages both hosts together.
+The public entry point, `stelliberty.exe`, handles the tray, core runtime, system proxy, service mode, global hotkeys, and background scheduling. When a window is needed, it launches `data/deps/stelliberty_ui.exe` through an authorized session. Other desktop platforms use the corresponding executables without filename extensions.
+
+Opening the window again reuses the active UI session. By default, hiding to the tray keeps the UI process alive. Lightweight Mode releases the UI process when hidden and creates a new session when reopened; the background runtime continues in both modes. Full application exit is coordinated by the tray. Startup integration, installers, and elevated restarts all use the tray entry point, and `scripts/build.py` builds and packages both hosts together.
 
 Prohibited:
 
@@ -183,7 +204,7 @@ Prohibited:
 - Use result objects for complex state (`SaveResult`, `ParseResult`), not bare `bool`
 - Guard clauses at system boundaries; no excessive defensiveness for impossible internal states
 - Never use `.Result` or `.Wait()` to block async tasks
-- Comments state intent, constraints, and pitfalls; concise, max 2 lines per block
+- Comments state intent, constraints, and pitfalls in Simplified Chinese; concise, max 2 lines per block
 
 ### Rust Conventions
 
@@ -252,12 +273,16 @@ python scripts/prebuild.py
 
 ```bash
 python scripts/test.py --all
+python scripts/test.py <name>
 ```
 
 | Flag | Effect |
 |---|---|
-| `<name>` | Run a specific test by name |
 | `--all` | Run every pre-build test |
+| `<name>` | Run a specific test (see the table below) |
+
+<details>
+<summary>Available tests</summary>
 
 | Name | Description |
 |---|---|
@@ -267,6 +292,8 @@ python scripts/test.py --all
 | `proxy-selection-rules` | Group semantics, normalization, selection, visibility |
 | `runtime-config-rules` | Settings normalization and deterministic YAML generation |
 | `chain-proxy-rules` | Analysis and deterministic runtime config transformation |
+
+</details>
 
 #### 3. Build
 
@@ -279,9 +306,12 @@ python scripts/build.py
 | *(default)* | Release build |
 | `--dev` | Debug build |
 | `--all` | Both Debug and Release |
-| `--platform <rid>` | Same as prebuild, plus `desktop` (win-x64 + linux-x64 + macos-arm64) |
-| `--pack <format>` | `zip` · `installer` · `all` |
+| `--platform <rid>` | Same as prebuild, plus `desktop` |
+| `--pack <format>` | `app`, `zip`, `installer`, `all` |
+| `--version` | Specify the version number for this release |
 | `--clean` | Clean target output directory before building |
+
+Packaging during the build requires Inno Setup on Windows, the relevant system packaging tools on Linux, and DMG Python on macOS.
 
 **Full release build:**
 
@@ -301,41 +331,11 @@ cargo fmt
 
 ---
 
-## 📋 PR Guidelines
+## PR
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-Before submitting a Pull Request, confirm the following:
-
-### Requirements
-
-Pull Requests must target `beta`. Direct Pull Requests to `stable` are prohibited; only the repository owner may promote the repository's `beta` branch to `stable`.
-
-| Check | Description |
-|---|---|
-| Debug commands | Maintain UI commands under `src/Stelliberty.Desktop/Debug` and tray lifecycle commands under `src/Stelliberty.Tray/Debug` |
-| Control IDs | New interactive controls must have `AutomationProperties.AutomationId` set |
-| Test coverage | Pure business logic uses `Pre-build Tests`; packaged app behavior uses `Post-build Tests` |
-| Formatting | C#: `dotnet format`, Rust: `cargo fmt` |
-
-### Debug Command Requirements
-
-UI commands are wrapped under `src/Stelliberty.Desktop/Debug` and invoked through the debug control port, which exists only while the UI process is running. Tray lifecycle commands live under `src/Stelliberty.Tray/Debug` and use IPC. Keep the local app-debug skill in sync with the affected host; use its `tray.*` commands to inspect background state, open the UI, or verify UI crash recovery.
-
-The local skill also provides `tray.copy-terminal` to verify clipboard access while the UI is closed. It requires a running core and reports failures to the caller. Both local skill copies remain outside Git tracking.
-
-### Control ID Requirements
-
-When adding clickable, input-capable, selectable, or state-assertable controls:
-
-```xml
-<Button AutomationProperties.AutomationId="Settings.SaveButton" />
-<TextBox AutomationProperties.AutomationId="Subscription.UrlInput" />
-```
-
-Naming rule: `PageOrArea.SemanticName` — stable, unique, independent of visual layout.
-
-<br>
+Pull Requests are not accepted. Fork the repository to make changes.
 
 ---
 
@@ -345,26 +345,16 @@ Naming rule: `PageOrArea.SemanticName` — stable, unique, independent of visual
 
 ### Open Source Commitment
 
-This project is fully open source under the WTF License. Any derivative work based on this project must publish its complete corresponding source code and remain under the WTF License, whether it is distributed directly or provided as a network service.
+The modifications in this project are published as source code under the Wushidrm License. No warranty is provided for any code it contains.
 
 ### Commercial Use Restrictions
 
 This project and its derivative works must not be used for commercial purposes.
 
-### Branding and Identifiers
-
-Derivative works must not retain any identifier associated with the original Stelliberty software, including but not limited to its name, logos, icons, product names, package names, application identifiers, and other branding.
-
-### Third-Party Components
-
-Third-party components remain subject to their original licenses. See the [WTF License](LICENSE) for the complete terms and third-party project list.
-
 <br>
 
----
-
-## 🤝 Friends
+## Thanks
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-- [Telegram Updates](https://t.me/MaterialDesign3) — Project updates and release notices.
+- [Original author](https://t.me/MaterialDesign3).

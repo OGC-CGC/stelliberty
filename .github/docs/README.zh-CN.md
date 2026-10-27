@@ -1,12 +1,14 @@
 <div align="center">
 
-# Stelliberty 重制版
+# SBproxy
 
 [![English](https://img.shields.io/badge/English-red?style=flat-square)](../../README.md)
 &nbsp;
 [![简体中文](https://img.shields.io/badge/简体中文-blue?style=flat-square)](README.zh-CN.md)
 
 <br>
+
+[Stelliberty](https://github.com/Kindness-Kismet/stelliberty) 的一个二次分叉。根据分叉来源的要求，抹去了其信息。
 
 [![Avalonia](https://img.shields.io/badge/Avalonia-UI-9b4fdb?logo=avaloniaui&logoColor=white&style=flat-square)](https://avaloniaui.net)
 [![.NET 11](https://img.shields.io/badge/.NET-11-512BD4?logo=dotnet&logoColor=white&style=flat-square)](https://dotnet.microsoft.com)
@@ -26,7 +28,7 @@
 |---|---|
 | ![设置浅色](../../.github/images/settings-light.png) | ![设置深色](../../.github/images/settings-dark.png) |
 
-Stelliberty 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS。
+SBproxy 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS。
 
 支持 Clash 标准订阅和 Base64 订阅导入，启动快、占用低。Windows 和 macOS 上还做了平台级的模糊窗口效果，界面偏简约原生风格。
 
@@ -36,7 +38,7 @@ Stelliberty 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS
 
 ## 导航
 
-- [Stelliberty 重制版](#stelliberty-重制版)
+- [SBproxy](#sbproxy)
   - [导航](#导航)
   - [📦 安装](#-安装)
     - [下载](#下载)
@@ -58,15 +60,10 @@ Stelliberty 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS
       - [2. 编译前测试](#2-编译前测试)
       - [3. 构建](#3-构建)
       - [4. 格式化](#4-格式化)
-  - [📋 PR 规范](#-pr-规范)
-    - [必须项](#必须项)
-    - [调试指令要求](#调试指令要求)
-    - [控件 ID 要求](#控件-id-要求)
+  - [PR](#pr)
   - [📄 许可证](#-许可证)
     - [开源承诺](#开源承诺)
     - [商业使用限制](#商业使用限制)
-    - [品牌与标识](#品牌与标识)
-    - [第三方组件](#第三方组件)
   - [🤝 友情链接](#-友情链接)
 
 <br>
@@ -79,21 +76,21 @@ Stelliberty 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS
 
 ### 下载
 
-从 **[Releases 页面](https://github.com/Kindness-Kismet/stelliberty/releases/latest)** 下载对应平台的安装包：
+从 **[Releases 页面](https://github.com/OGC-CGC/stelliberty/releases/latest)** 下载对应平台的安装包：
 
 | 平台 | 推荐 | 其他可选 |
 |---|---|---|
 | Windows · x64 / arm64 | `*-setup.exe`（安装版） | `*.zip`（便携版） |
-| Linux · x64 / arm64 | `*.AppImage` | `*.zip` · `*.deb` · `*.rpm` · `*.pkg.tar.zst` |
-| macOS · x64 / arm64 | `*.dmg` | `*.pkg` |
+| Linux · x64 / arm64 | `*.AppImage` | |
+| macOS · x64 / arm64 | `*.dmg` | |
 
 ### 系统要求
 
 | 平台 | 最低要求 |
 |---|---|
-| Windows | 10（1809+）或 11 · x64 / arm64 |
-| Linux | 基于 glibc 的桌面环境，包含 fontconfig + X11 |
-| macOS | 22+ · Intel / Apple Silicon |
+| Windows | Windows 10 1809 及以上 |
+| Linux | 基于 X11/Wayland 的桌面环境 |
+| macOS | macOS 13+ |
 
 <br>
 
@@ -121,14 +118,14 @@ Stelliberty 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS
 
 ### 安装后无法启动或启动无响应？
 
-请先安装 .NET 11 运行时，然后重新启动 Stelliberty：
+请先安装 .NET 11 运行时，然后重新启动。
 
 - 通用：[微软官方下载](https://dotnet.microsoft.com/download/dotnet/11.0)
 - Arch Linux 及其衍生发行版：AUR 包 [`dotnet-core-preview-bin`](https://aur.archlinux.org/packages/dotnet-core-preview-bin)
 
 ### UWP 回环与管理员权限
 
-Windows 上的 UWP 应用（如微软商店应用）默认禁止访问本地代理回环地址。Stelliberty 提供了 **UWP 回环豁免** 功能来解除此限制。
+Windows 上的 UWP 应用（如微软商店应用）默认禁止访问本地代理回环地址。可使用 **UWP 回环豁免** 功能来解除此限制。
 
 注意事项：
 
@@ -156,7 +153,7 @@ Windows 上的 UWP 应用（如微软商店应用）默认禁止访问本地代�
 |---|---|---|
 | .NET SDK | `11.0.x` | https://dotnet.microsoft.com/download/dotnet/11.0 |
 | Rust | stable（rustup） | https://rustup.rs |
-| Python | `3.x` | https://www.python.org/downloads/ |
+| Python | `3.10+` | https://www.python.org/downloads/ |
 
 ### 架构
 
@@ -170,6 +167,7 @@ src/Stelliberty.Application     用例、服务与平台能力接口
 src/Stelliberty.Domain          实体、值对象、领域规则
 src/Stelliberty.Infrastructure  文件系统、持久化、外部服务、进程通信传输与客户端
 src/Stelliberty.Native          C# 到原生 FFI 层的包装
+src/Stelliberty.Cli             用于控制软件的 Cli 程序
 native/hub                      原生库：配置覆写、解析、能力模块
 native/service                  服务模式
 scripts/                        build.py · prebuild.py · test.py
@@ -309,8 +307,11 @@ python scripts/build.py
 | `--dev` | Debug 构建 |
 | `--all` | 同时构建 Debug 与 Release |
 | `--platform <rid>` | 目标平台（同预构建，额外支持 `desktop`） |
-| `--pack <格式>` | 打包格式：`zip`（压缩包）· `installer`（安装包）· `all`（全部） |
+| `--pack <格式>` | `app`, `zip`, `installer`, `all` |
+| `--version` | 指定此次发布使用的版本号 |
 | `--clean` | 构建前清理输出目录 |
+
+构建过程中若需要打包，则在 Windows 上依赖 Inno Setup，在 Linux 上依赖各系统打包工具，在 macOS 上依赖 DMG Python。
 
 **完整发布构建：**
 
@@ -330,41 +331,11 @@ cargo fmt
 
 ---
 
-## 📋 PR 规范
+## PR
 
 <sub>[↑ 回到导航](#导航)</sub>
 
-提交 Pull Request 前，请确认以下清单：
-
-### 必须项
-
-Pull Request 必须以 `beta` 为目标分支，禁止直接向 `stable` 发起；仅仓库所有者可以将本仓库的 `beta` 分支合并到 `stable`。
-
-| 检查项 | 说明 |
-|---|---|
-| 调试指令 | 界面指令维护在 `src/Stelliberty.Desktop/Debug`，托盘生命周期指令维护在 `src/Stelliberty.Tray/Debug` |
-| 控件 ID | 引入新的可交互控件时，必须设置 `AutomationProperties.AutomationId` |
-| 测试覆盖 | 纯业务逻辑使用编译前测试，安装包应用行为使用编译后测试 |
-| 格式化 | C# 运行 `dotnet format`，Rust 运行 `cargo fmt` |
-
-### 调试指令要求
-
-界面指令封装在 `src/Stelliberty.Desktop/Debug`，通过仅在界面进程运行时存在的调试端口调用；托盘生命周期指令封装在 `src/Stelliberty.Tray/Debug`，通过进程通信调用。修改时同步维护本地 app-debug 技能，使用 `tray.*` 指令观察后台状态、打开界面或验证界面崩溃恢复。
-
-本地技能还提供 `tray.copy-terminal`，用于验证界面关闭后的剪贴板操作；此指令要求核心已运行，失败时返回错误。两套本地技能均不纳入 Git 追踪。
-
-### 控件 ID 要求
-
-新增可点击、可输入、可选择、可断言状态的控件时：
-
-```xml
-<Button AutomationProperties.AutomationId="Settings.SaveButton" />
-<TextBox AutomationProperties.AutomationId="Subscription.UrlInput" />
-```
-
-命名规则：`页面或区域.语义名称`，保持稳定、不重复、不随视觉布局变化。
-
-<br>
+不接受任何 Pull Request。要改任何东西请分叉。
 
 ---
 
@@ -374,26 +345,16 @@ Pull Request 必须以 `beta` 为目标分支，禁止直接向 `stable` 发起�
 
 ### 开源承诺
 
-本项目基于 WTF 协议完全开源。任何基于本项目的衍生作品，无论是直接分发还是以网络服务形式提供，均须公开完整对应源码，并继续采用 WTF 协议。
+本项目的修改基于 Wushidrm 协议公开源代码。不对其内含的任何代码作任何保证。
 
 ### 商业使用限制
 
 本项目及其衍生作品均禁止用于商业用途。
 
-### 品牌与标识
-
-衍生作品不得保留与原版 Stelliberty 相关的任何标识，包括但不限于名称、Logo、图标、产品名、包名、应用标识符及其他品牌元素。
-
-### 第三方组件
-
-第三方组件仍受各自原始协议约束。完整授权条款及第三方项目清单，请参见 [WTF 协议](../../LICENSE)。
-
 <br>
-
----
 
 ## 🤝 友情链接
 
 <sub>[↑ 回到导航](#导航)</sub>
 
-- [Telegram 通知频道](https://t.me/MaterialDesign3) —— 接收项目更新与发布通知。
+- [原作者](https://t.me/MaterialDesign3)。
