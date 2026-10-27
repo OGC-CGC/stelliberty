@@ -79,7 +79,6 @@ def check_packaging_tools(platform_name: str) -> None:
         if zstd_path is None:
             raise RuntimeError("Missing zstd")
         print(f"  Tool   {zstd_path}", flush=True)
-        print(f"  Tool   {find_appimagetool()}", flush=True)
         return
 
     if platform_name.startswith("macos"):
@@ -144,10 +143,27 @@ def pack_linux_installers(
             pack_deb(metadata, platform_name, configuration, target, package_root, base_name),
             pack_rpm(metadata, platform_name, configuration, target, package_root, base_name),
             pack_arch_pkg(metadata, platform_name, configuration, target, package_root, base_name),
-            pack_appimage(metadata, platform_name, configuration, target, output_dir, base_name),
         ]
     finally:
         shutil.rmtree(package_root, ignore_errors=True)
+
+
+def pack_linux_app(
+    metadata: AppMetadata,
+    platform_name: str,
+    configuration: str,
+    target: PlatformTarget,
+    output_dir: Path,
+) -> Path:
+    if not sys.platform.startswith("linux"):
+        raise RuntimeError("Linux AppImages can only be created on a Linux host")
+
+    if not platform_name.startswith("linux"):
+        raise RuntimeError(f"Linux AppImages do not support this platform: {platform_name}")
+
+    PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
+    base_name = linux_package_base_name(metadata, platform_name, configuration)
+    return pack_appimage(metadata, platform_name, configuration, target, output_dir, base_name)
 
 
 def pack_macos_installers(

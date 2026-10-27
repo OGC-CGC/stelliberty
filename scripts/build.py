@@ -34,9 +34,9 @@ BUILD_PLATFORM_HELP = format_choice_help(
 PACK_HELP = format_choice_help(
     "Package format.",
     [
-        ("app", "Create a retained macOS app bundle"),
+        ("app", "Create a Linux AppImage or retained macOS app"),
         ("zip", "Create a zip archive"),
-        ("installer", "Create a platform installer"),
+        ("installer", "Create platform installers"),
         ("all", "Create every package format"),
     ],
 )

@@ -316,7 +316,7 @@ jobs:
           set -euo pipefail
 
           python scripts/prebuild.py --platform ${{ matrix.platform }}
-          python scripts/build.py --platform ${{ matrix.platform }} --version ${{ needs.prepare.outputs.version }} --pack all
+          python scripts/build.py --platform ${{ matrix.platform }} --version ${{ needs.prepare.outputs.version }} --pack app
 
       - name: Install macOS DMG packaging dependencies
         if: matrix.os_family == 'macos'
