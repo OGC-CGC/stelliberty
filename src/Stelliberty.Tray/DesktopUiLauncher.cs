@@ -10,6 +10,8 @@ namespace Stelliberty.Tray;
 internal interface IDesktopUiLauncher
 {
     Task LaunchAsync(string sessionToken, CancellationToken cancellationToken);
+
+    Task LaunchAdditionalAsync(string sessionToken, CancellationToken cancellationToken);
 }
 
 internal sealed class DesktopUiLauncher : IDesktopUiLauncher, IAsyncDisposable
@@ -37,14 +39,30 @@ internal sealed class DesktopUiLauncher : IDesktopUiLauncher, IAsyncDisposable
         _shutdownTimeout = shutdownTimeout;
     }
 
-    public async Task LaunchAsync(string sessionToken, CancellationToken cancellationToken)
+    public Task LaunchAsync(string sessionToken, CancellationToken cancellationToken) =>
+        LaunchCoreAsync(sessionToken, stopCurrent: true, cancellationToken);
+
+    // 重启界面时保留当前进程，让它收到响应后自行退出。
+    public Task LaunchAdditionalAsync(string sessionToken, CancellationToken cancellationToken) =>
+        LaunchCoreAsync(sessionToken, stopCurrent: false, cancellationToken);
+
+    private async Task LaunchCoreAsync(string sessionToken, bool stopCurrent, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             ObjectDisposedException.ThrowIf(_isDisposed, this);
-            await StopOwnedProcessAsync().ConfigureAwait(false);
+            if (stopCurrent)
+            {
+                await StopOwnedProcessAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                _process?.Dispose();
+                _process = null;
+            }
+
             var startInfo = new ProcessStartInfo(_resolveExecutablePath())
             {
                 UseShellExecute = false,

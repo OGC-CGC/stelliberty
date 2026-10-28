@@ -42,6 +42,8 @@ public sealed class AppSettings
 
     public string WindowEffect { get; set; } = "None";
 
+    public string WindowDecorationStyle { get; set; } = WindowDecorationStyleRules.DefaultValue;
+
     public bool IsSidebarDividerVisible { get; set; } = true;
 
     public bool IsSidebarCollapsed { get; set; } = true;

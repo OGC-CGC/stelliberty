@@ -136,6 +136,8 @@ internal sealed class TrayRequestRouter : IDisposable
 #endif
                 TrayProtocol.UiActivateMethod => TrayIpcResult.Success(
                     await _uiSessions.ActivateAsync(cancellationToken).ConfigureAwait(false)),
+                TrayProtocol.UiRestartMethod => TrayIpcResult.Success(
+                    await _uiSessions.RestartAsync(cancellationToken).ConfigureAwait(false)),
                 TrayProtocol.UiRegisterMethod => TrayIpcResult.Success(
                     await RegisterUiAsync(connection, request, cancellationToken).ConfigureAwait(false)),
                 TrayProtocol.UiUnregisterMethod => TrayIpcResult.Success(
@@ -183,7 +185,7 @@ internal sealed class TrayRequestRouter : IDisposable
             return TrayIpcResult.Error("core.operation_failed", exception.Message);
         }
         catch (Exception exception) when (
-            (request.Method is TrayProtocol.UiActivateMethod)
+            (request.Method is TrayProtocol.UiActivateMethod or TrayProtocol.UiRestartMethod)
             && exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
             AppLogger.Error(exception, "Desktop UI launch failed");

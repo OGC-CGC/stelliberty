@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -47,6 +48,7 @@ public sealed partial class MainWindow : Window
     private static readonly TimeSpan HiddenReleaseDelay = TimeSpan.FromSeconds(AppSettings.DefaultLightweightModeShutdownDelaySeconds);
     private static readonly TimeSpan PageLoadingMinVisible = TimeSpan.FromMilliseconds(300);
     private readonly WindowAppearanceService _windowAppearanceService = new();
+    private readonly MacOSWindowControlsService _macOSWindowControls = new();
     private readonly WindowStateService _windowStateService;
     private readonly SystemAccentColorService _systemAccentColorService = new();
     private readonly BitmapCache _proxyPageBitmapCache = new() { SnapsToDevicePixels = true };
@@ -63,6 +65,7 @@ public sealed partial class MainWindow : Window
     private bool _isShutdownRequested;
     private bool _isShutdownPreparing;
     private bool _shouldShutdownTray = true;
+    private WindowDecorationStyle _windowDecorationStyle = WindowDecorationStyleRules.Default;
     private bool _hasOpened;
     private long _pageTransitionVersion;
     private long _pageLoadingShownAt;
@@ -85,7 +88,7 @@ public sealed partial class MainWindow : Window
         _relativeTimeTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         _relativeTimeTimer.Tick += OnRelativeTimeTimerTick;
         InitializeComponent();
-        ApplyPlatformWindowDecorations();
+        ApplyWindowDecorationStyle(settings);
         DataContextChanged += OnDataContextChanged;
         PropertyChanged += OnWindowPropertyChanged;
         Opened += OnOpened;
@@ -99,21 +102,79 @@ public sealed partial class MainWindow : Window
 #endif
     }
 
-    private void ApplyPlatformWindowDecorations()
+    private void ApplyWindowDecorationStyle(AppSettings? settings)
+    {
+        _windowDecorationStyle = WindowDecorationStyleRules.Parse(settings?.WindowDecorationStyle);
+        ApplyWindowDecorations();
+    }
+
+    private void ApplyWindowDecorations()
+    {
+        var isMacOS = OperatingSystem.IsMacOS();
+        var useCustomButtons = _windowDecorationStyle == WindowDecorationStyle.Windows;
+        // macOS 的系统红绿灯浮在客户端区域上，保留自绘标题栏才能继续显示 FPS 与图钉。
+        var isMacOSSystem = isMacOS && _windowDecorationStyle == WindowDecorationStyle.System;
+        // 无装饰模式仍保留顶部透明拖动区，但不渲染任何标题栏元素。
+        var showTitleBarRow = useCustomButtons
+                              || isMacOSSystem
+                              || _windowDecorationStyle == WindowDecorationStyle.None;
+        var showTitleBarContent = useCustomButtons || isMacOSSystem;
+        ExtendClientAreaToDecorationsHint = useCustomButtons || isMacOSSystem;
+        WindowDecorations = _windowDecorationStyle switch
+        {
+            WindowDecorationStyle.None => Avalonia.Controls.WindowDecorations.None,
+            WindowDecorationStyle.System when !isMacOS => Avalonia.Controls.WindowDecorations.Full,
+            _ when OperatingSystem.IsLinux() => Avalonia.Controls.WindowDecorations.BorderOnly,
+            _ => Avalonia.Controls.WindowDecorations.Full
+        };
+        CaptionButtons.IsVisible = useCustomButtons;
+        SetTitleBarVisible(showTitleBarRow, showTitleBarContent);
+        // Linux 合成器不保证模糊；垫一层不透明底色，避免窗口 alpha 透出桌面。
+        BaseColorLayer.IsVisible = OperatingSystem.IsLinux();
+        ApplyPlatformWindowControls();
+    }
+
+    private void SetTitleBarVisible(bool showRow, bool showContent)
+    {
+        TitleBarSurface.IsVisible = showRow;
+        TitleBarLayout.IsVisible = showContent;
+        RootGrid.RowDefinitions[0].Height = showRow ? new GridLength(36) : new GridLength(0);
+    }
+
+    // macOS 系统红绿灯只在系统装饰模式保留，自绘或无边框时隐藏。
+    private void ApplyPlatformWindowControls()
     {
         if (OperatingSystem.IsMacOS())
         {
-            // macOS 保留系统标题栏按钮，避免与自绘窗口控制重复。
-            CaptionButtons.IsVisible = false;
+            _macOSWindowControls.SetHidden(this, _windowDecorationStyle != WindowDecorationStyle.System);
+        }
+    }
+
+    // Wayland 部分合成器不提供系统标题栏时回退到 Windows 风格，避免出现无按钮窗口。
+    private void ApplySystemDecorationFallback()
+    {
+        var platform = PlatformImpl;
+        if (_windowDecorationStyle != WindowDecorationStyle.System
+            || !OperatingSystem.IsLinux()
+            || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))
+            || platform is null
+            || !RequiresManagedDecorations(platform))
+        {
             return;
         }
 
-        if (OperatingSystem.IsLinux())
-        {
-            WindowDecorations = Avalonia.Controls.WindowDecorations.BorderOnly;
-            // Linux 合成器不保证模糊；垫一层不透明底色，避免窗口 alpha 透出桌面。
-            BaseColorLayer.IsVisible = true;
-        }
+        AppLogger.Warning("System window decorations are unavailable; falling back to Windows style.");
+        _windowDecorationStyle = WindowDecorationStyle.Windows;
+        ApplyWindowDecorations();
+    }
+
+    // 引用程序集将 NeedsManagedDecorations 标为 internal，运行时库中为公开接口成员。
+    private static bool RequiresManagedDecorations(Avalonia.Platform.IWindowImpl platform)
+    {
+        var property = typeof(Avalonia.Platform.IWindowImpl).GetProperty(
+            "NeedsManagedDecorations",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        return property?.GetValue(platform) is true;
     }
 #if DEBUG
     private void AttachDevBadge()
@@ -140,6 +201,7 @@ public sealed partial class MainWindow : Window
         {
             _attachedViewModel = viewModel;
             _attachedViewModel.Theme.CustomAccentRequested += OnCustomAccentRequested;
+            _attachedViewModel.Theme.WindowDecorationRestartRequested += OnWindowDecorationRestartRequested;
             _attachedViewModel.PropertyChanged += OnAttachedViewModelPropertyChanged;
             _windowAppearanceService.Attach(this, viewModel.Theme);
             if (_hasOpened)
@@ -158,6 +220,7 @@ public sealed partial class MainWindow : Window
         }
 
         _attachedViewModel.Theme.CustomAccentRequested -= OnCustomAccentRequested;
+        _attachedViewModel.Theme.WindowDecorationRestartRequested -= OnWindowDecorationRestartRequested;
         _attachedViewModel.PropertyChanged -= OnAttachedViewModelPropertyChanged;
         _windowAppearanceService.Dispose();
         _systemAccentColorService.Dispose();
@@ -175,6 +238,8 @@ public sealed partial class MainWindow : Window
 #endif
         _hasOpened = true;
         _relativeTimeTimer.Start();
+        ApplyPlatformWindowControls();
+        ApplySystemDecorationFallback();
         if (DataContext is MainWindowViewModel viewModel)
         {
             _systemAccentColorService.Attach(this, viewModel.Theme);
@@ -193,6 +258,7 @@ public sealed partial class MainWindow : Window
             || DialogHost.IsOpen
             || ConnectivityDialogHost.IsOpen
             || UpdateDialogHost.IsOpen
+            || RestartRequiredDialogHost.IsOpen
             || DataContext is not MainWindowViewModel viewModel
             || viewModel.SubscriptionPage.Provider.IsProviderSelectorDialogVisible
             || viewModel.CurrentPage != AppNavigationPage.Settings
@@ -836,6 +902,45 @@ public sealed partial class MainWindow : Window
         UpdatePinState();
     }
 
+    private void OnWindowDecorationRestartRequested(object? sender, EventArgs args)
+    {
+        RestartRequiredDialogHost.IsOpen = true;
+    }
+
+    private void OnRestartRequiredLaterClicked(object? sender, RoutedEventArgs args)
+    {
+        RestartRequiredDialogHost.IsOpen = false;
+    }
+
+    private void OnRestartRequiredRestartClicked(object? sender, RoutedEventArgs args)
+    {
+        _ = RestartUiWindowCoreAsync();
+    }
+
+    private async Task RestartUiWindowCoreAsync()
+    {
+        RestartRequiredDialogHost.IsOpen = false;
+        if (RestartUiWindowAsync is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (await RestartUiWindowAsync())
+            {
+                RequestUiShutdown();
+                return;
+            }
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Warning($"Desktop UI restart failed: {exception.Message}");
+        }
+
+        RestartRequiredDialogHost.IsOpen = true;
+    }
+
     private void UpdatePinState()
     {
         PinFilledIcon.IsVisible = Topmost;
@@ -915,6 +1020,9 @@ public sealed partial class MainWindow : Window
     internal Func<Task>? PrepareShutdownAsync { private get; set; }
 
     internal Action? OsShutdownDetected { private get; set; }
+
+    // 由宿主注入：重启界面进程，成功后当前窗口自行退出。
+    internal Func<Task<bool>>? RestartUiWindowAsync { get; set; }
 
     internal bool IsShutdownPreparing => _isShutdownPreparing;
 

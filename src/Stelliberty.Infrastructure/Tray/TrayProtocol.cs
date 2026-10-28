@@ -45,6 +45,7 @@ public static class TrayProtocol
     public const string PowerDebugMethod = "tray.debug_power";
 #endif
     public const string UiActivateMethod = "ui.activate";
+    public const string UiRestartMethod = "ui.restart";
     public const string UiRegisterMethod = "ui.register";
     public const string UiUnregisterMethod = "ui.unregister";
     public const string UiActivationEvent = "ui.activate";

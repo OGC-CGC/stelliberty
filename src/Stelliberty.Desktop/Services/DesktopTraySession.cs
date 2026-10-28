@@ -49,6 +49,10 @@ internal sealed class DesktopTraySession : IDisposable, IBackgroundOperationClie
         _sessionId = null;
     }
 
+    // 托盘替换会话后会启动新的界面进程，当前进程随后由宿主关闭。
+    public Task<UiActivateResult> RestartAsync(CancellationToken cancellationToken) =>
+        _client.RestartUiAsync(Environment.ProcessId, cancellationToken);
+
     public async Task<IAsyncDisposable?> TryAcquireAsync(BackgroundOperationRequest request, CancellationToken cancellationToken = default)
     {
         // 取得授权后必须接收其 ID 才能释放，避免调用方取消时遗留后台占用。

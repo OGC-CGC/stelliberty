@@ -16,6 +16,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     private AppTheme _selectedTheme;
     private AccentColorMode _accentColorMode;
     private WindowEffect _windowEffect;
+    private WindowDecorationStyle _windowDecorationStyle;
     private string _customAccentColor;
     private bool _backgroundImageLoadFailed;
 
@@ -28,9 +29,11 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         _selectedTheme = ParseEnum(settings.Theme, AppTheme.System);
         _accentColorMode = ParseEnum(settings.AccentColorMode, AccentColorMode.System);
         _windowEffect = NormalizeWindowEffect(ParseEnum(settings.WindowEffect, WindowEffect.None));
+        _windowDecorationStyle = WindowDecorationStyleRules.Parse(settings.WindowDecorationStyle);
         _customAccentColor = string.IsNullOrWhiteSpace(settings.AccentColor) ? "#3B82F6" : settings.AccentColor;
         settings.AccentColorMode = _accentColorMode.ToString();
         NormalizePersistedWindowEffect();
+        NormalizePersistedWindowDecorationStyle();
         _localization.LanguageChanged += OnLanguageChanged;
         ClearBackgroundImageCommand = new RelayCommand(() => SetBackgroundImagePath(string.Empty));
         EditCustomAccentColorCommand = new RelayCommand(() => CustomAccentRequested?.Invoke(this, EventArgs.Empty));
@@ -41,6 +44,9 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     public event EventHandler? AccentColorChanged;
 
     public event EventHandler<WindowEffect>? WindowEffectChanged;
+
+    // 窗口按钮改动只能在新窗口创建时生效，宿主据此提示重启界面。
+    public event EventHandler? WindowDecorationRestartRequested;
 
     public event EventHandler? CustomAccentRequested;
 
@@ -308,6 +314,21 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
 
     public bool IsWindowEffectSupported => _windowEffects.Count > 1;
 
+    public string WindowDecorationSectionTitle => _localization.GetString("Settings.Field.WindowDecoration");
+
+    public IReadOnlyList<SelectionOption<WindowDecorationStyle>> WindowDecorationOptions =>
+        WindowDecorationStyleRules.Supported
+            .Select(style => new SelectionOption<WindowDecorationStyle>(style, WindowDecorationDisplayName(style)))
+            .ToArray();
+
+    public SelectionOption<WindowDecorationStyle> SelectedWindowDecorationOption
+    {
+        get => WindowDecorationOptions.First(option => option.Value == _windowDecorationStyle);
+        set => SetWindowDecorationStyle(value.Value);
+    }
+
+    public WindowDecorationStyle SelectedWindowDecoration => _windowDecorationStyle;
+
     public ICommand EditCustomAccentColorCommand { get; }
 
     public void ConfirmCustomAccentColor(string hexColor)
@@ -336,9 +357,11 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         _selectedTheme = ParseEnum(_settings.Theme, AppTheme.System);
         _accentColorMode = ParseEnum(_settings.AccentColorMode, AccentColorMode.System);
         _windowEffect = NormalizeWindowEffect(ParseEnum(_settings.WindowEffect, WindowEffect.None));
+        _windowDecorationStyle = WindowDecorationStyleRules.Parse(_settings.WindowDecorationStyle);
         _customAccentColor = string.IsNullOrWhiteSpace(_settings.AccentColor) ? "#3B82F6" : _settings.AccentColor;
         _settings.AccentColorMode = _accentColorMode.ToString();
         NormalizePersistedWindowEffect();
+        NormalizePersistedWindowDecorationStyle();
         OnPropertyChanged(string.Empty);
         BackgroundImageChanged?.Invoke(this, true);
 
@@ -399,6 +422,21 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         WindowEffectChanged?.Invoke(this, effect);
     }
 
+    private void SetWindowDecorationStyle(WindowDecorationStyle style)
+    {
+        if (!WindowDecorationStyleRules.Supported.Contains(style) || _windowDecorationStyle == style)
+        {
+            return;
+        }
+
+        _windowDecorationStyle = style;
+        _settings.WindowDecorationStyle = style.ToString();
+        _settingsStore.Save(_settings);
+        OnPropertyChanged(nameof(SelectedWindowDecoration));
+        OnPropertyChanged(nameof(SelectedWindowDecorationOption));
+        WindowDecorationRestartRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         RaiseBackgroundPropertiesChanged();
@@ -410,6 +448,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(LightThemeText));
         OnPropertyChanged(nameof(DarkThemeText));
         OnPropertyChanged(nameof(WindowEffectSectionTitle));
+        OnPropertyChanged(nameof(WindowDecorationSectionTitle));
         OnPropertyChanged(nameof(SidebarDividerText));
         OnPropertyChanged(nameof(Options));
         OnPropertyChanged(nameof(SelectedOption));
@@ -417,6 +456,8 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SelectedAccentModeOption));
         OnPropertyChanged(nameof(WindowEffectOptions));
         OnPropertyChanged(nameof(SelectedWindowEffectOption));
+        OnPropertyChanged(nameof(WindowDecorationOptions));
+        OnPropertyChanged(nameof(SelectedWindowDecorationOption));
     }
 
     private static T ParseEnum<T>(string value, T fallback) where T : struct
@@ -451,6 +492,28 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
             WindowEffect.FrutigerAero => "Settings.WindowEffect.FrutigerAero",
             _ => "Settings.WindowEffect.None"
         });
+    }
+
+    private string WindowDecorationDisplayName(WindowDecorationStyle style)
+    {
+        return _localization.GetString(style switch
+        {
+            WindowDecorationStyle.System => "Settings.WindowDecoration.System",
+            WindowDecorationStyle.Windows => "Settings.WindowDecoration.Windows",
+            _ => "Settings.WindowDecoration.None"
+        });
+    }
+
+    private void NormalizePersistedWindowDecorationStyle()
+    {
+        var normalized = _windowDecorationStyle.ToString();
+        if (string.Equals(_settings.WindowDecorationStyle, normalized, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _settings.WindowDecorationStyle = normalized;
+        _settingsStore.Save(_settings);
     }
 
     private static IReadOnlyList<WindowEffect> NormalizeWindowEffects(IReadOnlyList<WindowEffect> effects)

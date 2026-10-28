@@ -74,6 +74,50 @@ internal sealed class UiSessionManager(
         }
     }
 
+    public async Task<UiActivateResult> RestartAsync(CancellationToken cancellationToken)
+    {
+        UiSession? previousSession;
+        string launchToken;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            // 先撤销当前会话并预占启动令牌，新窗口才能注册；旧窗口收到响应后自行退出。
+            previousSession = _activeSession;
+            launchToken = Guid.NewGuid().ToString("N");
+            _activeSession = null;
+            _pendingToken = launchToken;
+            _pendingUntil = _timeProvider.GetUtcNow() + LaunchReservationDuration;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        try
+        {
+            await _launcher.LaunchAdditionalAsync(launchToken, cancellationToken).ConfigureAwait(false);
+            return new UiActivateResult(true, false, true);
+        }
+        catch
+        {
+            await _gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                _activeSession ??= previousSession;
+                if (string.Equals(_pendingToken, launchToken, StringComparison.Ordinal))
+                {
+                    _pendingToken = null;
+                }
+            }
+            finally
+            {
+                _gate.Release();
+            }
+
+            throw;
+        }
+    }
+
     public async Task<UiActivateResult> ToggleAsync(CancellationToken cancellationToken)
     {
         IUiSessionConnection? activeConnection;

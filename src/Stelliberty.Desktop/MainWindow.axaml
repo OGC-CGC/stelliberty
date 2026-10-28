@@ -59,7 +59,7 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="36,*">
+  <Grid x:Name="RootGrid" RowDefinitions="36,*">
     <!-- Linux 无模糊合成器时，用不透明底色替代窗口 93% alpha，避免透出桌面。 -->
     <Border x:Name="BaseColorLayer" Grid.RowSpan="2"
             Background="{DynamicResource AppBaseColorBrush}"
@@ -440,6 +440,48 @@
                         Tag="{Binding Update.LatestReleaseUrl}"
                         Click="OnOpenUpdateReleaseClicked"
                         Content="{loc:Loc Settings.Update.OpenRelease}" />
+              </StackPanel>
+            </Grid>
+          </controls:DialogPanel.DialogContent>
+        </controls:DialogPanel>
+      </controls:OverlayDialogHost.DialogContent>
+    </controls:OverlayDialogHost>
+
+    <controls:OverlayDialogHost x:Name="RestartRequiredDialogHost"
+                                Grid.RowSpan="2"
+                                AutomationProperties.AutomationId="Shell.RestartRequiredDialogOverlay">
+      <controls:OverlayDialogHost.DialogContent>
+        <controls:DialogPanel PanelWidth="460"
+                              ContentPadding="0"
+                              AutomationProperties.AutomationId="Shell.RestartRequiredDialog">
+          <controls:DialogPanel.DialogContent>
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+              <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="24,24,24,0">
+                <TextBlock Classes="dialog-title"
+                           VerticalAlignment="Center"
+                           Text="{loc:Loc Settings.WindowDecoration.Restart.Title}" />
+                <Button Grid.Column="1"
+                        Classes="dialog-close"
+                        AutomationProperties.AutomationId="Shell.RestartRequiredDialog.CloseButton"
+                        Click="OnRestartRequiredLaterClicked">
+                  <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="CloseFill" />
+                </Button>
+              </Grid>
+              <TextBlock Grid.Row="1"
+                         Classes="dialog-subtitle"
+                         Margin="24,0,22,0"
+                         TextWrapping="Wrap"
+                         Text="{loc:Loc Settings.WindowDecoration.Restart.Message}" />
+              <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8"
+                          HorizontalAlignment="Right" Margin="24,4,24,24">
+                <Button Classes="dialog-secondary"
+                        AutomationProperties.AutomationId="Shell.RestartRequiredDialog.LaterButton"
+                        Click="OnRestartRequiredLaterClicked"
+                        Content="{loc:Loc Settings.WindowDecoration.Restart.Later}" />
+                <Button Classes="dialog-primary"
+                        AutomationProperties.AutomationId="Shell.RestartRequiredDialog.RestartButton"
+                        Click="OnRestartRequiredRestartClicked"
+                        Content="{loc:Loc Settings.WindowDecoration.Restart.Now}" />
               </StackPanel>
             </Grid>
           </controls:DialogPanel.DialogContent>

@@ -323,6 +323,25 @@ public sealed partial class App : Avalonia.Application
             };
             _mainWindow = mainWindow;
             clipboardWriter.Attach(mainWindow);
+            mainWindow.RestartUiWindowAsync = async () =>
+            {
+                if (_traySession is null)
+                {
+                    return false;
+                }
+
+                try
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await _traySession.RestartAsync(timeout.Token).ConfigureAwait(true);
+                    return true;
+                }
+                catch (Exception exception)
+                {
+                    AppLogger.Warning($"Desktop UI restart request failed: {exception.Message}");
+                    return false;
+                }
+            };
             mainWindow.PrepareShutdownAsync = async () =>
             {
                 StopBackgroundServices();

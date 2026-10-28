@@ -166,6 +166,12 @@ public sealed class TrayIpcClient : IDisposable, IAsyncDisposable
             new UiActivateRequest(launcherPid),
             cancellationToken);
 
+    public Task<UiActivateResult> RestartUiAsync(int launcherPid, CancellationToken cancellationToken) =>
+        RequestAsync<UiActivateResult>(
+            TrayProtocol.UiRestartMethod,
+            new UiActivateRequest(launcherPid),
+            cancellationToken);
+
     public Task<UiRegisterResult> RegisterUiAsync(string sessionToken, int uiPid, CancellationToken cancellationToken) =>
         RequestAsync<UiRegisterResult>(
             TrayProtocol.UiRegisterMethod,
