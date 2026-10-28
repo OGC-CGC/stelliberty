@@ -110,17 +110,51 @@ internal sealed class TrayRuntime
             return;
         }
 
-        var settings = new JsonAppSettingsStore(new TrayPlatformDirectories()).Load();
-        if (settings.IsLazyModeEnabled)
+        var settingsStore = new JsonAppSettingsStore(new TrayPlatformDirectories());
+        var settings = settingsStore.Load();
+        if (!settings.IsLazyModeEnabled)
         {
-            var applied = await systemProxy.SetEnabledAsync(true,
-                SystemProxyApplicationRequest.Build(settings, CurrentSystemProxyPlatform()),
-                cancellationToken).ConfigureAwait(false);
-            if (!applied.IsSuccess)
+            return;
+        }
+
+        // 懒惰模式等效于就绪后手动开启 TUN：不可用时不启用，应用失败回滚持久化状态。
+        if (!settings.IsTunEnabled && await CanEnableTunAsync(coreRuntime, cancellationToken).ConfigureAwait(false))
+        {
+            settings.IsTunEnabled = true;
+            settingsStore.Save(settings);
+            try
             {
-                AppLogger.Warning($"Background system proxy startup failed: {applied.Message}");
+                await coreRuntime.ApplyCurrentSettingsAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                settings.IsTunEnabled = false;
+                settingsStore.Save(settings);
+                AppLogger.Warning($"Background TUN startup failed: {exception.Message}");
             }
         }
+
+        var applied = await systemProxy.SetEnabledAsync(true,
+            SystemProxyApplicationRequest.Build(settings, CurrentSystemProxyPlatform()),
+            cancellationToken).ConfigureAwait(false);
+        if (!applied.IsSuccess)
+        {
+            AppLogger.Warning($"Background system proxy startup failed: {applied.Message}");
+        }
+    }
+
+    // 与托盘 TUN 开关判定一致：管理员/服务运行模式或服务模式正在运行才可开启。
+    private static async Task<bool> CanEnableTunAsync(
+        ITrayCoreRuntime coreRuntime,
+        CancellationToken cancellationToken)
+    {
+        if (new SystemProcessPrivilegeProbe().Detect() is ProcessRunMode.Administrator or ProcessRunMode.Service)
+        {
+            return true;
+        }
+
+        var status = await coreRuntime.GetServiceModeStatusAsync(cancellationToken).ConfigureAwait(false);
+        return status.IsRunning;
     }
 
     private static SystemProxyPlatform CurrentSystemProxyPlatform()
