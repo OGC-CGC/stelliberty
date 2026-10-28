@@ -93,6 +93,7 @@ public sealed partial class MainWindow : Window
         _windowStateService.Attach(this);
         UpdateSidebarState();
         UpdateWindowStateVisuals();
+        UpdatePinState();
 #if DEBUG
         AttachDevBadge();
 #endif
@@ -826,6 +827,26 @@ public sealed partial class MainWindow : Window
         else
         {
             Classes.Remove("sidebar-collapsed");
+        }
+    }
+
+    private void OnPinClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
+    {
+        Topmost = !Topmost;
+        UpdatePinState();
+    }
+
+    private void UpdatePinState()
+    {
+        PinFilledIcon.IsVisible = Topmost;
+        PinOutlineIcon.IsVisible = !Topmost;
+        if (Topmost)
+        {
+            PinButton.Classes.Add("active");
+        }
+        else
+        {
+            PinButton.Classes.Remove("active");
         }
     }
 

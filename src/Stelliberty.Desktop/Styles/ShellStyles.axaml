@@ -80,6 +80,9 @@
   <Style Selector="Button.titlebar-button:pointerover">
     <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
   </Style>
+  <Style Selector="Button.titlebar-button.pin.active">
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
   <Style Selector="Button.titlebar-button.close:pointerover">
     <Setter Property="Background" Value="{DynamicResource TitleBarCloseButtonHoverBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppOnDangerBrush}" />

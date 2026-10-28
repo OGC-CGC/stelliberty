@@ -88,43 +88,65 @@
                              FontSize="11"
                              FontWeight="Normal"
                              Foreground="{DynamicResource AppTextSecondaryBrush}" />
-        <StackPanel x:Name="CaptionButtons"
-                    Grid.Column="2"
+        <StackPanel Grid.Column="2"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Stretch">
-          <Button Classes="titlebar-button"
-                  AutomationProperties.AutomationId="TitleBar.MinimizeButton"
-                  Click="OnMinimizeClicked">
-            <Path Width="13" Height="13"
-                  Data="M 2 6 L 10 6"
-                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                  StrokeThickness="1.4"
-                  StrokeLineCap="Square" />
-          </Button>
-          <Button Classes="titlebar-button"
-                  AutomationProperties.AutomationId="TitleBar.MaximizeButton"
-                  Click="OnMaximizeClicked">
+          <!-- 图钉：Windows/Linux 位于窗口按钮左侧，macOS 位于标题栏最右侧。 -->
+          <Button x:Name="PinButton"
+                  Classes="titlebar-button pin"
+                  AutomationProperties.AutomationId="TitleBar.PinButton"
+                  AutomationProperties.Name="{loc:Loc TitleBar.Tooltip.Pin}"
+                  ToolTip.Tip="{loc:Loc TitleBar.Tooltip.Pin}"
+                  Click="OnPinClicked">
             <Grid Width="13" Height="13">
-              <Rectangle x:Name="MaximizeIcon" Width="9" Height="9"
-                         HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                         StrokeThickness="1.25" />
-              <Path x:Name="RestoreIcon" IsVisible="False"
-                    Data="M 4 2.5 H 9.5 V 8 M 2.5 4 H 8 V 9.5 H 2.5 Z"
-                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                    StrokeThickness="1.25" />
+              <iconPacks:PackIconMingCuteIcons x:Name="PinOutlineIcon"
+                                               Width="13" Height="13"
+                                               Kind="PinLine"
+                                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+              <iconPacks:PackIconMingCuteIcons x:Name="PinFilledIcon"
+                                               Width="13" Height="13"
+                                               Kind="PinFill"
+                                               IsVisible="False"
+                                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
             </Grid>
           </Button>
-          <Button Classes="titlebar-button close"
-                  AutomationProperties.AutomationId="TitleBar.CloseButton"
-                  Click="OnCloseClicked">
-            <Path Width="13" Height="13"
-                  Data="M 3 3 L 9 9 M 9 3 L 3 9"
-                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                  StrokeThickness="1.45"
-                  StrokeLineCap="Round" />
-          </Button>
+          <StackPanel x:Name="CaptionButtons"
+                      Orientation="Horizontal"
+                      VerticalAlignment="Stretch">
+            <Button Classes="titlebar-button"
+                    AutomationProperties.AutomationId="TitleBar.MinimizeButton"
+                    Click="OnMinimizeClicked">
+              <Path Width="13" Height="13"
+                    Data="M 2 6 L 10 6"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                    StrokeThickness="1.4"
+                    StrokeLineCap="Square" />
+            </Button>
+            <Button Classes="titlebar-button"
+                    AutomationProperties.AutomationId="TitleBar.MaximizeButton"
+                    Click="OnMaximizeClicked">
+              <Grid Width="13" Height="13">
+                <Rectangle x:Name="MaximizeIcon" Width="9" Height="9"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                           StrokeThickness="1.25" />
+                <Path x:Name="RestoreIcon" IsVisible="False"
+                      Data="M 4 2.5 H 9.5 V 8 M 2.5 4 H 8 V 9.5 H 2.5 Z"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                      StrokeThickness="1.25" />
+              </Grid>
+            </Button>
+            <Button Classes="titlebar-button close"
+                    AutomationProperties.AutomationId="TitleBar.CloseButton"
+                    Click="OnCloseClicked">
+              <Path Width="13" Height="13"
+                    Data="M 3 3 L 9 9 M 9 3 L 3 9"
+                    Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                    StrokeThickness="1.45"
+                    StrokeLineCap="Round" />
+            </Button>
+          </StackPanel>
         </StackPanel>
       </Grid>
     </Border>

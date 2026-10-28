@@ -787,5 +787,6 @@
   "Language.Option.En": "English",
   "Theme.Option.System": "System",
   "Theme.Option.Light": "Light",
-  "Theme.Option.Dark": "Dark"
+  "Theme.Option.Dark": "Dark",
+  "TitleBar.Tooltip.Pin": "Always on Top"
 }

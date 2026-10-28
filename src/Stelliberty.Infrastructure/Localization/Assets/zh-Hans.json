@@ -787,5 +787,6 @@
   "Language.Option.En": "英文",
   "Theme.Option.System": "跟随系统",
   "Theme.Option.Light": "浅色",
-  "Theme.Option.Dark": "深色"
+  "Theme.Option.Dark": "深色",
+  "TitleBar.Tooltip.Pin": "窗口置顶"
 }
