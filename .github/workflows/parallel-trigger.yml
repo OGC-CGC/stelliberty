@@ -65,12 +65,6 @@ jobs:
               echo 'Stable version metadata changed in this push; beta build is skipped.'
               exit 0
             fi
-
-            if git log --format= --name-only "${BEFORE_SHA}..${AFTER_SHA}" -- .github/CHANGELOG.md | grep . >/dev/null; then
-              echo 'should_build=false' >> "$GITHUB_OUTPUT"
-              echo 'Changelog changed in this push; beta build is skipped.'
-              exit 0
-            fi
           fi
 
           props_version="$(sed -n 's:.*<AppVersion>\(.*\)</AppVersion>.*:\1:p' Directory.Build.props)"

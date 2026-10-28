@@ -20,7 +20,6 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: read
 
 env:
   DOTNET_NOLOGO: "1"
@@ -88,6 +87,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Read app metadata
         id: names
@@ -140,19 +141,32 @@ jobs:
             echo "- Tag: `${{ steps.ver.outputs.tag }}`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Read changelog
+      - name: Generate stable changelog
         id: notes
         shell: bash
         run: |
           set -euo pipefail
 
-          changelog_file=".github/CHANGELOG.md"
-          if [ ! -f "${changelog_file}" ]; then
-            echo "::error::Missing changelog file: ${changelog_file}"
-            exit 1
+          current_tag="${{ steps.ver.outputs.tag }}"
+          previous_tag="$(
+            git tag --merged HEAD --list 'v*' |
+              grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' |
+              grep -vFx "${current_tag}" |
+              sort -V |
+              tail -n 1 || true
+          )"
+          if [ -n "${previous_tag}" ]; then
+            revision_range="${previous_tag}..${GITHUB_SHA}"
+          else
+            revision_range=""
+            echo "::notice::No previous stable release tag; using the repository changelog."
           fi
 
-          cp "${changelog_file}" release_notes.md
+          bash .github/scripts/generate-changelog.sh \
+            --range "${revision_range}" \
+            --fallback .github/CHANGELOG.md \
+            --output release_notes.md
+
           echo "========== Release Notes =========="
           cat release_notes.md
 
@@ -405,59 +419,11 @@ jobs:
           overwrite_files: true
           make_latest: true
 
-      - name: Find promoted beta source
-        id: promotion
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BETA_BRANCH: ${{ vars.BETA_BRANCH || 'beta' }}
-          STABLE_BRANCH: ${{ vars.STABLE_BRANCH || 'stable' }}
-        run: |
-          set -euo pipefail
-          gh api --method GET --paginate --slurp \
-            "repos/${GITHUB_REPOSITORY}/pulls" \
-            -f state=closed -f base="${STABLE_BRANCH}" -f sort=updated -f direction=desc -f per_page=100 \
-            > stable-pulls.json
-          pull_number=''
-          source_sha=''
-          while IFS=$'\t' read -r candidate_number merge_sha candidate_source_sha; do
-            if git merge-base --is-ancestor "${merge_sha}" "${GITHUB_SHA}"; then
-              pull_number="${candidate_number}"
-              source_sha="${candidate_source_sha}"
-              break
-            fi
-          done < <(
-            jq -r --arg repository "${GITHUB_REPOSITORY}" \
-              --arg beta_branch "${BETA_BRANCH}" --arg stable_branch "${STABLE_BRANCH}" '
-              [
-                .[][]
-                | select(
-                    .merged_at != null
-                    and .base.ref == $stable_branch
-                    and .head.ref == $beta_branch
-                    and .head.repo.full_name == $repository
-                    and .merge_commit_sha != null
-                    and .head.sha != null
-                  )
-              ]
-              | sort_by(.merged_at)
-              | reverse
-              | .[]
-              | [.number, .merge_commit_sha, .head.sha]
-              | @tsv
-            ' stable-pulls.json
-          )
-          if [ -z "${source_sha}" ]; then
-            source_sha="${GITHUB_SHA}"
-            echo '::notice::No promotion pull request found; using the release commit as the beta baseline.'
-          fi
-          printf 'pull_number=%s\nsource_sha=%s\n' "${pull_number}" "${source_sha}" | tee -a "$GITHUB_OUTPUT"
-
       - name: Create beta release baseline
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SOURCE_SHA: ${{ steps.promotion.outputs.source_sha }}
+          SOURCE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           baseline_tag="beta-base/${{ needs.prepare.outputs.tag }}"

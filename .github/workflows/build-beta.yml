@@ -142,7 +142,7 @@ jobs:
             printf -- '- Tag: `%s`\n' "${TAG}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Generate beta release notes
+      - name: Generate beta changelog
         id: notes
         shell: bash
         run: |
@@ -156,18 +156,11 @@ jobs:
             revision_range="${GITHUB_SHA}^!"
             echo "::notice::No release baseline exists; creating the first beta release."
           fi
-          {
-            echo "## Changes"
-            echo
-            if [ "${revision_range}" = "${GITHUB_SHA}^!" ]; then
-              echo 'First beta release in this repository.'
-              echo
-            fi
-            while IFS=$'\t' read -r commit short subject; do
-              printf -- '- %s [`%s`](%s/%s/commit/%s)\n' \
-                "${subject}" "${short}" "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${commit}"
-            done < <(git log --reverse --format='%H%x09%h%x09%s' "${revision_range}")
-          } > release_notes.md
+
+          bash .github/scripts/generate-changelog.sh \
+            --range "${revision_range}" \
+            --fallback .github/CHANGELOG.md \
+            --output release_notes.md
 
           echo "========== Release Notes =========="
           cat release_notes.md
