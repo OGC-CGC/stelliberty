@@ -157,7 +157,16 @@
               Classes.divider-hidden="{Binding !Theme.IsSidebarDividerVisible}"
               Padding="12,24,12,20"
               Background="Transparent">
-        <Grid RowDefinitions="Auto,*,Auto">
+        <Grid x:Name="SidebarLayout" RowDefinitions="Auto,*,Auto">
+          <!-- 选中底板：跨导航项平移，而不是在每一项上单独出现。 -->
+          <Border x:Name="NavSelectionIndicator"
+                  Grid.RowSpan="3"
+                  Classes="nav-selection-indicator"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Top"
+                  IsHitTestVisible="False"
+                  Opacity="0"
+                  AutomationProperties.AccessibilityView="Raw" />
           <Button Classes="sidebar-toggle"
                   Margin="0,4,0,28"
                   AutomationProperties.AutomationId="Sidebar.ToggleButton"
@@ -216,13 +225,14 @@
             </Grid>
           </Button>
 
-          <ScrollViewer Grid.Row="1"
+          <ScrollViewer x:Name="SidebarNavigationScroll"
+                        Grid.Row="1"
                         HorizontalScrollBarVisibility="Disabled"
                         VerticalScrollBarVisibility="Hidden"
                         ScrollChanged="OnSidebarScrollChanged">
             <StackPanel Spacing="6">
               <Button Classes="nav-item"
-                      Classes.selected="{Binding IsHomeSelected}"
+                      x:Name="NavHomeButton"
                       AutomationProperties.AutomationId="Navigation.HomeButton"
                       AutomationProperties.Name="{Binding HomeNavText}"
                       ToolTip.Tip="{Binding HomeNavText}"
@@ -234,7 +244,7 @@
                 </Grid>
               </Button>
               <Button Classes="nav-item"
-                      Classes.selected="{Binding IsProxySelected}"
+                      x:Name="NavProxyButton"
                       AutomationProperties.AutomationId="Navigation.ProxyButton"
                       AutomationProperties.Name="{Binding ProxyNavText}"
                       ToolTip.Tip="{Binding ProxyNavText}"
@@ -246,7 +256,7 @@
                 </Grid>
               </Button>
               <Button Classes="nav-item"
-                      Classes.selected="{Binding IsConnectionsSelected}"
+                      x:Name="NavConnectionsButton"
                       AutomationProperties.AutomationId="Navigation.ConnectionsButton"
                       AutomationProperties.Name="{Binding ConnectionsNavText}"
                       ToolTip.Tip="{Binding ConnectionsNavText}"
@@ -258,19 +268,7 @@
                 </Grid>
               </Button>
               <Button Classes="nav-item"
-                      Classes.selected="{Binding IsCoreLogsSelected}"
-                      AutomationProperties.AutomationId="Navigation.CoreLogsButton"
-                      AutomationProperties.Name="{Binding CoreLogsNavText}"
-                      ToolTip.Tip="{Binding CoreLogsNavText}"
-                      Command="{Binding ShowCoreLogsCommand}">
-                <Grid Classes="nav-item-layout" ColumnDefinitions="34,*,Auto">
-                  <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-log" /></Border>
-                  <TextBlock Grid.Column="1" Text="{Binding CoreLogsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
-                  <Border Grid.Column="2" Classes="nav-label-spacer" Width="34" />
-                </Grid>
-              </Button>
-              <Button Classes="nav-item"
-                      Classes.selected="{Binding IsRulesSelected}"
+                      x:Name="NavRulesButton"
                       AutomationProperties.AutomationId="Navigation.RulesButton"
                       AutomationProperties.Name="{Binding RulesNavText}"
                       ToolTip.Tip="{Binding RulesNavText}"
@@ -282,7 +280,7 @@
                 </Grid>
               </Button>
               <Button Classes="nav-item"
-                      Classes.selected="{Binding IsSubscriptionsSelected}"
+                      x:Name="NavSubscriptionsButton"
                       AutomationProperties.AutomationId="Navigation.SubscriptionsButton"
                       AutomationProperties.Name="{Binding SubscriptionsNavText}"
                       ToolTip.Tip="{Binding SubscriptionsNavText}"
@@ -294,7 +292,7 @@
                 </Grid>
               </Button>
               <Button Classes="nav-item"
-                      Classes.selected="{Binding IsOverridesSelected}"
+                      x:Name="NavOverridesButton"
                       AutomationProperties.AutomationId="Navigation.OverridesButton"
                       AutomationProperties.Name="{Binding OverridesNavText}"
                       ToolTip.Tip="{Binding OverridesNavText}"
@@ -305,13 +303,25 @@
                   <Border Grid.Column="2" Classes="nav-label-spacer" Width="34" />
                 </Grid>
               </Button>
+              <Button Classes="nav-item"
+                      x:Name="NavCoreLogsButton"
+                      AutomationProperties.AutomationId="Navigation.CoreLogsButton"
+                      AutomationProperties.Name="{Binding CoreLogsNavText}"
+                      ToolTip.Tip="{Binding CoreLogsNavText}"
+                      Command="{Binding ShowCoreLogsCommand}">
+                <Grid Classes="nav-item-layout" ColumnDefinitions="34,*,Auto">
+                  <Border Grid.Column="0" Classes="nav-icon-pill"><iconPacks:PackIconMingCuteIcons Classes="icon nav-icon nav-icon-log" /></Border>
+                  <TextBlock Grid.Column="1" Text="{Binding CoreLogsNavText}" Classes="nav-label" VerticalAlignment="Center" FontSize="14" />
+                  <Border Grid.Column="2" Classes="nav-label-spacer" Width="34" />
+                </Grid>
+              </Button>
             </StackPanel>
           </ScrollViewer>
 
           <Button Grid.Row="2"
+                  x:Name="NavSettingsButton"
                   Margin="0,12,0,0"
                   Classes="nav-item"
-                  Classes.selected="{Binding IsSettingsSelected}"
                   AutomationProperties.AutomationId="Navigation.SettingsButton"
                   AutomationProperties.Name="{Binding SettingsNavText}"
                   ToolTip.Tip="{Binding SettingsNavText}"

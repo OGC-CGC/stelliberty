@@ -3,11 +3,13 @@ using System.Diagnostics;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -23,6 +25,7 @@ using Stelliberty.Desktop.Views;
 using Stelliberty.Desktop.Views.Dialogs;
 using Stelliberty.Presentation.ViewModels;
 using AppNavigationPage = Stelliberty.Presentation.ViewModels.NavigationPage;
+using IconPacks.Avalonia.MingCuteIcons;
 
 namespace Stelliberty.Desktop;
 
@@ -47,6 +50,14 @@ public sealed partial class MainWindow : Window
     // 隐藏后等待：轻量模式结束 UI 进程，常规模式回收页面视觉树。
     private static readonly TimeSpan HiddenReleaseDelay = TimeSpan.FromSeconds(AppSettings.DefaultLightweightModeShutdownDelaySeconds);
     private static readonly TimeSpan PageLoadingMinVisible = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan NavColorFadeDuration = TimeSpan.FromMilliseconds(120);
+    // 选中态（文字与图标配色）等底板基本到位后再切换。
+    private static readonly TimeSpan NavSelectionRevealDelay = TimeSpan.FromMilliseconds(100);
+    // 图标形状在配色渐变到一半时切换。
+    private static readonly TimeSpan NavIconMorphDelay = NavSelectionRevealDelay + NavColorFadeDuration / 2;
+    // 旧项的图标提前回落到线条形态，跑在底板滑动前段。
+    private static readonly TimeSpan NavIconUnmorphDelay = TimeSpan.FromMilliseconds(60);
+    private static readonly TimeSpan NavScrollAnimationDuration = TimeSpan.FromMilliseconds(100);
     private readonly WindowAppearanceService _windowAppearanceService = new();
     private readonly MacOSWindowControlsService _macOSWindowControls = new();
     private readonly WindowStateService _windowStateService;
@@ -56,12 +67,18 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<AppNavigationPage, Dictionary<string, Vector>> _pageScrollOffsets = new();
     private readonly DispatcherTimer _hiddenReleaseTimer;
     private readonly DispatcherTimer _relativeTimeTimer;
+    private DispatcherTimer? _navVisualTimer;
     private IReadOnlyDictionary<SettingsSubPage, Vector>? _settingsScrollOffsets;
     private bool _pageHostsReady;
     private ContentControl? _visiblePageHost;
     private ContentControl? _pendingPageHost;
     private MainWindowViewModel? _attachedViewModel;
     private AccentColorPickerView? _activeAccentPicker;
+    // 侧栏选中底板：跟随当前项平移，记录上次锚点以区分“目标移动”和“底板动画中”。
+    private Button? _navIndicatorTarget;
+    private Rect? _navIndicatorRect;
+    // 选中项在视口外时，侧栏先把它滚进来（带动画），底板随滚动逐帧跟随。
+    private DispatcherTimer? _navScrollTimer;
     private bool _isShutdownRequested;
     private bool _isShutdownPreparing;
     private bool _shouldShutdownTray = true;
@@ -209,8 +226,429 @@ public sealed partial class MainWindow : Window
                 _systemAccentColorService.Attach(this, viewModel.Theme);
             }
             InitializePageHosts();
+            AttachNavIndicator(viewModel);
         }
     }
+
+    private void AttachNavIndicator(MainWindowViewModel viewModel)
+    {
+        _navIndicatorTarget = ResolveNavButton(viewModel.CurrentPage);
+        _navIndicatorRect = null;
+        SidebarLayout.LayoutUpdated += OnSidebarLayoutUpdated;
+        NavSelectionIndicator.PropertyChanged += OnNavIndicatorPropertyChanged;
+        foreach (var (_, button) in NavButtons())
+        {
+            button.AddHandler(
+                Control.RequestBringIntoViewEvent,
+                OnNavBringIntoViewRequest,
+                RoutingStrategies.Bubble,
+                handledEventsToo: true);
+        }
+        UpdateNavIndicator(animate: false);
+        // 首屏没有位移动画，选中态与图标形状直接生效。
+        _navVisualTimer?.Stop();
+        _navVisualTimer = null;
+        ApplyNavIconMorph(viewModel.CurrentPage);
+        ApplyNavSelectionVisuals(viewModel.CurrentPage);
+    }
+
+    private void DetachNavIndicator()
+    {
+        SidebarLayout.LayoutUpdated -= OnSidebarLayoutUpdated;
+        NavSelectionIndicator.PropertyChanged -= OnNavIndicatorPropertyChanged;
+        foreach (var (_, button) in NavButtons())
+        {
+            button.RemoveHandler(Control.RequestBringIntoViewEvent, OnNavBringIntoViewRequest);
+        }
+        _navVisualTimer?.Stop();
+        _navVisualTimer = null;
+        _navScrollTimer?.Stop();
+        _navScrollTimer = null;
+        _navIndicatorTarget = null;
+        _navIndicatorRect = null;
+    }
+
+    // 一次切换的三段时序：60ms 旧项回落线条图标，100ms 新项开始配色渐变，160ms 切换图标形状。
+    private void StartNavVisualTimeline()
+    {
+        _navVisualTimer?.Stop();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        var startedAt = Stopwatch.GetTimestamp();
+        var unmorphed = false;
+        var selected = false;
+        timer.Tick += (_, _) =>
+        {
+            var elapsed = Stopwatch.GetElapsedTime(startedAt);
+            if (!unmorphed && elapsed >= NavIconUnmorphDelay)
+            {
+                unmorphed = true;
+                ApplyNavIconMorph(null);
+            }
+
+            if (!selected && elapsed >= NavSelectionRevealDelay)
+            {
+                selected = true;
+                ApplyNavSelectionVisuals(_attachedViewModel?.CurrentPage);
+            }
+
+            if (elapsed < NavIconMorphDelay)
+            {
+                return;
+            }
+
+            timer.Stop();
+            if (ReferenceEquals(_navVisualTimer, timer))
+            {
+                _navVisualTimer = null;
+            }
+
+            ApplyNavIconMorph(_attachedViewModel?.CurrentPage);
+        };
+        _navVisualTimer = timer;
+        timer.Start();
+    }
+
+    private void ApplyNavSelectionVisuals(AppNavigationPage? page) => SetNavItemClass("selected", page);
+
+    // 旧项需要立刻回到普通色：临时关闭颜色过渡，撤掉选中类后再恢复。
+    private void RevertNavSelectionImmediately()
+    {
+        foreach (var (_, button) in NavButtons())
+        {
+            if (!button.Classes.Contains("selected"))
+            {
+                continue;
+            }
+
+            SuppressNavColorTransitions(button, suppress: true);
+            button.Classes.Remove("selected");
+            Dispatcher.UIThread.Post(
+                () => SuppressNavColorTransitions(button, suppress: false),
+                DispatcherPriority.Background);
+        }
+    }
+
+    private static void SuppressNavColorTransitions(Button button, bool suppress)
+    {
+        SetTransitions(button);
+        foreach (var icon in button.GetVisualDescendants().OfType<PackIconMingCuteIcons>())
+        {
+            SetTransitions(icon);
+        }
+
+        void SetTransitions(Animatable element)
+        {
+            if (suppress)
+            {
+                element.Transitions = null;
+            }
+            else
+            {
+                element.ClearValue(StyledElement.TransitionsProperty);
+            }
+        }
+    }
+
+    // 图标形状（线条 ↔ 实心）跟随点击立即切换，配色仍走延迟渐变。
+    private void ApplyNavIconMorph(AppNavigationPage? page) => SetNavItemClass("nav-icon-morph", page);
+
+    private void SetNavItemClass(string className, AppNavigationPage? page)
+    {
+        foreach (var (navPage, button) in NavButtons())
+        {
+            button.Classes.Set(className, navPage == page);
+        }
+    }
+
+    private IEnumerable<(AppNavigationPage Page, Button Button)> NavButtons()
+    {
+        yield return (AppNavigationPage.Home, NavHomeButton);
+        yield return (AppNavigationPage.Proxy, NavProxyButton);
+        yield return (AppNavigationPage.Connections, NavConnectionsButton);
+        yield return (AppNavigationPage.CoreLogs, NavCoreLogsButton);
+        yield return (AppNavigationPage.Rules, NavRulesButton);
+        yield return (AppNavigationPage.Subscriptions, NavSubscriptionsButton);
+        yield return (AppNavigationPage.Overrides, NavOverridesButton);
+        yield return (AppNavigationPage.Settings, NavSettingsButton);
+    }
+
+    private Button? ResolveNavButton(AppNavigationPage page) =>
+        NavButtons().Where(entry => entry.Page == page).Select(entry => entry.Button).FirstOrDefault();
+
+    // 布局变化（侧栏收放、窗口缩放、滚动）时让底板贴住目标，不播放位移动画。
+    private void OnSidebarLayoutUpdated(object? sender, EventArgs args)
+    {
+        if (_attachedViewModel is null)
+        {
+            return;
+        }
+
+        var target = _navIndicatorTarget ?? ResolveNavButton(_attachedViewModel.CurrentPage);
+        if (target is null)
+        {
+            return;
+        }
+
+        _navIndicatorTarget = target;
+        UpdateNavIndicator(animate: false);
+        RefreshNavIndicatorMask();
+    }
+
+    private void UpdateNavIndicator(bool animate)
+    {
+        var target = _navIndicatorTarget;
+        if (target is null)
+        {
+            return;
+        }
+
+        var origin = target.TranslatePoint(new Point(0, 0), SidebarLayout);
+        var size = target.Bounds.Size;
+        if (origin is not { } point || size.Width <= 0 || size.Height <= 0)
+        {
+            return;
+        }
+
+        // 目标没动就不重复写入，避免打断正在进行中的位移过渡。
+        if (!animate
+            && _navIndicatorRect is { } current
+            && Math.Abs(current.X - point.X) < 0.5
+            && Math.Abs(current.Y - point.Y) < 0.5
+            && Math.Abs(current.Width - size.Width) < 0.5
+            && Math.Abs(current.Height - size.Height) < 0.5)
+        {
+            return;
+        }
+
+        ApplyNavIndicatorRect(point, size, animate);
+    }
+
+    private void ApplyNavIndicatorRect(Point origin, Size size, bool animate)
+    {
+        var isFirstPlacement = _navIndicatorRect is null;
+        _navIndicatorRect = new Rect(origin, size);
+
+        var transitions = NavSelectionIndicator.Transitions;
+        if (!animate || isFirstPlacement)
+        {
+            NavSelectionIndicator.Transitions = null;
+        }
+
+        NavSelectionIndicator.Margin = new Thickness(origin.X, origin.Y, 0, 0);
+        NavSelectionIndicator.Width = size.Width;
+        NavSelectionIndicator.Height = size.Height;
+        // 可见性完全由边缘遮罩决定，底板自身保持不透明。
+        NavSelectionIndicator.Opacity = 1;
+        RefreshNavIndicatorMask();
+
+        if (!animate || isFirstPlacement)
+        {
+            NavSelectionIndicator.Transitions = transitions;
+        }
+    }
+
+    // 把目标项滚进视口，返回内容需要上移的像素数（0 表示无需滚动）。
+    // 「设置」固定在滚动区外，不应触发导航列表滚动。
+    private double GetNavScrollDelta(Button target)
+    {
+        var scroll = SidebarNavigationScroll;
+        if (scroll.Viewport.Height <= 0 || !target.GetVisualAncestors().Contains(scroll))
+        {
+            return 0;
+        }
+
+        var origin = target.TranslatePoint(new Point(0, 0), scroll);
+        return origin is { } point ? ComputeNavScrollDelta(point.Y, target.Bounds.Height) : 0;
+    }
+
+    private double ComputeNavScrollDelta(double itemTop, double itemHeight)
+    {
+        var scroll = SidebarNavigationScroll;
+        var viewportHeight = scroll.Viewport.Height;
+        if (viewportHeight <= 0)
+        {
+            return 0;
+        }
+
+        const double padding = 6;
+        var desired = scroll.Offset.Y;
+        if (itemTop < padding)
+        {
+            desired = scroll.Offset.Y + itemTop - padding;
+        }
+        else if (itemTop + itemHeight > viewportHeight - padding)
+        {
+            desired = scroll.Offset.Y + itemTop + itemHeight - viewportHeight + padding;
+        }
+
+        var maxOffset = Math.Max(0, scroll.Extent.Height - viewportHeight);
+        desired = Math.Clamp(desired, 0, maxOffset);
+        var delta = desired - scroll.Offset.Y;
+        return Math.Abs(delta) < 0.5 ? 0 : delta;
+    }
+
+    // 焦点变化时 Avalonia 会瞬间 BringIntoView；这里接管为缓动滚动。
+    private void OnNavBringIntoViewRequest(object? sender, RequestBringIntoViewEventArgs args)
+    {
+        args.Handled = true;
+        if (args.TargetObject is not Visual target)
+        {
+            return;
+        }
+
+        var origin = target.TranslatePoint(args.TargetRect.TopLeft, SidebarNavigationScroll);
+        if (origin is not { } point)
+        {
+            return;
+        }
+
+        var delta = ComputeNavScrollDelta(point.Y, args.TargetRect.Height);
+        if (Math.Abs(delta) >= 0.5 && _navScrollTimer is null)
+        {
+            StartNavScrollAnimation(delta);
+        }
+    }
+
+    // 用定时器推进 Offset：每帧都会触发 ScrollChanged，底板随之逐帧跟随目标。
+    private void StartNavScrollAnimation(double delta)
+    {
+        _navScrollTimer?.Stop();
+        var scroll = SidebarNavigationScroll;
+        var from = scroll.Offset.Y;
+        var to = from + delta;
+        var duration = NavScrollAnimationDuration.TotalMilliseconds;
+        var startedAt = Stopwatch.GetTimestamp();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        timer.Tick += (_, _) =>
+        {
+            var progress = Math.Clamp(
+                Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds / duration,
+                0,
+                1);
+            var eased = 1 - Math.Pow(1 - progress, 3);
+            scroll.Offset = new Vector(scroll.Offset.X, from + (to - from) * eased);
+            if (progress < 1)
+            {
+                return;
+            }
+
+            timer.Stop();
+            if (ReferenceEquals(_navScrollTimer, timer))
+            {
+                _navScrollTimer = null;
+            }
+
+            scroll.Offset = new Vector(scroll.Offset.X, to);
+            UpdateNavIndicator(animate: false);
+        };
+        _navScrollTimer = timer;
+        timer.Start();
+    }
+
+    // 位移动画期间逐帧按当前矩形重算遮罩，滚动区外的部分才能真正隐去。
+    private void RefreshNavIndicatorMask()
+    {
+        var target = _navIndicatorTarget;
+        var height = NavSelectionIndicator.Height;
+        if (target is null || height <= 0)
+        {
+            NavSelectionIndicator.OpacityMask = null;
+            return;
+        }
+
+        ApplyNavIndicatorEdgeFade(target, NavSelectionIndicator.Margin.Top, height);
+    }
+
+    private void OnNavIndicatorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs args)
+    {
+        if (args.Property == Layoutable.MarginProperty
+            || args.Property == Layoutable.HeightProperty
+            || args.Property == Layoutable.WidthProperty)
+        {
+            RefreshNavIndicatorMask();
+        }
+    }
+
+    // 底板保持完整尺寸与圆角，只把视口外的部分用遮罩隐去，避免圆角被裁成收缩状。
+    private void ApplyNavIndicatorEdgeFade(Button target, double top, double height)
+    {
+        if (height <= 0 || !target.GetVisualAncestors().Contains(SidebarNavigationScroll))
+        {
+            NavSelectionIndicator.OpacityMask = null;
+            return;
+        }
+
+        var viewportHeight = SidebarNavigationScroll.Bounds.Height;
+        if (viewportHeight <= 0)
+        {
+            NavSelectionIndicator.OpacityMask = null;
+            return;
+        }
+
+        var hasContentAbove = SidebarNavigationScroll.Offset.Y > 0;
+        var hasContentBelow = SidebarNavigationScroll.Extent.Height
+                              - SidebarNavigationScroll.Offset.Y
+                              - viewportHeight > 0.5;
+        if (!hasContentAbove && !hasContentBelow)
+        {
+            NavSelectionIndicator.OpacityMask = null;
+            return;
+        }
+
+        var fadePixels = Math.Min(viewportHeight / 2, SidebarEdgeFadeHeight);
+        if (fadePixels <= 0)
+        {
+            NavSelectionIndicator.OpacityMask = null;
+            return;
+        }
+
+        // 视口上下边界换算到指示器自身坐标系；视口外始终透明。
+        var viewportTop = (SidebarNavigationScroll.TranslatePoint(new Point(0, 0), SidebarLayout)?.Y ?? 0) - top;
+        var viewportBottom = viewportTop + viewportHeight;
+
+        double AlphaAt(double y)
+        {
+            if (y < viewportTop - 0.01 || y > viewportBottom + 0.01)
+            {
+                return 0;
+            }
+
+            var fromTop = hasContentAbove ? Math.Clamp((y - viewportTop) / fadePixels, 0, 1) : 1;
+            var fromBottom = hasContentBelow ? Math.Clamp((viewportBottom - y) / fadePixels, 0, 1) : 1;
+            return Math.Min(fromTop, fromBottom);
+        }
+
+        var breakpoints = new SortedSet<double> { 0, height };
+        foreach (var pixel in new[] { viewportTop, viewportTop + fadePixels, viewportBottom - fadePixels, viewportBottom })
+        {
+            if (pixel > 0 && pixel < height)
+            {
+                breakpoints.Add(pixel);
+            }
+        }
+
+        var brush = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Absolute),
+            EndPoint = new RelativePoint(0, height, RelativeUnit.Absolute),
+        };
+        foreach (var pixel in breakpoints)
+        {
+            var offset = Math.Clamp(pixel / height, 0, 1);
+            if (brush.GradientStops.Count > 0
+                && Math.Abs(brush.GradientStops[brush.GradientStops.Count - 1].Offset - offset) < 1e-6)
+            {
+                continue;
+            }
+
+            brush.GradientStops.Add(new GradientStop(MaskColor(AlphaAt(pixel)), offset));
+        }
+
+        NavSelectionIndicator.OpacityMask = brush;
+    }
+
+    private static Color MaskColor(double alpha) =>
+        Color.FromArgb((byte)Math.Round(Math.Clamp(alpha, 0, 1) * 255), 0, 0, 0);
 
     private void DetachViewModel()
     {
@@ -222,6 +660,7 @@ public sealed partial class MainWindow : Window
         _attachedViewModel.Theme.CustomAccentRequested -= OnCustomAccentRequested;
         _attachedViewModel.Theme.WindowDecorationRestartRequested -= OnWindowDecorationRestartRequested;
         _attachedViewModel.PropertyChanged -= OnAttachedViewModelPropertyChanged;
+        DetachNavIndicator();
         _windowAppearanceService.Dispose();
         _systemAccentColorService.Dispose();
         _attachedViewModel = null;
@@ -300,9 +739,39 @@ public sealed partial class MainWindow : Window
         if (args.PropertyName != nameof(MainWindowViewModel.CurrentPage)) return;
 
         AnimatePageTransition(viewModel.CurrentPage);
+        MoveNavIndicator(viewModel.CurrentPage);
 #if DEBUG
         ScheduleNavigationDebugLog(viewModel.CurrentPage);
 #endif
+    }
+
+    private void MoveNavIndicator(AppNavigationPage page)
+    {
+        var target = ResolveNavButton(page);
+        if (target is null || ReferenceEquals(target, _navIndicatorTarget))
+        {
+            return;
+        }
+
+        _navIndicatorTarget = target;
+        // 旧项立刻回到普通色并在 60ms 回落到线条图标；新项 100ms 后渐变选中色，160ms 切换形状。
+        RevertNavSelectionImmediately();
+
+        // 需要滚动时先贴住目标当前位置，随后随滚动逐帧跟入；否则直接平滑滑过去。
+        var isScrolling = _navScrollTimer is not null;
+        var scrollDelta = GetNavScrollDelta(target);
+        var origin = target.TranslatePoint(new Point(0, 0), SidebarLayout);
+        var size = target.Bounds.Size;
+        if (origin is { } point && size.Width > 0 && size.Height > 0)
+        {
+            ApplyNavIndicatorRect(point, size, animate: !isScrolling && Math.Abs(scrollDelta) < 0.5);
+        }
+
+        if (!isScrolling && Math.Abs(scrollDelta) >= 0.5)
+        {
+            StartNavScrollAnimation(scrollDelta);
+        }
+        StartNavVisualTimeline();
     }
 
     // 将页面映射到持久宿主；XAML 按导航顺序堆叠宿主。
@@ -842,6 +1311,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        UpdateNavIndicator(animate: false);
+
         var viewportHeight = scrollViewer.Viewport.Height;
         var remainingHeight = scrollViewer.Extent.Height - scrollViewer.Offset.Y - viewportHeight;
         var hasContentAbove = scrollViewer.Offset.Y > 0;
@@ -1098,6 +1569,8 @@ public sealed partial class MainWindow : Window
         _hiddenReleaseTimer.Tick -= OnHiddenReleaseTimerTick;
         _relativeTimeTimer.Stop();
         _relativeTimeTimer.Tick -= OnRelativeTimeTimerTick;
+        _navVisualTimer?.Stop();
+        _navVisualTimer = null;
         CloseAccentPicker();
         _visiblePageHost = null;
         ClearPageHostContents();

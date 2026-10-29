@@ -184,6 +184,11 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Foreground" Duration="0:0:0.12" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
     <Setter Property="Template">
       <ControlTemplate>
         <Border x:Name="NavRoot"
@@ -201,15 +206,31 @@
   <Style Selector="Button.nav-item:pointerover /template/ Border#NavRoot">
     <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
   </Style>
+  <!-- 选中项不再自绘底板，由 NavSelectionIndicator 从上一项平移过来。 -->
   <Style Selector="Button.nav-item.selected /template/ Border#NavRoot">
-    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="Button.nav-item.selected:pointerover /template/ Border#NavRoot">
-    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="Button.nav-item.selected">
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
     <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+
+  <Style Selector="Border.nav-selection-indicator">
+    <Setter Property="Width" Value="0" />
+    <Setter Property="Height" Value="0" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <ThicknessTransition Property="Margin" Duration="0:0:0.22" Easing="CubicEaseOut" />
+        <DoubleTransition Property="Width" Duration="0:0:0.22" Easing="CubicEaseOut" />
+        <DoubleTransition Property="Height" Duration="0:0:0.22" Easing="CubicEaseOut" />
+        <DoubleTransition Property="Opacity" Duration="0:0:0.14" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
   </Style>
 
   <Style Selector="Border.nav-icon-pill">
@@ -222,26 +243,15 @@
     <Setter Property="Foreground" Value="{DynamicResource AppOnAccentBrush}" />
   </Style>
 
-  <Style Selector="Window.frutiger-aero Button.nav-item.selected">
+  <Style Selector="Window.frutiger-aero Border.nav-selection-indicator">
     <Setter Property="CornerRadius" Value="16" />
-    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
-  </Style>
-  <Style Selector="Window.frutiger-aero Button.nav-item.selected /template/ Border#NavRoot">
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="7" />
     <Setter Property="BoxShadow" Value="{DynamicResource AppSurfaceListShadow}" />
-    <Setter Property="Transitions">
-      <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.16" />
-        <BrushTransition Property="BorderBrush" Duration="0:0:0.16" />
-        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.16" />
-      </Transitions>
-    </Setter>
   </Style>
-  <Style Selector="Window.frutiger-aero Button.nav-item.selected:pointerover /template/ Border#NavRoot">
-    <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
+  <Style Selector="Window.frutiger-aero Button.nav-item.selected">
+    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
   </Style>
   <Style Selector="Window.frutiger-aero Button.nav-item.selected iconPacks|PackIconMingCuteIcons">
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
@@ -250,6 +260,11 @@
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon">
     <Setter Property="Width" Value="18" />
     <Setter Property="Height" Value="18" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Foreground" Duration="0:0:0.12" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
   </Style>
 
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon-home">
@@ -257,7 +272,7 @@
   </Style>
 
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon-proxy">
-    <Setter Property="Kind" Value="WifiLine" />
+    <Setter Property="Kind" Value="SafariLine" />
   </Style>
 
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon-connections">
@@ -265,7 +280,7 @@
   </Style>
 
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon-log">
-    <Setter Property="Kind" Value="FileLine" />
+    <Setter Property="Kind" Value="FileCodeLine" />
     <Setter Property="RenderTransform">
       <TranslateTransform Y="0" />
     </Setter>
@@ -290,35 +305,35 @@
     <Setter Property="Kind" Value="Settings3Line" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-home">
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-home">
     <Setter Property="Kind" Value="Home3Fill" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-proxy">
-    <Setter Property="Kind" Value="WifiFill" />
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-proxy">
+    <Setter Property="Kind" Value="SafariFill" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-connections">
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-connections">
     <Setter Property="Kind" Value="TransferHorizontalFill" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-log">
-    <Setter Property="Kind" Value="FileFill" />
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-log">
+    <Setter Property="Kind" Value="FileCodeFill" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-rules">
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-rules">
     <Setter Property="Kind" Value="PencilRulerFill" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-subscription">
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-subscription">
     <Setter Property="Kind" Value="ServerFill" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-overrides">
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-overrides">
     <Setter Property="Kind" Value="EditFill" />
   </Style>
 
-  <Style Selector="Button.nav-item.selected iconPacks|PackIconMingCuteIcons.nav-icon-settings">
+  <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-settings">
     <Setter Property="Kind" Value="Settings3Fill" />
   </Style>
 
