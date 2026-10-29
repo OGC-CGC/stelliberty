@@ -7,7 +7,8 @@ namespace Stelliberty.Desktop.Services;
 internal sealed class MacOSGlassEffectService : IDisposable
 {
     private const string ObjectiveCLibrary = "/usr/lib/libobjc.A.dylib";
-    private static readonly nint RegularGlassStyle = 0;
+    // NSGlassEffectViewStyleClear 比 Regular 更通透，Frutiger Aero 以最透明为目标。
+    private static readonly nint ClearGlassStyle = 1;
     private static readonly nint NoTitleBarSeparatorStyle = 1;
     private static readonly nint TitleBarVisualEffectMaterial = 3;
     private static readonly nint WidthAndHeightSizable = 2 | 16;
@@ -16,8 +17,10 @@ internal sealed class MacOSGlassEffectService : IDisposable
     private nint _glassView;
     private nint _originalContentView;
     private nint _titleBarMaterialView;
+    private nint _titleBarUnderlineView;
     private nint _originalTitleBarSeparatorStyle;
     private bool _wasTitleBarMaterialHidden;
+    private bool _wasTitleBarUnderlineHidden;
 
     public static bool IsSupported => OperatingSystem.IsMacOSVersionAtLeast(26)
                                       && GetClass("NSGlassEffectView") != nint.Zero;
@@ -41,7 +44,9 @@ internal sealed class MacOSGlassEffectService : IDisposable
 
         if (_glassView != nint.Zero && _window == handle.Handle)
         {
+            SetInteger(_glassView, GetSelector("setStyle:"), ClearGlassStyle);
             SetBool(_titleBarMaterialView, GetSelector("setHidden:"), true);
+            SetBool(_titleBarUnderlineView, GetSelector("setHidden:"), true);
             HideTitleBarSeparator(_window);
             return true;
         }
@@ -63,10 +68,15 @@ internal sealed class MacOSGlassEffectService : IDisposable
         var titleBarMaterialView = FindTitleBarMaterialView(originalContentView);
         var wasTitleBarMaterialHidden = titleBarMaterialView != nint.Zero
                                         && SendBool(titleBarMaterialView, GetSelector("isHidden"));
+        // 原生材质隐藏后会露出 Avalonia 自带的标题栏下划线，需一并隐藏。
+        var titleBarUnderlineView = FindTitleBarUnderline(originalContentView);
+        var wasTitleBarUnderlineHidden = titleBarUnderlineView != nint.Zero
+                                         && SendBool(titleBarUnderlineView, GetSelector("isHidden"));
         var originalTitleBarSeparatorStyle = Send(handle.Handle, GetSelector("titlebarSeparatorStyle"));
         SetBool(titleBarMaterialView, GetSelector("setHidden:"), true);
+        SetBool(titleBarUnderlineView, GetSelector("setHidden:"), true);
 
-        SetInteger(glassView, GetSelector("setStyle:"), RegularGlassStyle);
+        SetInteger(glassView, GetSelector("setStyle:"), ClearGlassStyle);
         SetPointer(glassView, GetSelector("setTintColor:"), nint.Zero);
         SetDouble(glassView, GetSelector("setCornerRadius:"), 20);
         SetInteger(glassView, GetSelector("setAutoresizingMask:"), WidthAndHeightSizable);
@@ -81,8 +91,10 @@ internal sealed class MacOSGlassEffectService : IDisposable
         _glassView = glassView;
         _originalContentView = originalContentView;
         _titleBarMaterialView = titleBarMaterialView;
+        _titleBarUnderlineView = titleBarUnderlineView;
         _originalTitleBarSeparatorStyle = originalTitleBarSeparatorStyle;
         _wasTitleBarMaterialHidden = wasTitleBarMaterialHidden;
+        _wasTitleBarUnderlineHidden = wasTitleBarUnderlineHidden;
         HideTitleBarSeparator(handle.Handle);
         return true;
     }
@@ -95,8 +107,10 @@ internal sealed class MacOSGlassEffectService : IDisposable
             _glassView = nint.Zero;
             _originalContentView = nint.Zero;
             _titleBarMaterialView = nint.Zero;
+            _titleBarUnderlineView = nint.Zero;
             _originalTitleBarSeparatorStyle = nint.Zero;
             _wasTitleBarMaterialHidden = false;
+            _wasTitleBarUnderlineHidden = false;
             return;
         }
 
@@ -106,20 +120,25 @@ internal sealed class MacOSGlassEffectService : IDisposable
         var glassView = _glassView;
         var originalContentView = _originalContentView;
         var titleBarMaterialView = _titleBarMaterialView;
+        var titleBarUnderlineView = _titleBarUnderlineView;
         var originalTitleBarSeparatorStyle = _originalTitleBarSeparatorStyle;
         var wasTitleBarMaterialHidden = _wasTitleBarMaterialHidden;
+        var wasTitleBarUnderlineHidden = _wasTitleBarUnderlineHidden;
         _window = nint.Zero;
         _glassView = nint.Zero;
         _originalContentView = nint.Zero;
         _titleBarMaterialView = nint.Zero;
+        _titleBarUnderlineView = nint.Zero;
         _originalTitleBarSeparatorStyle = nint.Zero;
         _wasTitleBarMaterialHidden = false;
+        _wasTitleBarUnderlineHidden = false;
 
         Retain(originalContentView);
         SetPointer(glassView, GetSelector("setContentView:"), nint.Zero);
         SetPointer(window, GetSelector("setContentView:"), originalContentView);
         Release(originalContentView);
         SetBool(titleBarMaterialView, GetSelector("setHidden:"), wasTitleBarMaterialHidden);
+        SetBool(titleBarUnderlineView, GetSelector("setHidden:"), wasTitleBarUnderlineHidden);
         SetInteger(window, GetSelector("setTitlebarSeparatorStyle:"), originalTitleBarSeparatorStyle);
     }
 
@@ -166,6 +185,30 @@ internal sealed class MacOSGlassEffectService : IDisposable
         for (nint index = 0; index < count; index++)
         {
             var match = FindTitleBarMaterialView(
+                SendInteger(subviews, GetSelector("objectAtIndex:"), index));
+            if (match != nint.Zero)
+            {
+                return match;
+            }
+        }
+
+        return nint.Zero;
+    }
+
+    // Avalonia.Native 在标题栏底部放置 NSBox 作为下划线；玻璃材质隐藏后必须一并隐藏。
+    private static nint FindTitleBarUnderline(nint view)
+    {
+        var boxClass = GetClass("NSBox");
+        if (SendBool(view, GetSelector("isKindOfClass:"), boxClass))
+        {
+            return view;
+        }
+
+        var subviews = Send(view, GetSelector("subviews"));
+        var count = Send(subviews, GetSelector("count"));
+        for (nint index = 0; index < count; index++)
+        {
+            var match = FindTitleBarUnderline(
                 SendInteger(subviews, GetSelector("objectAtIndex:"), index));
             if (match != nint.Zero)
             {
