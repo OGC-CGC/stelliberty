@@ -67,11 +67,19 @@
                   <DataTemplate x:DataType="vm:ProxyGroupButtonViewModel">
                     <Button Classes="proxy-group-tab"
                             Classes.selected="{Binding IsSelected}"
-                            Content="{Binding Name}"
                             AutomationProperties.AutomationId="{Binding AutomationId}"
                             Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).SelectGroupCommand}"
                             CommandParameter="{Binding Name}"
-                            Click="OnSelectorItemClick" />
+                            Click="OnSelectorItemClick">
+                      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <controls:RemoteImage SourceUrl="{Binding IconUrl}"
+                                              Width="16" Height="16"
+                                              Stretch="Uniform"
+                                              VerticalAlignment="Center"
+                                              IsVisible="{Binding HasIcon}" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

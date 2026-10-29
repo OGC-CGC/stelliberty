@@ -24,6 +24,10 @@ public sealed class ProxyGroupButtonViewModel : ViewModelBase
 
     public string Name => _group.Name;
 
+    public string? IconUrl => _group.Icon;
+
+    public bool HasIcon => !string.IsNullOrWhiteSpace(_group.Icon);
+
     public string AutomationId => $"Proxy.Group.{Name}.Button";
 
     // 配置重建后，复用行必须接收新记录，否则派生值会停留。
@@ -33,6 +37,8 @@ public sealed class ProxyGroupButtonViewModel : ViewModelBase
         {
             _group = group;
             OnPropertyChanged(nameof(Group));
+            OnPropertyChanged(nameof(IconUrl));
+            OnPropertyChanged(nameof(HasIcon));
         }
 
         IsSelected = isSelected;
