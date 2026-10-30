@@ -25,6 +25,9 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SettingsBreadcrumbItem">
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <iconPacks:PackIconMingCuteIcons Classes="settings-breadcrumb-icon"
+                                                 Kind="Settings3Line"
+                                                 IsVisible="{Binding ShowIcon}" />
                 <Button Classes="settings-breadcrumb-link"
                         Content="{Binding Text}"
                         Command="{Binding Command}"

@@ -354,6 +354,13 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
+  <Style Selector="iconPacks|PackIconMingCuteIcons.settings-breadcrumb-icon">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
   <Style Selector="iconPacks|PackIconMingCuteIcons.settings-breadcrumb-separator">
     <Setter Property="Width" Value="12" />
     <Setter Property="Height" Value="12" />

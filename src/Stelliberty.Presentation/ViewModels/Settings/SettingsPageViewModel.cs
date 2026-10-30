@@ -31,6 +31,9 @@ public sealed class SettingsPageViewModel : ViewModelBase
         ShowCoreLogCommand = new RelayCommand(() => SubPage = SettingsSubPage.CoreLog);
         ShowRootCommand = new RelayCommand(GoToRoot);
         BackCommand = new RelayCommand(Back);
+
+        // 根页面不经过 SubPage setter，构造时就要生成一次面包屑，否则首次进入设置页导航条为空。
+        RebuildBreadcrumbs();
     }
 
     public event EventHandler<SettingsSubPage>? SubPageChanged;
@@ -242,13 +245,13 @@ public sealed class SettingsPageViewModel : ViewModelBase
         if (_subPage == SettingsSubPage.Root)
         {
             // 根页面同样显示导航条：只有当前页，不可点击、无分隔符。
-            Breadcrumbs = [new SettingsBreadcrumbItem(HeaderTextFor(SettingsSubPage.Root), null, false)];
+            Breadcrumbs = [new SettingsBreadcrumbItem(HeaderTextFor(SettingsSubPage.Root), null, false, true)];
             return;
         }
 
         var items = new List<SettingsBreadcrumbItem>
         {
-            new(HeaderTextFor(SettingsSubPage.Root), ShowRootCommand, true)
+            new(HeaderTextFor(SettingsSubPage.Root), ShowRootCommand, true, true)
         };
 
         if (ResolveBreadcrumbParent() is { } parent)
