@@ -4,21 +4,39 @@
     <Setter Property="AllowAutoHide" Value="True" />
   </Style>
 
+  <!--
+    Semi 主题里 ScrollBar 对 IsExpanded=False 的处理是按条件样式（StyleTrigger 优先级）下发的，
+    普通样式压不过它，会导致悬停前后滑块位置/长度跳变。这里对两种状态各写一份，保证几何完全一致。
+  -->
+
+  <!-- 两端箭头永不出现，也不占位（避免 Track 长度在悬停前后变化） -->
   <Style Selector="ScrollBar[IsExpanded=False] /template/ RepeatButton#PART_LineUpButton">
-    <Setter Property="IsVisible" Value="True" />
-    <Setter Property="Opacity" Value="0" />
-    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=True] /template/ RepeatButton#PART_LineUpButton">
+    <Setter Property="IsVisible" Value="False" />
   </Style>
   <Style Selector="ScrollBar[IsExpanded=False] /template/ RepeatButton#PART_LineDownButton">
-    <Setter Property="IsVisible" Value="True" />
-    <Setter Property="Opacity" Value="0" />
-    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="IsVisible" Value="False" />
   </Style>
-  <Style Selector="ScrollBar[IsExpanded=False]:vertical /template/ Thumb#thumb">
+  <Style Selector="ScrollBar[IsExpanded=True] /template/ RepeatButton#PART_LineDownButton">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- 滑块粗细固定 4px，两种状态一致 -->
+  <Style Selector="ScrollBar:vertical[IsExpanded=False] /template/ Thumb#thumb">
     <Setter Property="Width" Value="4" />
     <Setter Property="CornerRadius" Value="999" />
   </Style>
-  <Style Selector="ScrollBar[IsExpanded=False]:horizontal /template/ Thumb#thumb">
+  <Style Selector="ScrollBar:vertical[IsExpanded=True] /template/ Thumb#thumb">
+    <Setter Property="Width" Value="4" />
+    <Setter Property="CornerRadius" Value="999" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal[IsExpanded=False] /template/ Thumb#thumb">
+    <Setter Property="Height" Value="4" />
+    <Setter Property="CornerRadius" Value="999" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal[IsExpanded=True] /template/ Thumb#thumb">
     <Setter Property="Height" Value="4" />
     <Setter Property="CornerRadius" Value="999" />
   </Style>
