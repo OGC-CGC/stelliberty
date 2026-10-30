@@ -15,7 +15,7 @@
         x:DataType="vm:CoreLogPageViewModel">
 
       <Border Classes="surface-header"
-            Margin="8,6,25,0"
+            Margin="0,6,9,0"
             AutomationProperties.AutomationId="CoreLogs.Toolbar">
       <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
@@ -141,7 +141,7 @@
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
         <ItemsControl AutomationProperties.AutomationId="CoreLogs.List"
-                      Margin="8,0,25,15"
+                      Margin="0,0,9,15"
                       ItemsSource="{Binding FilteredLogRows}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>

@@ -11,11 +11,10 @@
              AutomationProperties.AutomationId="Settings.Root"
              Background="Transparent">
   <Border AutomationProperties.AutomationId="Settings.Page" Background="Transparent">
-    <Grid RowDefinitions="Auto,*" Margin="0,12,9,12">
-      <!-- 子页面面包屑导航；根页面隐藏。 -->
+    <Grid RowDefinitions="Auto,*" Margin="0,12,0,0">
+      <!-- 面包屑导航：根页面显示当前页标题，子页面可逐级回退。 -->
       <Border Classes="settings-breadcrumb"
-              Margin="0,0,0,12"
-              IsVisible="{Binding Settings.IsBackVisible}"
+              Margin="0,0,9,12"
               AutomationProperties.AutomationId="Settings.Breadcrumb">
         <ItemsControl ItemsSource="{Binding Settings.Breadcrumbs}">
           <ItemsControl.ItemsPanel>
@@ -49,6 +48,7 @@
         <!-- 承载全部设置子页面板 -->
         <!-- 设置子页按当前路由创建，避免隐藏面板常驻视觉树。 -->
         <ContentControl x:Name="SettingsContentPanel"
+                        Margin="0,0,9,15"
                         HorizontalAlignment="Stretch"
                         RenderTransformOrigin="50%,50%" />
       </ScrollViewer>

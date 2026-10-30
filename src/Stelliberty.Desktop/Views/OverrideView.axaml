@@ -15,7 +15,7 @@
         DataContext="{Binding OverridePage}"
         x:DataType="vm:OverridePageViewModel">
       <Border Classes="surface-header"
-            Margin="8,6,25,0"
+            Margin="0,6,9,0"
             AutomationProperties.AutomationId="Overrides.Toolbar">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
         <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
@@ -84,7 +84,7 @@
                     VerticalScrollBarVisibility="Auto">
         <ItemsControl x:Name="OverrideList"
                       AutomationProperties.AutomationId="Overrides.List"
-                      Margin="8,0,25,15"
+                      Margin="0,0,9,15"
                       ItemsSource="{Binding Overrides}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>

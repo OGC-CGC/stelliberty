@@ -15,7 +15,7 @@
         x:DataType="vm:ProxyPageViewModel">
 
     <Grid x:Name="ProxyToolbarHost"
-          Margin="8,6,25,0"
+          Margin="0,6,9,0"
           IsVisible="{Binding HasGroups}"
           ZIndex="10">
       <Border x:Name="ProxyToolbarSurface"
@@ -180,7 +180,7 @@
                     VerticalScrollBarVisibility="Auto">
         <ItemsControl x:Name="NodeList"
                       AutomationProperties.AutomationId="Proxy.NodeList"
-                      Margin="8,0,25,15"
+                      Margin="0,0,9,15"
                       ItemsSource="{Binding VisibleNodeRows}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -260,7 +260,7 @@
                     VerticalScrollBarVisibility="Auto">
         <ItemsControl x:Name="GroupCardList"
                       AutomationProperties.AutomationId="Proxy.GroupCardList"
-                      Margin="8,0,25,15"
+                      Margin="0,0,9,15"
                       ItemsSource="{Binding VisibleGroupCards}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>

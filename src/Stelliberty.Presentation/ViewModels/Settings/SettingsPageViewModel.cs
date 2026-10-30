@@ -241,7 +241,8 @@ public sealed class SettingsPageViewModel : ViewModelBase
     {
         if (_subPage == SettingsSubPage.Root)
         {
-            Breadcrumbs = [];
+            // 根页面同样显示导航条：只有当前页，不可点击、无分隔符。
+            Breadcrumbs = [new SettingsBreadcrumbItem(HeaderTextFor(SettingsSubPage.Root), null, false)];
             return;
         }
 

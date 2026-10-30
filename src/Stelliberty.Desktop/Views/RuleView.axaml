@@ -11,7 +11,7 @@
              Background="Transparent">
   <Grid x:Name="RulePageRoot" RowDefinitions="Auto,*" RowSpacing="16"
         DataContext="{Binding RulePage}" x:DataType="vm:RulePageViewModel">
-    <Border Classes="surface-header" Margin="8,6,25,0" AutomationProperties.AutomationId="Rules.Toolbar">
+    <Border Classes="surface-header" Margin="0,6,9,0" AutomationProperties.AutomationId="Rules.Toolbar">
       <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
         <!-- 主要动作留在标题行，第二行才容得下筛选芯片与搜索框，最小窗宽下不重叠 -->
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
@@ -126,7 +126,7 @@
 
       <ScrollViewer IsVisible="{Binding !IsVisibleRulesEmpty}" AutomationProperties.AutomationId="Rules.EditorScroll"
                     HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <ItemsControl x:Name="RuleList" ItemsSource="{Binding VisibleRules}" AutomationProperties.AutomationId="Rules.VisibleList" Margin="8,0,25,15">
+        <ItemsControl x:Name="RuleList" ItemsSource="{Binding VisibleRules}" AutomationProperties.AutomationId="Rules.VisibleList" Margin="0,0,9,15">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <controls:VirtualizingWrapPanel MinItemWidth="344" ItemHeight="104" ColumnSpacing="12" RowSpacing="12" EdgePadding="0" />
