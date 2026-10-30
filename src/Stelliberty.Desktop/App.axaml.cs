@@ -61,6 +61,34 @@ public sealed partial class App : Avalonia.Application
     {
         AppLogger.Debug("Loading Avalonia XAML");
         AvaloniaXamlLoader.Load(this);
+        ConfigureMacOSApplicationMenu();
+    }
+
+    // macOS 应用菜单：Avalonia 默认会插入「About Avalonia」并弹出它自带的关于对话框。
+    // 必须在 Initialize 里替换：Avalonia 在 AppBuilder.AfterSetup 阶段导出应用菜单，晚于这里。
+    private void ConfigureMacOSApplicationMenu()
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            return;
+        }
+
+        // 同时让系统菜单里的隐藏/退出项使用应用名。
+        Name = AppMetadata.DisplayName;
+
+        var aboutItem = new NativeMenuItem($"About {AppMetadata.DisplayName}");
+        aboutItem.Click += (_, _) => ShowApplicationAbout();
+        NativeMenu.SetMenu(this, new NativeMenu { aboutItem });
+    }
+
+    private void ShowApplicationAbout()
+    {
+        ShowMainWindow();
+        if (_mainWindow?.DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.ShowSettingsCommand.Execute(null);
+            viewModel.Settings.ShowAboutCommand.Execute(null);
+        }
     }
 
     public override void OnFrameworkInitializationCompleted()
