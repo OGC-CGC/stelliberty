@@ -158,13 +158,13 @@
                   AutomationProperties.Name="{loc:Loc TitleBar.Tooltip.Pin}"
                   ToolTip.Tip="{loc:Loc TitleBar.Tooltip.Pin}"
                   Click="OnPinClicked">
-            <Grid Width="15" Height="15">
+            <Grid Width="12" Height="12">
               <iconPacks:PackIconMingCuteIcons x:Name="PinOutlineIcon"
-                                               Width="15" Height="15"
+                                               Width="12" Height="12"
                                                Kind="PinLine"
                                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
               <iconPacks:PackIconMingCuteIcons x:Name="PinFilledIcon"
-                                               Width="15" Height="15"
+                                               Width="12" Height="12"
                                                Kind="PinFill"
                                                IsVisible="False"
                                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
@@ -177,33 +177,33 @@
                     AutomationProperties.AutomationId="TitleBar.MinimizeButton"
                     Click="OnMinimizeClicked">
               <Path Width="15" Height="15"
-                    Data="M 2 6 L 10 6"
+                    Data="M 2.5 7.5 L 12.5 7.5"
                     Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                    StrokeThickness="1.4"
-                    StrokeLineCap="Square" />
+                    StrokeThickness="1"
+                    StrokeLineCap="Flat" />
             </Button>
             <Button Classes="titlebar-button"
                     AutomationProperties.AutomationId="TitleBar.MaximizeButton"
                     Click="OnMaximizeClicked">
               <Grid Width="15" Height="15">
-                <Rectangle x:Name="MaximizeIcon" Width="9" Height="9"
+                <Rectangle x:Name="MaximizeIcon" Width="10" Height="10"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                           StrokeThickness="1.25" />
+                           StrokeThickness="1" />
                 <Path x:Name="RestoreIcon" IsVisible="False"
-                      Data="M 4 2.5 H 9.5 V 8 M 2.5 4 H 8 V 9.5 H 2.5 Z"
+                      Data="M 4.5 2.5 H 12.5 V 10.5 M 2.5 4.5 H 10.5 V 12.5 H 2.5 Z"
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                      StrokeThickness="1.25" />
+                      StrokeThickness="1" />
               </Grid>
             </Button>
             <Button Classes="titlebar-button close"
                     AutomationProperties.AutomationId="TitleBar.CloseButton"
                     Click="OnCloseClicked">
               <Path Width="15" Height="15"
-                    Data="M 3 3 L 9 9 M 9 3 L 3 9"
+                    Data="M 2.5 2.5 L 12.5 12.5 M 12.5 2.5 L 2.5 12.5"
                     Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                    StrokeThickness="1.45"
-                    StrokeLineCap="Round" />
+                    StrokeThickness="1"
+                    StrokeLineCap="Flat" />
             </Button>
           </StackPanel>
         </StackPanel>
