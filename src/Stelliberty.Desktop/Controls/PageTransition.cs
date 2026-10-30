@@ -11,7 +11,6 @@ namespace Stelliberty.Desktop.Controls;
 internal static class PageTransition
 {
     private static readonly TimeSpan EnterDuration = TimeSpan.FromMilliseconds(280);
-    private static readonly TimeSpan HeaderEnterDuration = TimeSpan.FromMilliseconds(220);
     public static readonly TimeSpan LeaveDuration = TimeSpan.FromMilliseconds(120);
     private static readonly Easing EnterEasing = new SplineEasing
     {
@@ -32,19 +31,11 @@ internal static class PageTransition
     public static readonly ITransform EnterFromTransform = TransformOperations.Parse("translate(0px,0px) scale(0.985)");
     public static readonly ITransform RestTransform = TransformOperations.Parse("translate(0px,0px) scale(1)");
     public static readonly ITransform LeaveToTransform = TransformOperations.Parse("translate(0px,0px) scale(0.995)");
-    public static readonly ITransform HeaderEnterFromTransform = TransformOperations.Parse("translate(0px,0px)");
-    public static readonly ITransform HeaderRestTransform = TransformOperations.Parse("translate(0px,0px)");
 
     public static Transitions CreateEnterTransitions() => new()
     {
         new DoubleTransition { Property = Visual.OpacityProperty, Duration = EnterDuration, Easing = EnterEasing },
         new TransformOperationsTransition { Property = Visual.RenderTransformProperty, Duration = EnterDuration, Easing = EnterEasing },
-    };
-
-    public static Transitions CreateHeaderEnterTransitions() => new()
-    {
-        new DoubleTransition { Property = Visual.OpacityProperty, Duration = HeaderEnterDuration, Easing = EnterEasing },
-        new TransformOperationsTransition { Property = Visual.RenderTransformProperty, Duration = HeaderEnterDuration, Easing = EnterEasing },
     };
 
     public static Transitions CreateLeaveTransitions() => new()

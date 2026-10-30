@@ -10,6 +10,7 @@ public sealed class SettingsPageViewModel : ViewModelBase
     private readonly ILocalizationService _localization;
     private SettingsSubPage _subPage = SettingsSubPage.Root;
     private SettingsSubPage _backTarget = SettingsSubPage.Root;
+    private IReadOnlyList<SettingsBreadcrumbItem> _breadcrumbs = [];
 
     public SettingsPageViewModel(ILocalizationService localization)
     {
@@ -28,6 +29,7 @@ public sealed class SettingsPageViewModel : ViewModelBase
         ShowDnsCommand = new RelayCommand(() => SubPage = SettingsSubPage.Dns);
         ShowPerformanceCommand = new RelayCommand(() => SubPage = SettingsSubPage.Performance);
         ShowCoreLogCommand = new RelayCommand(() => SubPage = SettingsSubPage.CoreLog);
+        ShowRootCommand = new RelayCommand(GoToRoot);
         BackCommand = new RelayCommand(Back);
     }
 
@@ -63,7 +65,15 @@ public sealed class SettingsPageViewModel : ViewModelBase
     public bool IsCoreLogVisible => SubPage == SettingsSubPage.CoreLog;
     public bool IsBackVisible => SubPage != SettingsSubPage.Root;
 
-    public string HeaderText => SubPage switch
+    public IReadOnlyList<SettingsBreadcrumbItem> Breadcrumbs
+    {
+        get => _breadcrumbs;
+        private set => SetProperty(ref _breadcrumbs, value);
+    }
+
+    public string HeaderText => HeaderTextFor(SubPage);
+
+    private string HeaderTextFor(SettingsSubPage page) => page switch
     {
         SettingsSubPage.Theme => Localize("Settings.Header.Theme"),
         SettingsSubPage.Language => Localize("Settings.Header.Language"),
@@ -129,6 +139,7 @@ public sealed class SettingsPageViewModel : ViewModelBase
     public ICommand ShowDnsCommand { get; }
     public ICommand ShowPerformanceCommand { get; }
     public ICommand ShowCoreLogCommand { get; }
+    public ICommand ShowRootCommand { get; }
     public ICommand BackCommand { get; }
 
     public void GoToRoot()
@@ -169,6 +180,7 @@ public sealed class SettingsPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(ClashDnsText));
         OnPropertyChanged(nameof(ClashPerformanceText));
         OnPropertyChanged(nameof(ClashCoreLogText));
+        RebuildBreadcrumbs();
     }
 
     private void GoToUpdate()
@@ -222,6 +234,45 @@ public sealed class SettingsPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsCoreLogVisible));
         OnPropertyChanged(nameof(HeaderText));
         OnPropertyChanged(nameof(IsBackVisible));
+        RebuildBreadcrumbs();
+    }
+
+    private void RebuildBreadcrumbs()
+    {
+        if (_subPage == SettingsSubPage.Root)
+        {
+            Breadcrumbs = [];
+            return;
+        }
+
+        var items = new List<SettingsBreadcrumbItem>
+        {
+            new(HeaderTextFor(SettingsSubPage.Root), ShowRootCommand, true)
+        };
+
+        if (ResolveBreadcrumbParent() is { } parent)
+        {
+            items.Add(new SettingsBreadcrumbItem(HeaderTextFor(parent.Page), parent.Command, true));
+        }
+
+        items.Add(new SettingsBreadcrumbItem(HeaderTextFor(_subPage), null, false));
+        Breadcrumbs = items;
+    }
+
+    private (SettingsSubPage Page, ICommand Command)? ResolveBreadcrumbParent()
+    {
+        if (IsClashFeatureSubPage(_subPage))
+        {
+            return (SettingsSubPage.ClashFeatures, ShowClashFeaturesCommand);
+        }
+
+        if ((_subPage is SettingsSubPage.Update or SettingsSubPage.AppLog)
+            && _backTarget == SettingsSubPage.About)
+        {
+            return (SettingsSubPage.About, ShowAboutCommand);
+        }
+
+        return null;
     }
 
     private string Localize(string key) => _localization.GetString(key);

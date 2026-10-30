@@ -11,37 +11,47 @@
              AutomationProperties.AutomationId="Settings.Root"
              Background="Transparent">
   <Border AutomationProperties.AutomationId="Settings.Page" Background="Transparent">
-    <!-- 页头与设置内容一起滚动，顶部留白随内容滚动。 -->
-    <ScrollViewer x:Name="SettingsScroll"
-                  AutomationProperties.AutomationId="Settings.ScrollViewer"
-                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-      <Grid RowDefinitions="Auto,Auto" RowSpacing="22" Margin="0,6,0,0">
+    <Grid RowDefinitions="Auto,*" Margin="0,12,9,12">
+      <!-- 子页面面包屑导航；根页面隐藏。 -->
+      <Border Classes="settings-breadcrumb"
+              Margin="0,0,0,12"
+              IsVisible="{Binding Settings.IsBackVisible}"
+              AutomationProperties.AutomationId="Settings.Breadcrumb">
+        <ItemsControl ItemsSource="{Binding Settings.Breadcrumbs}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="6" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SettingsBreadcrumbItem">
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Button Classes="settings-breadcrumb-link"
+                        Content="{Binding Text}"
+                        Command="{Binding Command}"
+                        IsVisible="{Binding CanNavigate}" />
+                <TextBlock Classes="settings-breadcrumb-current"
+                           Text="{Binding Text}"
+                           IsVisible="{Binding !CanNavigate}" />
+                <iconPacks:PackIconMingCuteIcons Classes="settings-breadcrumb-separator"
+                                              Kind="RightSmallLine"
+                                              IsVisible="{Binding ShowSeparator}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
 
-        <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-          <Button Classes="settings-back"
-                  AutomationProperties.AutomationId="Settings.BackButton"
-                  IsVisible="{Binding Settings.IsBackVisible}"
-                  Command="{Binding Settings.BackCommand}">
-            <iconPacks:PackIconMingCuteIcons Classes="settings-back-icon"
-                                          Kind="ArrowLeftLine" />
-          </Button>
-          <TextBlock x:Name="SettingsHeaderText"
-                     Text="{Binding Settings.HeaderText}"
-                     FontSize="26"
-                     FontWeight="Normal"
-                     VerticalAlignment="Center"
-                     RenderTransformOrigin="50%,50%"
-                     Foreground="{DynamicResource AppTextPrimaryBrush}" />
-        </StackPanel>
-
+      <ScrollViewer Grid.Row="1"
+                    x:Name="SettingsScroll"
+                    AutomationProperties.AutomationId="Settings.ScrollViewer"
+                    HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <!-- 承载全部设置子页面板 -->
-        <Grid Grid.Row="1" HorizontalAlignment="Stretch" Margin="8,0,25,12">
-          <!-- 设置子页按当前路由创建，避免隐藏面板常驻视觉树。 -->
-          <ContentControl x:Name="SettingsContentPanel"
-                          HorizontalAlignment="Stretch"
-                          RenderTransformOrigin="50%,50%" />
-        </Grid>
-      </Grid>
-    </ScrollViewer>
+        <!-- 设置子页按当前路由创建，避免隐藏面板常驻视觉树。 -->
+        <ContentControl x:Name="SettingsContentPanel"
+                        HorizontalAlignment="Stretch"
+                        RenderTransformOrigin="50%,50%" />
+      </ScrollViewer>
+    </Grid>
   </Border>
 </UserControl>

@@ -160,9 +160,6 @@ public sealed partial class SettingsView : UserControl
         _pointeroverSuppressor.Begin();
 
         // 起始态须先无动画落位，再注入过渡才能触发淡入上浮。
-        SettingsHeaderText.Transitions = null;
-        SettingsHeaderText.Opacity = 0;
-        SettingsHeaderText.RenderTransform = PageTransition.HeaderEnterFromTransform;
         SettingsContentPanel.Transitions = null;
         SettingsContentPanel.Opacity = 0;
         SettingsContentPanel.RenderTransform = PageTransition.EnterFromTransform;
@@ -200,9 +197,6 @@ public sealed partial class SettingsView : UserControl
                     return;
                 }
 
-                SettingsHeaderText.Transitions = PageTransition.CreateHeaderEnterTransitions();
-                SettingsHeaderText.Opacity = 1;
-                SettingsHeaderText.RenderTransform = PageTransition.HeaderRestTransform;
                 SettingsContentPanel.Transitions = PageTransition.CreateEnterTransitions();
                 SettingsContentPanel.Opacity = 1;
                 SettingsContentPanel.RenderTransform = PageTransition.RestTransform;
@@ -212,9 +206,6 @@ public sealed partial class SettingsView : UserControl
 
     private void RestoreSubPageVisualState()
     {
-        SettingsHeaderText.Transitions = null;
-        SettingsHeaderText.Opacity = 1;
-        SettingsHeaderText.RenderTransform = PageTransition.HeaderRestTransform;
         SettingsContentPanel.Transitions = null;
         SettingsContentPanel.Opacity = 1;
         SettingsContentPanel.RenderTransform = PageTransition.RestTransform;

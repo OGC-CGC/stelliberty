@@ -35,7 +35,7 @@
     <Setter Property="Padding" Value="20,0,3,0" />
   </Style>
   <Style Selector="Border.content-host.settings">
-    <Setter Property="Padding" Value="20,0,3,0" />
+    <Setter Property="Padding" Value="8,0,3,0" />
   </Style>
   <Style Selector="Border.sidebar-shadow">
     <Setter Property="BorderBrush" Value="{DynamicResource AppSidebarDividerBrush}" />
