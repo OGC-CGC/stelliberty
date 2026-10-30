@@ -478,6 +478,7 @@ def pack_appimage(
         copy_linux_icon(app_dir / f"{app_package}.png", configuration)
         copy_linux_icon(icons_dir / f"{app_package}.png", configuration)
         set_linux_payload_permissions(app_payload_dir, metadata, target)
+        set_appimage_permissions(app_dir, linux_executable_paths(app_payload_dir, metadata, target))
 
         env = os.environ.copy()
         env["ARCH"] = appimage_arch(platform_name)
@@ -1007,17 +1008,35 @@ def macos_min_system(platform_name: str) -> str:
     raise RuntimeError(f"Unsupported macOS platform: {platform_name}")
 
 
-def set_linux_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:
-    executable_paths = [
+def linux_executable_paths(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> list[Path]:
+    return [
         install_dir / metadata.app_name,
         install_dir / "tweaks" / "cli" / "stelliberty-cli",
         install_dir / DEPS_DIRECTORY / f"{metadata.app_name}_ui",
         install_dir / "data" / "core" / "clash-mihomo-core",
         install_dir / "data" / "service" / "update" / service_binary_name(metadata, target),
     ]
-    for path in executable_paths:
+
+
+def set_linux_payload_permissions(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> None:
+    for path in linux_executable_paths(install_dir, metadata, target):
         if path.exists():
             path.chmod(path.stat().st_mode | 0o755)
+
+
+def set_appimage_permissions(app_dir: Path, executable_paths: list[Path]) -> None:
+    # appimagetool 要求：只要文件带任一可执行位，就必须对 owner/group/other 都可执行；
+    # 而 publish 输出里不少非可执行文件（deps 下的 dll/so 等）是 0744。
+    # 这里把整个 AppDir 归一化：目录 0755，可执行文件 0755，其余文件 0644。
+    executables = {path.resolve() for path in executable_paths}
+    for path in [app_dir, *app_dir.rglob("*")]:
+        if path.is_symlink():
+            continue
+        if path.is_dir():
+            path.chmod(path.stat().st_mode | 0o755)
+            continue
+        is_executable = (path.parent == app_dir and path.name == "AppRun") or path.resolve() in executables
+        path.chmod(0o755 if is_executable else 0o644)
 
 
 def installed_size_kb(path: Path) -> int:
