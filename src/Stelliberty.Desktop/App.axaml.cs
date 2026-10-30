@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Stelliberty.Application.Diagnostics;
@@ -64,8 +65,9 @@ public sealed partial class App : Avalonia.Application
         ConfigureMacOSApplicationMenu();
     }
 
-    // macOS 应用菜单：Avalonia 默认会插入「About Avalonia」并弹出它自带的关于对话框。
-    // 必须在 Initialize 里替换：Avalonia 在 AppBuilder.AfterSetup 阶段导出应用菜单，晚于这里。
+    // macOS 应用菜单：Avalonia 默认会插入「About Avalonia」，并把 ⌘Q 绑到退出。
+    // 这里接管整个应用菜单：关于 → 设置→关于；⌘Q 不再出现在菜单里（由窗口处理为关闭），
+    // 真正的退出走「Quit」项（无快捷键）或托盘菜单。
     private void ConfigureMacOSApplicationMenu()
     {
         if (!OperatingSystem.IsMacOS())
@@ -78,7 +80,35 @@ public sealed partial class App : Avalonia.Application
 
         var aboutItem = new NativeMenuItem($"About {AppMetadata.DisplayName}");
         aboutItem.Click += (_, _) => ShowApplicationAbout();
-        NativeMenu.SetMenu(this, new NativeMenu { aboutItem });
+
+        var hideItem = new NativeMenuItem($"Hide {AppMetadata.DisplayName}")
+        {
+            Gesture = new KeyGesture(Key.H, KeyModifiers.Meta)
+        };
+        hideItem.Click += (_, _) => _mainWindow?.HideToBackground();
+
+        var quitItem = new NativeMenuItem($"Quit {AppMetadata.DisplayName}");
+        quitItem.Click += (_, _) => QuitApplication();
+
+        NativeMenu.SetMenu(this, new NativeMenu
+        {
+            aboutItem,
+            new NativeMenuItemSeparator(),
+            hideItem,
+            new NativeMenuItemSeparator(),
+            quitItem
+        });
+    }
+
+    private void QuitApplication()
+    {
+        if (_mainWindow is { } mainWindow)
+        {
+            mainWindow.RequestShutdown();
+            return;
+        }
+
+        (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.TryShutdown();
     }
 
     private void ShowApplicationAbout()

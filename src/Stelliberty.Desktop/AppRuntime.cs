@@ -44,7 +44,12 @@ internal static class AppRuntime
 
         if (OperatingSystem.IsMacOS())
         {
-            builder = builder.With(new MacOSPlatformOptions { ShowInDock = true });
+            builder = builder.With(new MacOSPlatformOptions
+            {
+                ShowInDock = true,
+                // 应用菜单由 App.ConfigureMacOSApplicationMenu 自行定义；默认项会把 ⌘Q 绑到退出。
+                DisableDefaultApplicationMenuItems = true,
+            });
         }
         builder = builder.AfterSetup(_ =>
         {

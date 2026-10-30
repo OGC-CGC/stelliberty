@@ -746,6 +746,17 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs args)
     {
+        // macOS：⌘Q 与关闭按钮一致（按设置隐藏到托盘或退出）；真正的退出走应用菜单「Quit」/托盘菜单。
+        if (!args.Handled
+            && OperatingSystem.IsMacOS()
+            && args.Key == Key.Q
+            && args.KeyModifiers == KeyModifiers.Meta)
+        {
+            Close();
+            args.Handled = true;
+            return;
+        }
+
         if (args.Handled
             || args.Key != Key.Escape
             || args.KeyModifiers != KeyModifiers.None
