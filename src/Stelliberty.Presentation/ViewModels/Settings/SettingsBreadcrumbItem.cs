@@ -4,12 +4,12 @@ namespace Stelliberty.Presentation.ViewModels;
 
 public sealed class SettingsBreadcrumbItem
 {
-    public SettingsBreadcrumbItem(string text, ICommand? command, bool showSeparator, bool showIcon = false)
+    public SettingsBreadcrumbItem(string text, ICommand? command, bool showSeparator, SettingsSubPage page)
     {
         Text = text;
         Command = command;
         ShowSeparator = showSeparator;
-        ShowIcon = showIcon;
+        Page = page;
     }
 
     public string Text { get; }
@@ -18,8 +18,8 @@ public sealed class SettingsBreadcrumbItem
 
     public bool ShowSeparator { get; }
 
-    /// <summary>是否在文字前显示设置图标，仅根级“设置”面包屑使用。</summary>
-    public bool ShowIcon { get; }
+    /// <summary>该级面包屑对应的设置页面，用于取图标。</summary>
+    public SettingsSubPage Page { get; }
 
     public bool CanNavigate => Command is not null;
 }

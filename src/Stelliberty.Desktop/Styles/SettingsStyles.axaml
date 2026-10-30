@@ -361,10 +361,11 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <Style Selector="iconPacks|PackIconMingCuteIcons.settings-breadcrumb-separator">
-    <Setter Property="Width" Value="12" />
-    <Setter Property="Height" Value="12" />
-    <Setter Property="Foreground" Value="{DynamicResource AppTextTertiaryBrush}" />
+  <Style Selector="Path.settings-breadcrumb-separator">
+    <Setter Property="Stroke" Value="{DynamicResource AppTextTertiaryBrush}" />
+    <Setter Property="StrokeThickness" Value="1" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 </Styles>

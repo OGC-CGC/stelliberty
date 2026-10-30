@@ -245,21 +245,21 @@ public sealed class SettingsPageViewModel : ViewModelBase
         if (_subPage == SettingsSubPage.Root)
         {
             // 根页面同样显示导航条：只有当前页，不可点击、无分隔符。
-            Breadcrumbs = [new SettingsBreadcrumbItem(HeaderTextFor(SettingsSubPage.Root), null, false, true)];
+            Breadcrumbs = [new SettingsBreadcrumbItem(HeaderTextFor(SettingsSubPage.Root), null, false, SettingsSubPage.Root)];
             return;
         }
 
         var items = new List<SettingsBreadcrumbItem>
         {
-            new(HeaderTextFor(SettingsSubPage.Root), ShowRootCommand, true, true)
+            new(HeaderTextFor(SettingsSubPage.Root), ShowRootCommand, true, SettingsSubPage.Root)
         };
 
         if (ResolveBreadcrumbParent() is { } parent)
         {
-            items.Add(new SettingsBreadcrumbItem(HeaderTextFor(parent.Page), parent.Command, true));
+            items.Add(new SettingsBreadcrumbItem(HeaderTextFor(parent.Page), parent.Command, true, parent.Page));
         }
 
-        items.Add(new SettingsBreadcrumbItem(HeaderTextFor(_subPage), null, false));
+        items.Add(new SettingsBreadcrumbItem(HeaderTextFor(_subPage), null, false, _subPage));
         Breadcrumbs = items;
     }
 
