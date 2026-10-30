@@ -37,6 +37,59 @@
       <SolidColorBrush x:Key="AppInputFocusBrush" Color="#2563EB" />
 
       <SolidColorBrush x:Key="TitleBarButtonForegroundBrush" Color="#334155" />
+      <!-- macOS 风格窗口圆点：数值取自系统 DesignLibrary 的浅色外观素材（圆 14pt）。
+           填充上浅下深；1px 边框上下浅、中间深。 -->
+      <LinearGradientBrush x:Key="MacCaptionDotCloseBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#FAFB6B61" Offset="0" />
+        <GradientStop Color="#D1F57167" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotCloseBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F4F7645A" Offset="0" />
+        <GradientStop Color="#F5C10100" Offset="0.5" />
+        <GradientStop Color="#D3EB655D" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotMinimizeBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F8FBBA22" Offset="0" />
+        <GradientStop Color="#EBFECE32" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotMinimizeBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#E6EEA510" Offset="0" />
+        <GradientStop Color="#F59A0000" Offset="0.5" />
+        <GradientStop Color="#EAF1BE2F" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotZoomBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F462CE2F" Offset="0" />
+        <GradientStop Color="#C076D149" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotZoomBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F452C21A" Offset="0" />
+        <GradientStop Color="#F5004D00" Offset="0.5" />
+        <GradientStop Color="#C66ABF41" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotPinBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#FAC78CE0" Offset="0" />
+        <GradientStop Color="#D1BE6BDA" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotPinBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F4C78CE0" Offset="0" />
+        <GradientStop Color="#F574468B" Offset="0.5" />
+        <GradientStop Color="#C69B34BE" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionInactiveDotBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#63D8D8E1" Offset="0" />
+        <GradientStop Color="#4EDEE0E7" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionInactiveDotStrokeBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#5EC6C6D0" Offset="0" />
+        <GradientStop Color="#B285868D" Offset="0.5" />
+        <GradientStop Color="#64C1C1CC" Offset="1" />
+      </LinearGradientBrush>
+      <!-- 圆点内部符号：与所在圆点同色相；浅色外观用中调，保证在浅色圆上有对比。 -->
+      <SolidColorBrush x:Key="MacCaptionGlyphCloseBrush" Color="#BC0000" />
+      <SolidColorBrush x:Key="MacCaptionGlyphMinimizeBrush" Color="#D03E00" />
+      <SolidColorBrush x:Key="MacCaptionGlyphZoomBrush" Color="#237B00" />
+      <SolidColorBrush x:Key="MacCaptionGlyphPinBrush" Color="#74468B" />
+      <SolidColorBrush x:Key="MacCaptionInactiveGlyphBrush" Color="#6E7076" />
       <SolidColorBrush x:Key="DebugBadgeBackgroundBrush" Color="#F1F5F9" />
       <SolidColorBrush x:Key="DebugBadgeBorderBrush" Color="#CBD5E1" />
       <SolidColorBrush x:Key="DebugBadgeForegroundBrush" Color="#475569" />
@@ -84,6 +137,59 @@
       <SolidColorBrush x:Key="AppInputFocusBrush" Color="#60A5FA" />
 
       <SolidColorBrush x:Key="TitleBarButtonForegroundBrush" Color="#CBD5E1" />
+      <!-- macOS 风格窗口圆点：数值取自系统 DesignLibrary 的深色外观素材。
+           深色下填充更饱和且不透明，1px 边框上下亮、两侧接近填充色。 -->
+      <LinearGradientBrush x:Key="MacCaptionDotCloseBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#FFF65449" Offset="0" />
+        <GradientStop Color="#FFEF6760" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotCloseBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F4FFCAC0" Offset="0" />
+        <GradientStop Color="#F4F35650" Offset="0.5" />
+        <GradientStop Color="#F4FFC8C0" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotMinimizeBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#FFFBB200" Offset="0" />
+        <GradientStop Color="#FFFDCB2A" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotMinimizeBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F4FFFD6E" Offset="0" />
+        <GradientStop Color="#F4FCBD00" Offset="0.5" />
+        <GradientStop Color="#F4FFFD7F" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotZoomBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#FF09BD00" Offset="0" />
+        <GradientStop Color="#FF4DC237" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotZoomBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F4B4FD93" Offset="0" />
+        <GradientStop Color="#F412BD00" Offset="0.5" />
+        <GradientStop Color="#F4ACFF91" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotPinBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#FFC78CE0" Offset="0" />
+        <GradientStop Color="#FFBE6BDA" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionDotPinBorderBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F4E6CFF7" Offset="0" />
+        <GradientStop Color="#F4BE6BDA" Offset="0.5" />
+        <GradientStop Color="#F4E6CFF7" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionInactiveDotBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#30ECECEC" Offset="0" />
+        <GradientStop Color="#29ECECEC" Offset="1" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="MacCaptionInactiveDotStrokeBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#F3BABABA" Offset="0" />
+        <GradientStop Color="#32E5E5E5" Offset="0.5" />
+        <GradientStop Color="#F4B2B2B2" Offset="1" />
+      </LinearGradientBrush>
+      <!-- 圆点内部符号：与所在圆点同色相；深色外观用浅调，落在饱和圆上更清楚。 -->
+      <SolidColorBrush x:Key="MacCaptionGlyphCloseBrush" Color="#FFC9C1" />
+      <SolidColorBrush x:Key="MacCaptionGlyphMinimizeBrush" Color="#FFE39B" />
+      <SolidColorBrush x:Key="MacCaptionGlyphZoomBrush" Color="#C4F5A8" />
+      <SolidColorBrush x:Key="MacCaptionGlyphPinBrush" Color="#EBCFFA" />
+      <SolidColorBrush x:Key="MacCaptionInactiveGlyphBrush" Color="#C9C9C9" />
       <SolidColorBrush x:Key="DebugBadgeBackgroundBrush" Color="#334155" />
       <SolidColorBrush x:Key="DebugBadgeBorderBrush" Color="#64748B" />
       <SolidColorBrush x:Key="DebugBadgeForegroundBrush" Color="#E2E8F0" />

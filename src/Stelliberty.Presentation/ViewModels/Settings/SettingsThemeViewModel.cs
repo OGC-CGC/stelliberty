@@ -500,6 +500,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         {
             WindowDecorationStyle.System => "Settings.WindowDecoration.System",
             WindowDecorationStyle.Windows => "Settings.WindowDecoration.Windows",
+            WindowDecorationStyle.MacOS => "Settings.WindowDecoration.MacOS",
             _ => "Settings.WindowDecoration.None"
         });
     }

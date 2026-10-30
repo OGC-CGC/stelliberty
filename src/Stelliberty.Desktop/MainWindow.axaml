@@ -73,12 +73,70 @@
             AutomationProperties.AutomationId="TitleBar.Root"
             Background="Transparent"
             PointerPressed="OnTitleBarPointerPressed">
-      <Grid x:Name="TitleBarLayout" ColumnDefinitions="*,Auto,Auto">
-        <Border HorizontalAlignment="Left"
+      <Grid x:Name="TitleBarLayout" ColumnDefinitions="Auto,*,Auto,Auto">
+        <Border Grid.Column="0"
+                HorizontalAlignment="Left"
                 Classes="sidebar-shadow sidebar-width"
                 Classes.divider-hidden="{Binding !Theme.IsSidebarDividerVisible}"
                 IsHitTestVisible="False" />
-        <controls:FpsCounter Grid.Column="1"
+        <!-- macOS 风格：左侧四颗圆点（关闭/最小化/最大化/置顶），符号悬停显示。
+             左边距 4 = 一个间距(8) − 圆点在按钮内的 4px 内缩，使第一颗圆点左边缘 = 8px。 -->
+        <StackPanel x:Name="MacCaptionButtons"
+                    Grid.Column="0"
+                    Classes="mac-caption"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="4,0,0,0"
+                    IsVisible="False">
+          <Button x:Name="MacCloseButton"
+                  Classes="mac-caption-button close"
+                  AutomationProperties.AutomationId="TitleBar.MacCloseButton"
+                  Click="OnCloseClicked">
+            <Grid Width="15" Height="15">
+              <Border Classes="mac-caption-dot" />
+              <Path Classes="mac-caption-glyph"
+                    Data="M 4.5 4.5 L 10.5 10.5 M 10.5 4.5 L 4.5 10.5"
+                    StrokeThickness="1.5"
+                    StrokeLineCap="Round" />
+            </Grid>
+          </Button>
+          <Button x:Name="MacMinimizeButton"
+                  Classes="mac-caption-button minimize"
+                  AutomationProperties.AutomationId="TitleBar.MacMinimizeButton"
+                  Click="OnMinimizeClicked">
+            <Grid Width="15" Height="15">
+              <Border Classes="mac-caption-dot" />
+              <Path Classes="mac-caption-glyph"
+                    Data="M 4.5 7.5 L 10.5 7.5"
+                    StrokeThickness="1.8"
+                    StrokeLineCap="Round" />
+            </Grid>
+          </Button>
+          <Button x:Name="MacMaximizeButton"
+                  Classes="mac-caption-button zoom"
+                  AutomationProperties.AutomationId="TitleBar.MacMaximizeButton"
+                  Click="OnMacZoomClicked">
+            <Grid Width="15" Height="15">
+              <Border Classes="mac-caption-dot" />
+              <Path Classes="mac-caption-glyph"
+                    Data="M 4.5 9 V 4.5 H 9 Z M 10.5 6 V 10.5 H 6 Z" />
+            </Grid>
+          </Button>
+          <Button x:Name="MacPinButton"
+                  Classes="mac-caption-button pin"
+                  AutomationProperties.AutomationId="TitleBar.MacPinButton"
+                  Click="OnPinClicked">
+            <Grid Width="15" Height="15">
+              <Border Classes="mac-caption-dot" />
+              <iconPacks:PackIconMingCuteIcons x:Name="MacPinFilledIcon"
+                                               Width="8" Height="8"
+                                               Classes="mac-caption-glyph"
+                                               Kind="PinFill" />
+            </Grid>
+          </Button>
+        </StackPanel>
+        <controls:FpsCounter Grid.Column="2"
                              AutomationProperties.AutomationId="TitleBar.FpsCounter"
                              IsVisible="{Binding AppBehavior.IsTitleBarFpsVisible}"
                              IsHitTestVisible="False"
@@ -88,7 +146,8 @@
                              FontSize="11"
                              FontWeight="Normal"
                              Foreground="{DynamicResource AppTextSecondaryBrush}" />
-        <StackPanel Grid.Column="2"
+        <StackPanel x:Name="WindowsTitleBarGroup"
+                    Grid.Column="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Stretch">
@@ -99,13 +158,13 @@
                   AutomationProperties.Name="{loc:Loc TitleBar.Tooltip.Pin}"
                   ToolTip.Tip="{loc:Loc TitleBar.Tooltip.Pin}"
                   Click="OnPinClicked">
-            <Grid Width="13" Height="13">
+            <Grid Width="15" Height="15">
               <iconPacks:PackIconMingCuteIcons x:Name="PinOutlineIcon"
-                                               Width="13" Height="13"
+                                               Width="15" Height="15"
                                                Kind="PinLine"
                                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
               <iconPacks:PackIconMingCuteIcons x:Name="PinFilledIcon"
-                                               Width="13" Height="13"
+                                               Width="15" Height="15"
                                                Kind="PinFill"
                                                IsVisible="False"
                                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
@@ -117,7 +176,7 @@
             <Button Classes="titlebar-button"
                     AutomationProperties.AutomationId="TitleBar.MinimizeButton"
                     Click="OnMinimizeClicked">
-              <Path Width="13" Height="13"
+              <Path Width="15" Height="15"
                     Data="M 2 6 L 10 6"
                     Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                     StrokeThickness="1.4"
@@ -126,7 +185,7 @@
             <Button Classes="titlebar-button"
                     AutomationProperties.AutomationId="TitleBar.MaximizeButton"
                     Click="OnMaximizeClicked">
-              <Grid Width="13" Height="13">
+              <Grid Width="15" Height="15">
                 <Rectangle x:Name="MaximizeIcon" Width="9" Height="9"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
@@ -140,7 +199,7 @@
             <Button Classes="titlebar-button close"
                     AutomationProperties.AutomationId="TitleBar.CloseButton"
                     Click="OnCloseClicked">
-              <Path Width="13" Height="13"
+              <Path Width="15" Height="15"
                     Data="M 3 3 L 9 9 M 9 3 L 3 9"
                     Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                     StrokeThickness="1.45"

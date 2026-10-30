@@ -88,6 +88,147 @@
     <Setter Property="Foreground" Value="{DynamicResource AppOnDangerBrush}" />
   </Style>
 
+  <!-- macOS 风格：左侧四颗圆点（关闭/最小化/最大化/置顶），符号仅在悬停时显示。 -->
+  <Style Selector="Button.mac-caption-button">
+    <Setter Property="Width" Value="23" />
+    <Setter Property="Height" Value="15" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="Transparent">
+          <ContentPresenter HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <!-- 圆点用 Border + 圆角（半径 = 半边长）保证正圆；圆 15px、按钮 23×15：
+       高度与圆一致，左右各留 4px（间距 8px），全部落在整数像素上。 -->
+  <Style Selector="Border.mac-caption-dot">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+    <Setter Property="CornerRadius" Value="7.5" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.mac-caption-button.close Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotCloseBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotCloseBorderBrush}" />
+  </Style>
+  <Style Selector="Button.mac-caption-button.minimize Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotMinimizeBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotMinimizeBorderBrush}" />
+  </Style>
+  <Style Selector="Button.mac-caption-button.zoom Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotZoomBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotZoomBorderBrush}" />
+  </Style>
+  <Style Selector="Button.mac-caption-button.pin Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotPinBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotPinBorderBrush}" />
+  </Style>
+  <!-- 符号颜色与所在圆点同色相（浅色外观取中调、深色外观取浅调）。 -->
+  <Style Selector="Button.mac-caption-button.close Path.mac-caption-glyph">
+    <Setter Property="Stroke" Value="{DynamicResource MacCaptionGlyphCloseBrush}" />
+  </Style>
+  <Style Selector="Button.mac-caption-button.minimize Path.mac-caption-glyph">
+    <Setter Property="Stroke" Value="{DynamicResource MacCaptionGlyphMinimizeBrush}" />
+  </Style>
+  <Style Selector="Button.mac-caption-button.zoom Path.mac-caption-glyph">
+    <Setter Property="Fill" Value="{DynamicResource MacCaptionGlyphZoomBrush}" />
+  </Style>
+  <Style Selector="Button.mac-caption-button.pin iconPacks|PackIconMingCuteIcons.mac-caption-glyph">
+    <Setter Property="Foreground" Value="{DynamicResource MacCaptionGlyphPinBrush}" />
+  </Style>
+  <!-- 窗口未激活时四颗圆点转为半透明灰阶渐变（macOS 行为）。 -->
+  <Style Selector="Window.window-inactive Button.mac-caption-button Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionInactiveDotBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionInactiveDotStrokeBrush}" />
+  </Style>
+  <!-- 已置顶的紫色圆点保持原色，不随窗口失焦变灰。 -->
+  <Style Selector="Window.window-inactive Button.mac-caption-button.pin.active Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotPinBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotPinBorderBrush}" />
+  </Style>
+  <!-- 圆点变灰时符号同步转灰；置顶的紫色圆点保持原色。 -->
+  <Style Selector="Window.window-inactive Button.mac-caption-button.close Path.mac-caption-glyph">
+    <Setter Property="Stroke" Value="{DynamicResource MacCaptionInactiveGlyphBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.minimize Path.mac-caption-glyph">
+    <Setter Property="Stroke" Value="{DynamicResource MacCaptionInactiveGlyphBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.zoom Path.mac-caption-glyph">
+    <Setter Property="Fill" Value="{DynamicResource MacCaptionInactiveGlyphBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.pin iconPacks|PackIconMingCuteIcons.mac-caption-glyph">
+    <Setter Property="Foreground" Value="{DynamicResource MacCaptionInactiveGlyphBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.pin.active iconPacks|PackIconMingCuteIcons.mac-caption-glyph">
+    <Setter Property="Foreground" Value="{DynamicResource MacCaptionGlyphPinBrush}" />
+  </Style>
+  <!-- 未激活时悬停到哪颗，哪颗就恢复本来的颜色（移开恢复灰），符号同步恢复本色。 -->
+  <Style Selector="Window.window-inactive Button.mac-caption-button.close:pointerover Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotCloseBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotCloseBorderBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.minimize:pointerover Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotMinimizeBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotMinimizeBorderBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.zoom:pointerover Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotZoomBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotZoomBorderBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.pin:pointerover Border.mac-caption-dot">
+    <Setter Property="Background" Value="{DynamicResource MacCaptionDotPinBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotPinBorderBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.close:pointerover Path.mac-caption-glyph">
+    <Setter Property="Stroke" Value="{DynamicResource MacCaptionGlyphCloseBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.minimize:pointerover Path.mac-caption-glyph">
+    <Setter Property="Stroke" Value="{DynamicResource MacCaptionGlyphMinimizeBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.zoom:pointerover Path.mac-caption-glyph">
+    <Setter Property="Fill" Value="{DynamicResource MacCaptionGlyphZoomBrush}" />
+  </Style>
+  <Style Selector="Window.window-inactive Button.mac-caption-button.pin:pointerover iconPacks|PackIconMingCuteIcons.mac-caption-glyph">
+    <Setter Property="Foreground" Value="{DynamicResource MacCaptionGlyphPinBrush}" />
+  </Style>
+  <Style Selector="Path.mac-caption-glyph">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="StackPanel.mac-caption:pointerover Path.mac-caption-glyph">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="iconPacks|PackIconMingCuteIcons.mac-caption-glyph">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <!-- 悬停四颗中任意一颗时，四个符号一起显示（联动）。 -->
+  <Style Selector="StackPanel.mac-caption:pointerover iconPacks|PackIconMingCuteIcons.mac-caption-glyph">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- 已置顶时常显实心图钉。 -->
+  <Style Selector="Button.mac-caption-button.pin.active iconPacks|PackIconMingCuteIcons.mac-caption-glyph">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
   <Style Selector="Border.debug-badge">
     <Setter Property="Margin" Value="12,0,0,0" />
     <Setter Property="Padding" Value="9,2" />
@@ -116,7 +257,10 @@
     </Setter>
   </Style>
   <Style Selector="Window.sidebar-collapsed Border.sidebar-width">
-    <Setter Property="Width" Value="76" />
+    <!-- 74 = 分割线所在像素列 73 + 1。73 正好是红绿灯第 3、4 颗之间间隙的中心
+         （按钮左边距 4 + 圆点在按钮内缩进 4 = 8 起，第 3、4 颗间隙中心 = 4 + 69 = 73）；
+         同时收起态内容中心 12 + 8 + 17 = 37 = 74 / 2，内容在分割线内居中。 -->
+    <Setter Property="Width" Value="74" />
   </Style>
 
   <Style Selector="Button.sidebar-toggle">

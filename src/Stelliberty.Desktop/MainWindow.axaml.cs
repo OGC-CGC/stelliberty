@@ -84,6 +84,7 @@ public sealed partial class MainWindow : Window
     private bool _shouldShutdownTray = true;
     private WindowDecorationStyle _windowDecorationStyle = WindowDecorationStyleRules.Default;
     private bool _hasOpened;
+    private bool _wasFullScreen;
     private long _pageTransitionVersion;
     private long _pageLoadingShownAt;
 #if DEBUG
@@ -105,6 +106,8 @@ public sealed partial class MainWindow : Window
         _relativeTimeTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         _relativeTimeTimer.Tick += OnRelativeTimeTimerTick;
         InitializeComponent();
+        Activated += OnWindowActivated;
+        Deactivated += OnWindowDeactivated;
         ApplyWindowDecorationStyle(settings);
         DataContextChanged += OnDataContextChanged;
         PropertyChanged += OnWindowPropertyChanged;
@@ -114,6 +117,7 @@ public sealed partial class MainWindow : Window
         UpdateSidebarState();
         UpdateWindowStateVisuals();
         UpdatePinState();
+        UpdateWindowActiveVisuals();
 #if DEBUG
         AttachDevBadge();
 #endif
@@ -128,14 +132,11 @@ public sealed partial class MainWindow : Window
     private void ApplyWindowDecorations()
     {
         var isMacOS = OperatingSystem.IsMacOS();
-        var useCustomButtons = _windowDecorationStyle == WindowDecorationStyle.Windows;
+        var useWindowsButtons = _windowDecorationStyle == WindowDecorationStyle.Windows;
+        var useMacButtons = _windowDecorationStyle == WindowDecorationStyle.MacOS;
+        var useCustomButtons = useWindowsButtons || useMacButtons;
         // macOS 的系统红绿灯浮在客户端区域上，保留自绘标题栏才能继续显示 FPS 与图钉。
         var isMacOSSystem = isMacOS && _windowDecorationStyle == WindowDecorationStyle.System;
-        // 无装饰模式仍保留顶部透明拖动区，但不渲染任何标题栏元素。
-        var showTitleBarRow = useCustomButtons
-                              || isMacOSSystem
-                              || _windowDecorationStyle == WindowDecorationStyle.None;
-        var showTitleBarContent = useCustomButtons || isMacOSSystem;
         ExtendClientAreaToDecorationsHint = useCustomButtons || isMacOSSystem;
         WindowDecorations = _windowDecorationStyle switch
         {
@@ -144,27 +145,81 @@ public sealed partial class MainWindow : Window
             _ when OperatingSystem.IsLinux() => Avalonia.Controls.WindowDecorations.BorderOnly,
             _ => Avalonia.Controls.WindowDecorations.Full
         };
-        CaptionButtons.IsVisible = useCustomButtons;
-        SetTitleBarVisible(showTitleBarRow, showTitleBarContent);
-        // Linux 合成器不保证模糊；垫一层不透明底色，避免窗口 alpha 透出桌面。
-        BaseColorLayer.IsVisible = OperatingSystem.IsLinux();
+        // macOS 风格自绘左侧四颗圆点，右侧只保留 FPS。
+        WindowsTitleBarGroup.IsVisible = !useMacButtons;
+        UpdateCaptionButtonsVisibility();
+        // 顶栏自绘区域始终显示；Linux 系统装饰下会与系统标题栏同时存在。
+        RootGrid.RowDefinitions[0].Height = new GridLength(36);
+        TitleBarSurface.IsVisible = true;
+        TitleBarLayout.IsVisible = true;
+        UpdateBaseColorLayer();
         ApplyPlatformWindowControls();
     }
 
-    private void SetTitleBarVisible(bool showRow, bool showContent)
+    // 系统全屏时 macOS 会自己显示窗口控件，自绘按钮不再渲染；
+    // Windows/Linux 全屏没有系统控件，保留自绘按钮以便退出全屏。
+    private void UpdateCaptionButtonsVisibility()
     {
-        TitleBarSurface.IsVisible = showRow;
-        TitleBarLayout.IsVisible = showContent;
-        RootGrid.RowDefinitions[0].Height = showRow ? new GridLength(36) : new GridLength(0);
+        var isMacOSFullScreen = OperatingSystem.IsMacOS() && WindowState == WindowState.FullScreen;
+        MacCaptionButtons.IsVisible = _windowDecorationStyle == WindowDecorationStyle.MacOS && !isMacOSFullScreen;
+        CaptionButtons.IsVisible = _windowDecorationStyle == WindowDecorationStyle.Windows && !isMacOSFullScreen;
     }
 
-    // macOS 系统红绿灯只在系统装饰模式保留，自绘或无边框时隐藏。
+    // Linux 合成器不保证模糊；macOS 全屏后透明/玻璃效果会失效。
+    // 两种情况都垫一层跟随明暗主题的不透明底色，避免窗口透出桌面或发黑。
+    private void UpdateBaseColorLayer()
+    {
+        BaseColorLayer.IsVisible = OperatingSystem.IsLinux()
+                                   || (OperatingSystem.IsMacOS() && WindowState == WindowState.FullScreen);
+    }
+
+    // macOS 系统红绿灯只在系统装饰模式保留，自绘或无边框时隐藏；
+    // 系统全屏时改由系统标题栏提供控件，这时恢复显示、并把自绘按钮让出去。
     private void ApplyPlatformWindowControls()
     {
         if (OperatingSystem.IsMacOS())
         {
-            _macOSWindowControls.SetHidden(this, _windowDecorationStyle != WindowDecorationStyle.System);
+            var hideNativeButtons = _windowDecorationStyle != WindowDecorationStyle.System
+                                    && WindowState != WindowState.FullScreen;
+            _macOSWindowControls.SetHidden(this, hideNativeButtons);
         }
+    }
+
+    // 进出系统全屏时 AppKit 会重建标题栏：原先隐藏的原生红绿灯、标题栏材质会重新出现，
+    // 因此在状态切换时补一次，并在全屏过渡动画结束后再补一次。
+    private void ReapplyNativeWindowChromeForFullScreen()
+    {
+        var isFullScreen = WindowState == WindowState.FullScreen;
+        if (!isFullScreen && !_wasFullScreen)
+        {
+            return;
+        }
+
+        _wasFullScreen = isFullScreen;
+        ApplyNativeWindowChrome();
+        DispatcherTimer.RunOnce(
+            ApplyNativeWindowChrome,
+            TimeSpan.FromMilliseconds(700),
+            DispatcherPriority.Background);
+    }
+
+    private void ApplyNativeWindowChrome()
+    {
+        ApplyPlatformWindowControls();
+        _windowAppearanceService.ReapplyWindowEffect();
+    }
+
+    // 自绘圆点跟随窗口激活状态：失焦时转为灰色，回到前台恢复彩色。
+    // 事件回调按事件语义直接切换，不读取 IsActive：激活事件可能早于属性更新。
+    private void OnWindowActivated(object? sender, EventArgs args) => SetWindowActiveVisuals(true);
+
+    private void OnWindowDeactivated(object? sender, EventArgs args) => SetWindowActiveVisuals(false);
+
+    private void UpdateWindowActiveVisuals() => SetWindowActiveVisuals(IsActive);
+
+    private void SetWindowActiveVisuals(bool isActive)
+    {
+        Classes.Set("window-inactive", !isActive);
     }
 
     // Wayland 部分合成器不提供系统标题栏时回退到 Windows 风格，避免出现无按钮窗口。
@@ -1414,16 +1469,17 @@ public sealed partial class MainWindow : Window
 
     private void UpdatePinState()
     {
-        PinFilledIcon.IsVisible = Topmost;
-        PinOutlineIcon.IsVisible = !Topmost;
-        if (Topmost)
-        {
-            PinButton.Classes.Add("active");
-        }
-        else
-        {
-            PinButton.Classes.Remove("active");
-        }
+        UpdatePinVisual(PinButton, PinOutlineIcon, PinFilledIcon);
+        // macOS 风格图钉固定用实心图标，只区分“是否常显”。
+        MacPinFilledIcon.IsVisible = true;
+        MacPinButton.Classes.Set("active", Topmost);
+    }
+
+    private void UpdatePinVisual(Button button, Visual outlineIcon, Visual filledIcon)
+    {
+        filledIcon.IsVisible = Topmost;
+        outlineIcon.IsVisible = !Topmost;
+        button.Classes.Set("active", Topmost);
     }
 
     private void OnMinimizeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
@@ -1434,6 +1490,14 @@ public sealed partial class MainWindow : Window
     private void OnMaximizeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
     {
         ToggleWindowMaximized();
+    }
+
+    // macOS 风格绿灯：语义对齐系统行为，切换系统全屏（原生 Space），而不是最大化。
+    private void OnMacZoomClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
+    {
+        WindowState = WindowState == WindowState.FullScreen
+            ? WindowState.Normal
+            : WindowState.FullScreen;
     }
 
     private void OnCloseClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs args)
@@ -1739,6 +1803,14 @@ public sealed partial class MainWindow : Window
         if (args.Property == WindowStateProperty)
         {
             UpdateWindowStateVisuals();
+            UpdateCaptionButtonsVisibility();
+            UpdateBaseColorLayer();
+            ReapplyNativeWindowChromeForFullScreen();
+        }
+
+        if (args.Property == WindowBase.IsActiveProperty)
+        {
+            UpdateWindowActiveVisuals();
         }
 
         if (args.Property != Visual.IsVisibleProperty)

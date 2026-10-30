@@ -784,6 +784,7 @@
   "Settings.WindowEffect.FrutigerAero": "Frutiger Aero",
   "Settings.WindowDecoration.System": "系統",
   "Settings.WindowDecoration.Windows": "Windows 風格",
+  "Settings.WindowDecoration.MacOS": "macOS 風格",
   "Settings.WindowDecoration.None": "無",
   "Settings.WindowDecoration.Restart.Title": "需要重新啟動介面",
   "Settings.WindowDecoration.Restart.Message": "視窗按鈕的變更將在重新啟動介面後生效，代理與核心不受影響。",

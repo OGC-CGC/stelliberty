@@ -45,6 +45,9 @@ internal sealed class MacOSGlassEffectService : IDisposable
         if (_glassView != nint.Zero && _window == handle.Handle)
         {
             SetInteger(_glassView, GetSelector("setStyle:"), ClearGlassStyle);
+            // 全屏切换会重建标题栏视图：按当前视图树重新定位后再隐藏，避免向已释放的视图发消息。
+            _titleBarMaterialView = FindTitleBarMaterialView(_originalContentView);
+            _titleBarUnderlineView = FindTitleBarUnderline(_originalContentView);
             SetBool(_titleBarMaterialView, GetSelector("setHidden:"), true);
             SetBool(_titleBarUnderlineView, GetSelector("setHidden:"), true);
             HideTitleBarSeparator(_window);

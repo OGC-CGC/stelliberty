@@ -784,6 +784,7 @@
   "Settings.WindowEffect.FrutigerAero": "Frutiger Aero",
   "Settings.WindowDecoration.System": "System",
   "Settings.WindowDecoration.Windows": "Windows Style",
+  "Settings.WindowDecoration.MacOS": "macOS Style",
   "Settings.WindowDecoration.None": "None",
   "Settings.WindowDecoration.Restart.Title": "Restart Required",
   "Settings.WindowDecoration.Restart.Message": "Window button changes take effect after restarting the interface. The proxy and core stay connected.",

@@ -1,10 +1,11 @@
 namespace Stelliberty.Application.Settings;
 
-// 窗口按钮来源：系统标题栏、应用自绘（Windows 风格）或无边框。
+// 窗口按钮来源：系统标题栏、应用自绘（Windows / macOS 风格）或无边框。
 public enum WindowDecorationStyle
 {
     System,
     Windows,
+    MacOS,
     None
 }
 
@@ -18,8 +19,8 @@ public static class WindowDecorationStyleRules
 
     public static IReadOnlyList<WindowDecorationStyle> Supported =>
         OperatingSystem.IsWindows()
-            ? [WindowDecorationStyle.Windows, WindowDecorationStyle.None]
-            : [WindowDecorationStyle.System, WindowDecorationStyle.Windows, WindowDecorationStyle.None];
+            ? [WindowDecorationStyle.Windows, WindowDecorationStyle.MacOS, WindowDecorationStyle.None]
+            : [WindowDecorationStyle.System, WindowDecorationStyle.Windows, WindowDecorationStyle.MacOS, WindowDecorationStyle.None];
 
     public static WindowDecorationStyle Parse(string? value)
     {

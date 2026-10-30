@@ -69,6 +69,18 @@ internal sealed class WindowAppearanceService : IDisposable
         UpdateBackgroundImage(reloadImage: true);
     }
 
+    // 进出系统全屏后 AppKit 会重建标题栏，重新应用窗口效果（含 macOS 玻璃与标题栏材质/下划线隐藏）。
+    public void ReapplyWindowEffect()
+    {
+        if (_theme is null)
+        {
+            return;
+        }
+
+        _isWindowActive = _window?.IsActive ?? _isWindowActive;
+        ApplyWindowEffect(_theme.SelectedWindowEffect);
+    }
+
     public void Dispose()
     {
         if (_theme is not null)
