@@ -16,77 +16,72 @@
         <Button Classes="settings-row first"
                 AutomationProperties.AutomationId="Settings.NetworkEntry"
                 Command="{Binding Settings.ShowNetworkCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="RouteLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="14,0,0,0" Text="{Binding Settings.ClashNetworkText}" />
+            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashNetworkText}" />
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row"
                 AutomationProperties.AutomationId="Settings.PortControlEntry"
                 Command="{Binding Settings.ShowPortControlCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="Settings6Line" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="14,0,0,0" Text="{Binding Settings.ClashPortControlText}" />
+            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashPortControlText}" />
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row"
                 AutomationProperties.AutomationId="Settings.SystemIntegrationEntry"
                 Command="{Binding Settings.ShowSystemIntegrationCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="ComputerLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="14,0,0,0" Text="{Binding Settings.ClashSystemIntegrationText}" />
+            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashSystemIntegrationText}" />
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row"
                 AutomationProperties.AutomationId="Settings.DnsEntry"
                 Command="{Binding Settings.ShowDnsCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="EarthLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="14,0,0,0" Text="{Binding Settings.ClashDnsText}" />
+            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashDnsText}" />
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row"
                 AutomationProperties.AutomationId="Settings.PerformanceEntry"
                 Command="{Binding Settings.ShowPerformanceCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="PerformanceLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="14,0,0,0" Text="{Binding Settings.ClashPerformanceText}" />
+            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashPerformanceText}" />
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row last"
                 AutomationProperties.AutomationId="Settings.CoreLogEntry"
                 Command="{Binding Settings.ShowCoreLogCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="TerminalBoxLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="14,0,0,0" Text="{Binding Settings.ClashCoreLogText}" />
+            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashCoreLogText}" />
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>

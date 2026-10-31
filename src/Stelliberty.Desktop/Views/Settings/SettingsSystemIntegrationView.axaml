@@ -26,7 +26,6 @@
                       SelectedItem="{Binding SystemIntegration.ProxyHost, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding SystemIntegration.SystemPacModeText}" />
@@ -35,7 +34,6 @@
                           IsChecked="{Binding SystemIntegration.IsPacModeEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" IsVisible="{Binding SystemIntegration.IsSystemProxyBypassVisible}" />
         <Border Classes="settings-inline-row" IsVisible="{Binding SystemIntegration.IsSystemProxyBypassVisible}">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -63,7 +61,6 @@
                      Text="{Binding SystemIntegration.SystemProxyBypass, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" IsVisible="{Binding SystemIntegration.IsPacScriptVisible}" />
         <Border Classes="settings-inline-row" IsVisible="{Binding SystemIntegration.IsPacScriptVisible}">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -108,7 +105,6 @@
                       SelectedItem="{Binding CoreConfig.SelectedTunStack, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,180">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunDeviceText}" />
@@ -117,7 +113,6 @@
                      Text="{Binding CoreConfig.TunDevice, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunAutoRouteText}" />
@@ -126,7 +121,6 @@
                           IsChecked="{Binding CoreConfig.IsTunAutoRouteEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunAutoRedirectText}" />
@@ -135,7 +129,6 @@
                           IsChecked="{Binding CoreConfig.IsTunAutoRedirectEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunAutoDetectInterfaceText}" />
@@ -144,7 +137,6 @@
                           IsChecked="{Binding CoreConfig.IsTunAutoDetectInterfaceEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunStrictRouteText}" />
@@ -153,7 +145,6 @@
                           IsChecked="{Binding CoreConfig.IsTunStrictRouteEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunDnsHijackText}" />
@@ -163,7 +154,6 @@
                      Text="{Binding CoreConfig.TunDnsHijackText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunRouteExcludeText}" />
@@ -173,7 +163,6 @@
                      Text="{Binding CoreConfig.TunRouteExcludeAddressesText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunDisableIcmpForwardingText}" />
@@ -182,7 +171,6 @@
                           IsChecked="{Binding CoreConfig.IsTunIcmpForwardingDisabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,160">
             <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">

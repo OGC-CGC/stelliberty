@@ -31,7 +31,6 @@
             </Button>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBlock Classes="settings-row-title"
@@ -42,7 +41,6 @@
                           IsChecked="{Binding Update.IsAutoCheckEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBlock Classes="settings-row-title"
@@ -61,7 +59,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Spacing="4" VerticalAlignment="Center">
@@ -83,7 +80,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" IsVisible="{Binding Update.IsCustomUpdateSource}" />
         <Border Classes="settings-inline-row" IsVisible="{Binding Update.IsCustomUpdateSource}">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{loc:Loc Settings.Update.Source.RepositoryUrl}" />
@@ -102,7 +98,6 @@
                        IsVisible="{Binding Update.IsCustomRepositoryUrlInvalid}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBlock Classes="settings-row-title"
@@ -135,14 +130,12 @@
             <TextBlock Grid.Column="1" Classes="settings-row-subtitle" Text="{Binding Settings.AppVersionText}" VerticalAlignment="Center" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBlock Classes="settings-row-title" Text="{loc:Loc Settings.Update.Metric.LastCheck}" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Classes="settings-row-subtitle" Text="{Binding Update.LastCheckText}" VerticalAlignment="Center" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBlock Classes="settings-row-title"

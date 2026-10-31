@@ -16,12 +16,12 @@
         <Button Classes="settings-row first"
                 AutomationProperties.AutomationId="Settings.ThemeEntry"
                 Command="{Binding Settings.ShowThemeCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon settings-theme-icon"
                                                 Kind="Palette3Line" />
             </Border>
-            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
               <TextBlock Classes="settings-row-title" Text="{Binding Settings.ThemeEntryTitle}" />
               <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.ThemeEntryDescription}" />
             </StackPanel>
@@ -30,16 +30,15 @@
                                               Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row last"
                 AutomationProperties.AutomationId="Settings.LanguageEntry"
                 Command="{Binding Settings.ShowLanguageCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="Translate2Line" />
             </Border>
-            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
               <TextBlock Classes="settings-row-title" Text="{Binding Settings.LanguageEntryTitle}" />
               <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.LanguageEntryDescription}" />
             </StackPanel>
@@ -58,12 +57,12 @@
       <Button Classes="settings-row only"
               AutomationProperties.AutomationId="Settings.ClashFeaturesEntry"
               Command="{Binding Settings.ShowClashFeaturesCommand}">
-        <Grid ColumnDefinitions="48,*,Auto">
+        <Grid ColumnDefinitions="40,*,Auto">
           <Border Grid.Column="0" Classes="settings-icon-badge">
             <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                               Kind="SendPlaneLine" />
           </Border>
-          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
             <TextBlock Classes="settings-row-title" Text="{Binding Settings.ClashFeaturesEntryTitle}" />
             <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.ClashFeaturesEntryDescription}" />
           </StackPanel>
@@ -82,12 +81,12 @@
         <Button Classes="settings-row first"
                 AutomationProperties.AutomationId="Settings.AppBehaviorEntry"
                 Command="{Binding Settings.ShowAppBehaviorCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="ToggleLeftLine" />
             </Border>
-            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
               <TextBlock Classes="settings-row-title" Text="{Binding Settings.AppBehaviorEntryTitle}" />
               <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.AppBehaviorEntryDescription}" />
             </StackPanel>
@@ -96,16 +95,15 @@
                                               Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row last"
                 AutomationProperties.AutomationId="Settings.AboutEntry"
                 Command="{Binding Settings.ShowAboutCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="InformationLine" />
             </Border>
-            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
               <TextBlock Classes="settings-row-title" Text="{Binding Settings.AboutEntryTitle}" />
               <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.AboutEntryDescription}" />
             </StackPanel>
@@ -124,12 +122,12 @@
       <Button Classes="settings-row only"
               AutomationProperties.AutomationId="Settings.DataEntry"
               Command="{Binding Settings.ShowDataManagementCommand}">
-        <Grid ColumnDefinitions="48,*,Auto">
+        <Grid ColumnDefinitions="40,*,Auto">
           <Border Grid.Column="0" Classes="settings-icon-badge">
             <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                               Kind="StorageLine" />
           </Border>
-          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
             <TextBlock Classes="settings-row-title" Text="{Binding Settings.DataManagementEntryTitle}" />
             <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.DataManagementEntryDescription}" />
           </StackPanel>

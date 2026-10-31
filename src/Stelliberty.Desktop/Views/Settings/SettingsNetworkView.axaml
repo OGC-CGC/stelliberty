@@ -21,7 +21,6 @@
                           IsChecked="{Binding CoreConfig.IsUnifiedDelayEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="220,*" ColumnSpacing="20">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.NetworkDelayUrlText}" />
@@ -46,7 +45,6 @@
                           IsChecked="{Binding CoreConfig.IsAllowLanEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="220,*" ColumnSpacing="20">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanAuthUserNameText}" />
@@ -55,7 +53,6 @@
                      Text="{Binding CoreConfig.LanAuthenticationUserName, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="220,*" ColumnSpacing="20">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanAuthPasswordText}" />
@@ -64,7 +61,6 @@
                      Text="{Binding CoreConfig.LanAuthenticationPassword, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanAllowedIpsText}" />
@@ -74,7 +70,6 @@
                      Text="{Binding CoreConfig.LanAllowedIpsText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanDisallowedIpsText}" />
@@ -84,7 +79,6 @@
                      Text="{Binding CoreConfig.LanDisallowedIpsText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.NetworkSkipAuthPrefixesText}" />
@@ -110,7 +104,6 @@
                           IsChecked="{Binding CoreConfig.IsIpv6Enabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.NetworkTcpConcurrentText}" />

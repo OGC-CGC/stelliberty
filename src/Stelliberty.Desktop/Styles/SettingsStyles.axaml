@@ -42,7 +42,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
-    <Setter Property="Padding" Value="20,16" />
+    <Setter Property="Padding" Value="20,12" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
   </Style>
@@ -69,19 +69,12 @@
     <Setter Property="CornerRadius" Value="14" />
   </Style>
 
-  <Style Selector="Border.settings-row-divider">
-    <Setter Property="Height" Value="1" />
-    <Setter Property="Margin" Value="20,0" />
-    <Setter Property="Background" Value="{DynamicResource AppBorderBrush}" />
-    <Setter Property="Opacity" Value="0.6" />
-  </Style>
-
   <Style Selector="Border.settings-icon-badge">
     <Setter Property="Width" Value="36" />
     <Setter Property="Height" Value="36" />
     <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Background" Value="{DynamicResource AppAccentSubtleBrush}" />
-    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="iconPacks|PackIconMingCuteIcons.settings-entry-icon">
@@ -104,7 +97,7 @@
     <Setter Property="Foreground" Value="{DynamicResource AppTextTertiaryBrush}" />
   </Style>
   <Style Selector="Border.settings-inline-row">
-    <Setter Property="Padding" Value="20,14" />
+    <Setter Property="Padding" Value="20,10" />
     <Setter Property="Background" Value="Transparent" />
   </Style>
 

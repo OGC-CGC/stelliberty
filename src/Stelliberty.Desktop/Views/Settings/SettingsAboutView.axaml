@@ -61,12 +61,12 @@
         <Button Classes="settings-row first"
                 AutomationProperties.AutomationId="Settings.About.UpdateEntry"
                 Command="{Binding Settings.ShowUpdateCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="Refresh1Line" />
             </Border>
-            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
               <TextBlock Classes="settings-row-title" Text="{Binding Settings.UpdateEntryTitle}" />
               <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.UpdateEntryDescription}" />
             </StackPanel>
@@ -75,16 +75,15 @@
                                               Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Border Classes="settings-row-divider" />
         <Button Classes="settings-row last"
                 AutomationProperties.AutomationId="Settings.About.AppLogEntry"
                 Command="{Binding Settings.ShowAppLogCommand}">
-          <Grid ColumnDefinitions="48,*,Auto">
+          <Grid ColumnDefinitions="40,*,Auto">
             <Border Grid.Column="0" Classes="settings-icon-badge">
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="FileLine" />
             </Border>
-            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="14,0,0,0">
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
               <TextBlock Classes="settings-row-title" Text="{Binding Settings.AppLogEntryTitle}" />
               <TextBlock Classes="settings-row-subtitle" Text="{Binding Settings.AppLogEntryDescription}" />
             </StackPanel>

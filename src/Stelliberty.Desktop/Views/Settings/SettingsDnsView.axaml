@@ -21,7 +21,6 @@
                           IsChecked="{Binding CoreConfig.IsDnsOverrideEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsEnableText}" />
@@ -30,7 +29,6 @@
                           IsChecked="{Binding CoreConfig.IsDnsEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,200">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsListenText}" />
@@ -39,7 +37,6 @@
                      Text="{Binding CoreConfig.DnsListen, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsModeText}" />
@@ -56,7 +53,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,200">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsFakeIpText}" />
@@ -65,7 +61,6 @@
                      Text="{Binding CoreConfig.FakeIpRange, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsRespectRulesText}" />
@@ -74,7 +69,6 @@
                           IsChecked="{Binding CoreConfig.IsDnsRespectRulesEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsNameserverText}" />
@@ -84,7 +78,6 @@
                      Text="{Binding CoreConfig.NameServersText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsFallbackText}" />
@@ -94,7 +87,6 @@
                      Text="{Binding CoreConfig.FallbackNameServersText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsProxyServerNameserverText}" />
@@ -104,7 +96,6 @@
                      Text="{Binding CoreConfig.ProxyServerNameServersText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsDefaultNameserverText}" />
@@ -114,7 +105,6 @@
                      Text="{Binding CoreConfig.DefaultNameServersText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsFakeIpFilterText}" />
@@ -124,7 +114,6 @@
                      Text="{Binding CoreConfig.FakeIpFiltersText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,200">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsFallbackFilterGeoIpCodeText}" />
@@ -133,7 +122,6 @@
                      Text="{Binding CoreConfig.FallbackFilterGeoIpCode, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsHostsText}" />
@@ -143,7 +131,6 @@
                      Text="{Binding CoreConfig.HostsText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsIpv6Text}" />
@@ -152,7 +139,6 @@
                           IsChecked="{Binding CoreConfig.IsDnsIpv6Enabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsUseHostsText}" />
@@ -161,7 +147,6 @@
                           IsChecked="{Binding CoreConfig.IsDnsUseHostsEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsUseSystemHostsText}" />
@@ -170,7 +155,6 @@
                           IsChecked="{Binding CoreConfig.IsDnsUseSystemHostsEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsDirectNameserverText}" />
@@ -180,7 +164,6 @@
                      Text="{Binding CoreConfig.DirectNameServersText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsNameServerPolicyText}" />
@@ -190,7 +173,6 @@
                      Text="{Binding CoreConfig.NameServerPolicyText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsPreferH3Text}" />
@@ -199,7 +181,6 @@
                           IsChecked="{Binding CoreConfig.IsDnsPreferH3Enabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsFakeIpFilterModeText}" />
@@ -216,7 +197,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsDirectNameServerFollowPolicyText}" />
@@ -225,7 +205,6 @@
                           IsChecked="{Binding CoreConfig.IsDirectNameServerFollowPolicyEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.DnsFallbackFilterGeoIpText}" />
@@ -234,7 +213,6 @@
                           IsChecked="{Binding CoreConfig.IsFallbackFilterGeoIpEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsFallbackFilterIpCidrText}" />
@@ -244,7 +222,6 @@
                      Text="{Binding CoreConfig.FallbackFilterIpCidrsText, Mode=TwoWay}" />
           </StackPanel>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.DnsFallbackFilterDomainText}" />

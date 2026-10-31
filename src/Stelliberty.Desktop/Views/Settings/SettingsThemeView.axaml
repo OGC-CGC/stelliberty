@@ -36,7 +36,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
             <TextBlock Grid.Column="0" Classes="settings-row-title"
@@ -60,8 +59,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider"
-                IsVisible="{Binding Theme.IsWindowEffectSupported}" />
         <Border Classes="settings-inline-row"
                 IsVisible="{Binding Theme.IsWindowEffectSupported}">
           <Grid ColumnDefinitions="*,Auto">
@@ -81,7 +78,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title"
@@ -100,7 +96,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title"
@@ -136,7 +131,6 @@
                     Command="{Binding Theme.ClearBackgroundImageCommand}" />
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
@@ -153,7 +147,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
@@ -170,7 +163,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
@@ -187,7 +179,6 @@
             </ComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-row-divider" />
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,200,48" ColumnSpacing="10">
             <StackPanel Spacing="4" VerticalAlignment="Center">
