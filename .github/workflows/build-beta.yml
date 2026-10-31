@@ -10,6 +10,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   DOTNET_NOLOGO: "1"
@@ -173,6 +174,8 @@ jobs:
     needs: prepare
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    # 非必需平台失败不直接判定运行失败；由 triage 按失败原因决定是否阻塞发布。
+    continue-on-error: ${{ matrix.required != true }}
 
     strategy:
       fail-fast: false
@@ -183,31 +186,37 @@ jobs:
             platform: win-x64
             rust_target: x86_64-pc-windows-msvc
             os_family: windows
+            required: true
           - label: Windows arm64
             runner: windows-11-vs2026-arm
             platform: win-arm64
             rust_target: aarch64-pc-windows-msvc
             os_family: windows
+            required: false
           - label: Linux x64
             runner: ubuntu-22.04
             platform: linux-x64
             rust_target: x86_64-unknown-linux-gnu
             os_family: linux
+            required: true
           - label: Linux arm64
             runner: ubuntu-22.04-arm
             platform: linux-arm64
             rust_target: aarch64-unknown-linux-gnu
             os_family: linux
+            required: false
           - label: macOS arm64
             runner: macos-26
             platform: macos-arm64
             rust_target: aarch64-apple-darwin
             os_family: macos
+            required: false
           - label: macOS x64
             runner: macos-26-intel
             platform: macos-x64
             rust_target: x86_64-apple-darwin
             os_family: macos
+            required: false
 
     steps:
       - name: Check out repository
@@ -370,10 +379,90 @@ jobs:
             !build/packages/*.app/**
           if-no-files-found: error
 
+  triage:
+    name: Triage build failures
+    needs: [prepare, build]
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-22.04
+
+    outputs:
+      release_ok: ${{ steps.classify.outputs.release_ok }}
+
+    steps:
+      - name: Classify failed platforms
+        id: classify
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          work_dir="${RUNNER_TEMP:-/tmp}"
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?per_page=100" \
+            --jq '.jobs[] | select(.name | startswith("Build / ")) | .id' \
+            > "${work_dir}/build-job-ids.txt"
+
+          blocking=false
+          while IFS= read -r job_id; do
+            [ -n "${job_id}" ] || continue
+
+            detail_file="${work_dir}/job-${job_id}.json"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}" > "${detail_file}"
+
+            job_name="$(jq -r '.name' "${detail_file}")"
+            label="${job_name#Build / }"
+
+            # continue-on-error 可能把失败的 job 记为 success，因此同时检查各步骤结论。
+            failed="$(
+              jq -r '
+                (.conclusion // "") as $job
+                | ([.steps[]? | .conclusion] | any(. == "failure")) as $step
+                | if ($job == "failure" or $job == "cancelled" or $job == "startup_failure" or $step) then "true" else "false" end
+              ' "${detail_file}"
+            )"
+            if [ "${failed}" != true ]; then
+              continue
+            fi
+
+            case "${label}" in
+              "Windows x64"|"Linux x64")
+                echo "::error::Required platform failed: ${label}"
+                blocking=true
+                continue
+                ;;
+            esac
+
+            # 从未被 runner 领走的 job 没有日志；有日志则按日志内容判断失败原因。
+            log_file="${work_dir}/job-${job_id}.log"
+            if ! gh api "repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs" > "${log_file}" 2>/dev/null; then
+              echo "::notice::Optional platform ${label} was not acquired by a runner; treated as infrastructure failure."
+              continue
+            fi
+
+            if grep -Eqi 'The job was not acquired by Runner of type hosted even after multiple attempts|Internal server error' "${log_file}"; then
+              echo "::notice::Optional platform ${label} failed due to infrastructure; treated as infrastructure failure."
+              continue
+            fi
+
+            echo "::error::Optional platform ${label} failed to build."
+            blocking=true
+          done < "${work_dir}/build-job-ids.txt"
+
+          if [ "${blocking}" = true ]; then
+            echo 'release_ok=false' >> "$GITHUB_OUTPUT"
+            echo '### Release blocked' >> "$GITHUB_STEP_SUMMARY"
+            echo 'At least one platform must be fixed before the beta release is published.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo 'release_ok=true' >> "$GITHUB_OUTPUT"
+          echo '### Release allowed' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No blocking platform failure was detected.' >> "$GITHUB_STEP_SUMMARY"
+
   release:
     name: Publish beta to current repository
-    needs: [prepare, build]
-    if: ${{ needs.build.result == 'success' }}
+    needs: [prepare, triage]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.triage.outputs.release_ok == 'true' }}
     runs-on: ubuntu-22.04
 
     steps:
@@ -408,7 +497,7 @@ jobs:
           draft: true
           prerelease: true
           overwrite_files: true
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           make_latest: false
 
       - name: Publish beta release
