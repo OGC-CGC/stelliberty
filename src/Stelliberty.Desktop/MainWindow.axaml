@@ -95,6 +95,7 @@
                   Click="OnCloseClicked">
             <Grid Width="15" Height="15">
               <Border Classes="mac-caption-dot" />
+              <Border Classes="mac-caption-shine" />
               <Path Classes="mac-caption-glyph"
                     Data="M 4.5 4.5 L 10.5 10.5 M 10.5 4.5 L 4.5 10.5"
                     StrokeThickness="1.5"
@@ -107,6 +108,7 @@
                   Click="OnMinimizeClicked">
             <Grid Width="15" Height="15">
               <Border Classes="mac-caption-dot" />
+              <Border Classes="mac-caption-shine" />
               <Path Classes="mac-caption-glyph"
                     Data="M 4.5 7.5 L 10.5 7.5"
                     StrokeThickness="1.8"
@@ -119,6 +121,7 @@
                   Click="OnMacZoomClicked">
             <Grid Width="15" Height="15">
               <Border Classes="mac-caption-dot" />
+              <Border Classes="mac-caption-shine" />
               <Path Classes="mac-caption-glyph"
                     Data="M 4.5 9 V 4.5 H 9 Z M 10.5 6 V 10.5 H 6 Z" />
             </Grid>
@@ -129,6 +132,8 @@
                   Click="OnPinClicked">
             <Grid Width="15" Height="15">
               <Border Classes="mac-caption-dot" />
+              <Border Classes="mac-caption-shine" />
+              <Border Classes="mac-caption-shine-active" />
               <iconPacks:PackIconMingCuteIcons x:Name="MacPinFilledIcon"
                                                Width="8" Height="8"
                                                Classes="mac-caption-glyph"

@@ -94,6 +94,13 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Focusable" Value="False" />
+    <!-- 按下时放大；缩放走 RenderTransform，23×15 的布局盒与圆点间距保持不变。 -->
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
     <Setter Property="Template">
       <ControlTemplate>
         <Border Background="Transparent">
@@ -103,6 +110,31 @@
         </Border>
       </ControlTemplate>
     </Setter>
+  </Style>
+  <Style Selector="Button.mac-caption-button:pressed">
+    <Setter Property="RenderTransform" Value="scale(1.1)" />
+  </Style>
+  <!-- 按下且指针仍在按钮上时叠一层白色高光，出现与消失都带过渡。 -->
+  <Style Selector="Border.mac-caption-shine, Border.mac-caption-shine-active">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+    <Setter Property="CornerRadius" Value="7.5" />
+    <Setter Property="Background" Value="#66FFFFFF" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.1" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.mac-caption-button:pressed:pointerover Border.mac-caption-shine">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- 已置顶的图钉常驻高光。与按下高光分成两层：松开时按下层淡出、置顶层淡入，
+       两者时长与缓动一致，白度之和保持不变，不会出现先回落再亮起的闪烁。 -->
+  <Style Selector="Button.mac-caption-button.pin.active Border.mac-caption-shine-active">
+    <Setter Property="Opacity" Value="1" />
   </Style>
   <!-- 圆点用 Border + 圆角（半径 = 半边长）保证正圆；圆 15px、按钮 23×15：
        高度与圆一致，左右各留 4px（间距 8px），全部落在整数像素上。 -->
