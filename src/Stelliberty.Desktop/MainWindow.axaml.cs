@@ -33,6 +33,11 @@ public sealed partial class MainWindow : Window
 {
     private const double SidebarAutoCollapseWidth = 1040;
     private const double SidebarEdgeFadeHeight = 36;
+    // 平台允许的窗口动作标志，取值与 Avalonia 的 PlatformAllowedWindowActions 一致。
+    private const int WindowActionMaximize = 1 << 0;
+    private const int WindowActionFullscreen = 1 << 1;
+    private const int WindowActionMinimize = 1 << 2;
+    private const int AllWindowActions = WindowActionMaximize | WindowActionFullscreen | WindowActionMinimize;
     private readonly LinearGradientBrush _sidebarEdgeFadeMask = new()
     {
         StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
@@ -161,8 +166,28 @@ public sealed partial class MainWindow : Window
     private void UpdateCaptionButtonsVisibility()
     {
         var isMacOSFullScreen = OperatingSystem.IsMacOS() && WindowState == WindowState.FullScreen;
+        var allowedActions = GetAllowedWindowActions();
+        var supportsMinimize = (allowedActions & WindowActionMinimize) != 0;
+        var supportsMaximize = (allowedActions & WindowActionMaximize) != 0;
+        var supportsFullscreen = (allowedActions & WindowActionFullscreen) != 0;
+        // 部分桌面环境不支持最小化/最大化：自绘时只绘制平台实际支持的按钮。
+        MinimizeButton.IsVisible = supportsMinimize;
+        MaximizeButton.IsVisible = supportsMaximize;
+        MacMinimizeButton.IsVisible = supportsMinimize;
+        // macOS 风格的绿灯在 macOS 上切换系统全屏，其他平台按最大化/全屏能力判断。
+        MacMaximizeButton.IsVisible = supportsMaximize || supportsFullscreen;
         MacCaptionButtons.IsVisible = _windowDecorationStyle == WindowDecorationStyle.MacOS && !isMacOSFullScreen;
         CaptionButtons.IsVisible = _windowDecorationStyle == WindowDecorationStyle.Windows && !isMacOSFullScreen;
+    }
+
+    // 引用程序集将 Window.AllowedWindowActions 标为 internal，运行时库中为公开接口成员；
+    // 其枚举带 PrivateApi 标记，这里按标志位整数读取，平台未上报时按“全部支持”处理。
+    private int GetAllowedWindowActions()
+    {
+        var property = typeof(Window).GetProperty(
+            "AllowedWindowActions",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        return property?.GetValue(this) is { } value ? Convert.ToInt32(value) : AllWindowActions;
     }
 
     // Linux 合成器不保证模糊；macOS 全屏后透明/玻璃效果会失效。
@@ -734,6 +759,8 @@ public sealed partial class MainWindow : Window
         _relativeTimeTimer.Start();
         ApplyPlatformWindowControls();
         ApplySystemDecorationFallback();
+        // 平台能力在窗口显示后才确定，这里补一次自绘按钮显隐。
+        UpdateCaptionButtonsVisibility();
         if (DataContext is MainWindowViewModel viewModel)
         {
             _systemAccentColorService.Attach(this, viewModel.Theme);

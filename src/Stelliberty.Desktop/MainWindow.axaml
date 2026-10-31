@@ -173,7 +173,8 @@
           <StackPanel x:Name="CaptionButtons"
                       Orientation="Horizontal"
                       VerticalAlignment="Stretch">
-            <Button Classes="titlebar-button"
+            <Button x:Name="MinimizeButton"
+                    Classes="titlebar-button"
                     AutomationProperties.AutomationId="TitleBar.MinimizeButton"
                     Click="OnMinimizeClicked">
               <Path Width="15" Height="15"
@@ -182,7 +183,8 @@
                     StrokeThickness="1"
                     StrokeLineCap="Flat" />
             </Button>
-            <Button Classes="titlebar-button"
+            <Button x:Name="MaximizeButton"
+                    Classes="titlebar-button"
                     AutomationProperties.AutomationId="TitleBar.MaximizeButton"
                     Click="OnMaximizeClicked">
               <Grid Width="15" Height="15">

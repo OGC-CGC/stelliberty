@@ -9,18 +9,23 @@ public enum WindowDecorationStyle
     None
 }
 
-// Windows 不提供系统装饰选项；缺失或不支持的值回退到平台默认。
+// Windows / macOS 提供本平台与对方的自绘风格加无边框；Linux 三种装饰加无边框都可选。
+// 缺失或不支持的值回退到平台默认。
 public static class WindowDecorationStyleRules
 {
     public static WindowDecorationStyle Default =>
-        OperatingSystem.IsWindows() ? WindowDecorationStyle.Windows : WindowDecorationStyle.System;
+        OperatingSystem.IsWindows() ? WindowDecorationStyle.Windows
+        : OperatingSystem.IsMacOS() ? WindowDecorationStyle.MacOS
+        : WindowDecorationStyle.System;
 
     public static string DefaultValue => Default.ToString();
 
     public static IReadOnlyList<WindowDecorationStyle> Supported =>
         OperatingSystem.IsWindows()
             ? [WindowDecorationStyle.Windows, WindowDecorationStyle.MacOS, WindowDecorationStyle.None]
-            : [WindowDecorationStyle.System, WindowDecorationStyle.Windows, WindowDecorationStyle.MacOS, WindowDecorationStyle.None];
+            : OperatingSystem.IsMacOS()
+                ? [WindowDecorationStyle.MacOS, WindowDecorationStyle.Windows, WindowDecorationStyle.None]
+                : [WindowDecorationStyle.System, WindowDecorationStyle.Windows, WindowDecorationStyle.MacOS, WindowDecorationStyle.None];
 
     public static WindowDecorationStyle Parse(string? value)
     {
