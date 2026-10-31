@@ -233,6 +233,7 @@
                 <ToggleSwitch Grid.Column="2" VerticalAlignment="Center"
                               AutomationProperties.AutomationId="Home.SystemProxyToggle"
                               IsThreeState="True"
+                              Classes.on-target="{Binding SystemProxyToggleTarget}"
                               IsEnabled="{Binding IsSystemProxyToggleEnabled}"
                               IsChecked="{Binding SystemProxyToggleState, Mode=TwoWay}"
                               OnContent="" OffContent="" />
@@ -250,6 +251,7 @@
                 <ToggleSwitch Grid.Column="3" Margin="10,0,0,0" VerticalAlignment="Center"
                               AutomationProperties.AutomationId="Home.VirtualNicToggle"
                               IsThreeState="True"
+                              Classes.on-target="{Binding TunToggleTarget}"
                               IsEnabled="{Binding IsTunToggleEnabled}"
                               IsChecked="{Binding TunToggleState, Mode=TwoWay}" OnContent="" OffContent="" />
               </Grid>

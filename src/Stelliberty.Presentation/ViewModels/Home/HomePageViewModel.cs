@@ -40,6 +40,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     private int _systemProxyApplyVersion;
     private int _pendingSystemProxyOperations;
     private bool _isSystemProxyApplyPending;
+    private bool _pendingSystemProxyState;
     private bool _isTunEnabled;
     private bool _isTunApplyPending;
     private bool _pendingTunState;
@@ -190,6 +191,9 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     public bool IsSystemProxyToggleEnabled => !_isSystemProxyApplyPending;
 
+    // 中间态圆点贴向目标一侧，而不是停在轨道中央；目标值在操作进行中才与当前值不同。
+    public bool SystemProxyToggleTarget => _isSystemProxyApplyPending ? _pendingSystemProxyState : _isSystemProxyEnabled;
+
     public void ApplyTunState(bool isEnabled)
     {
         if (_isTunEnabled == isEnabled && !_isTunApplyPending)
@@ -282,6 +286,8 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     }
 
     public bool IsTunApplyPending => _isTunApplyPending;
+
+    public bool TunToggleTarget => _isTunApplyPending ? _pendingTunState : _isTunEnabled;
 
     public bool IsTunEnabledForRuntimeConfig => _isTunApplyPending ? _pendingTunState : _isTunEnabled;
 
@@ -769,6 +775,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
         var version = Interlocked.Increment(ref _systemProxyApplyVersion);
         _isSystemProxyApplyPending = true;
+        _pendingSystemProxyState = shouldEnable;
         RaiseHomeStateChanged();
         _ = Task.Run(() => ApplySystemProxyAsync(shouldEnable, version));
     }
@@ -1228,9 +1235,11 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(IsSystemProxyEnabled));
         OnPropertyChanged(nameof(SystemProxyToggleState));
+        OnPropertyChanged(nameof(SystemProxyToggleTarget));
         OnPropertyChanged(nameof(IsSystemProxyToggleEnabled));
         OnPropertyChanged(nameof(IsTunEnabled));
         OnPropertyChanged(nameof(TunToggleState));
+        OnPropertyChanged(nameof(TunToggleTarget));
         OnPropertyChanged(nameof(IsTunApplyPending));
         OnPropertyChanged(nameof(PrivilegeModeText));
         OnPropertyChanged(nameof(ServiceModeState));

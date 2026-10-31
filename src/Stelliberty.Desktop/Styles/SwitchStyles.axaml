@@ -84,7 +84,11 @@
   </Style>
   <Style Selector="ToggleSwitch:indeterminate /template/ Border#SwitchThumb">
     <Setter Property="Background" Value="{DynamicResource AppSwitchThumbOnBrush}" />
-    <Setter Property="Margin" Value="14,0,0,0" />
+    <!-- 中间态表示操作进行中：圆点贴向目标一侧，不停在轨道中央。 -->
+    <Setter Property="Margin" Value="4,0,0,0" />
+  </Style>
+  <Style Selector="ToggleSwitch:indeterminate.on-target /template/ Border#SwitchThumb">
+    <Setter Property="Margin" Value="24,0,0,0" />
   </Style>
   <Style Selector="ToggleSwitch:indeterminate /template/ Path#SwitchCheck">
     <Setter Property="Opacity" Value="0" />
