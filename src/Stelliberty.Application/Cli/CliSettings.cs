@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Stelliberty.Application.Settings;
+using Stelliberty.Application.Updates;
 
 namespace Stelliberty.Application.Cli;
 
@@ -21,13 +22,18 @@ public static class CliSettings
         if (field.Name == "accent-color" && !Regex.IsMatch((string)parsed, "^#[0-9a-fA-F]{6}$"))
             throw new ArgumentException("accent-color requires #RRGGBB.");
         if (field.Name == "delay-test-url") ValidateHttpUrl((string)parsed);
+        if (field.Name == "custom-update-url" && !GitHubUpdateRepository.TryParse((string)parsed, out _))
+            throw new ArgumentException("custom-update-url requires https://github.com/<owner>/<repository>.");
+        if (field.Name == "webdav-url" && !string.IsNullOrWhiteSpace((string)parsed))
+            ValidateHttpUrl((string)parsed);
 
         object? value = parsed;
         if (field.Type == "lines")
             value = ((string)parsed).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if ((field.Name is "socks-port" or "http-port" or "redir-port") && parsed is 0)
             value = null;
-        if (field.Name is "tun-stack" or "delay-test-url" or "listen" or "fake-ip-range" or "fallback-geoip-code")
+        if (field.Name is "tun-stack" or "delay-test-url" or "listen" or "fake-ip-range" or "fallback-geoip-code"
+            or "custom-update-url" or "webdav-url" or "webdav-directory" or "external-controller-address" or "proxy-host")
             value = ((string)parsed).Trim();
         typeof(AppSettings).GetProperty(field.SettingProperty)!.SetValue(settings, value);
         if (field.Name == "accent-color") settings.AccentColorMode = "Custom";

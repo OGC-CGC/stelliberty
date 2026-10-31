@@ -102,6 +102,8 @@ internal sealed class CliService(
         if (setting.Name == "window-effect" && !new WindowEffectCapability().SupportedEffects
             .Contains(Enum.Parse<WindowEffect>((string)parsed, true)))
             throw new ArgumentException("window-effect is not supported on this platform.");
+        if (setting.Name == "tun-enabled" && (bool)parsed && !await CanUseTunAsync(token).ConfigureAwait(false))
+            throw new CliOperationException("unavailable", "TUN requires the existing privileged service/admin mode.");
         if (setting.Name == "background-image" && (string)parsed is { Length: > 0 } path && path != AppSettings.DefaultBackgroundImagePath)
         {
             if (!Path.IsPathFullyQualified(path)) throw new ArgumentException("background-image requires an absolute path.");
@@ -111,14 +113,14 @@ internal sealed class CliService(
         CliSettings.Assign(settings, setting, parsed);
         if (call.DryRun) return new(true, "dry_run", new { key = setting.Name, old_value = oldValue, schema = setting.Schema });
         _stateChanged = true;
-        if (setting.Name == "silent-start" && settings.IsAutoStartEnabled)
+        if (setting.Name == "auto-start" || setting.Name == "silent-start" && settings.IsAutoStartEnabled)
         {
             var binary = Path.Combine(AppContext.BaseDirectory, AppRuntimeNames.TrayBinaryName);
             IAppBehaviorService behavior = OperatingSystem.IsWindows() ? new WindowsAppBehaviorService(binary)
                 : OperatingSystem.IsLinux() ? new LinuxAppBehaviorService(binary)
                 : OperatingSystem.IsMacOS() ? new MacOSAppBehaviorService(binary, Path.Combine(AppContext.BaseDirectory, "tweaks", "cli", "stelliberty-cli"))
                 : new UnsupportedAppBehaviorService();
-            behavior.Apply(new(settings.IsSilentStartEnabled, true));
+            behavior.Apply(new(settings.IsSilentStartEnabled, settings.IsAutoStartEnabled));
         }
         var property = typeof(AppSettings).GetProperty(setting.SettingProperty)!;
         var expected = JsonSerializer.Serialize(property.GetValue(settings));

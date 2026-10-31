@@ -1,5 +1,7 @@
 # Agent 命令行控制
 
+[English](CLI.md) | [简体中文](CLI.zh-CN.md)
+
 `stelliberty-cli` 随所有构建产物附带，默认关闭。可在应用的「设置 → 应用行为」中手动开启，导入备份也不会改变本机的启用状态。关闭后拒绝新命令，已经开始的操作可能继续完成。
 
 ## Windows
@@ -35,6 +37,9 @@ stelliberty-cli settings set theme dark --dry-run
 stelliberty-cli settings set theme dark
 stelliberty-cli settings set title-bar-fps false
 stelliberty-cli settings set minimize-to-tray true
+stelliberty-cli settings set auto-start true
+stelliberty-cli settings set webdav-url 'https://dav.example.com/remote.php/dav/files/user'
+stelliberty-cli proxy config set external-controller-address 127.0.0.1:9090
 stelliberty-cli proxy config schema
 stelliberty-cli proxy config set mixed-port 7890
 stelliberty-cli proxy config set socks-port 0
@@ -43,7 +48,7 @@ stelliberty-cli dns set override true
 stelliberty-cli dns set nameservers '["1.1.1.1","https://dns.google/dns-query"]'
 ```
 
-`settings` 覆盖语言、主题、强调色、窗口效果、背景、托盘行为、轻量模式和更新设置。`proxy config` 覆盖端口、LAN、认证、IPv6、延迟测试及 TUN 参数；`dns` 覆盖应用 DNS 设置。运行 `schema` 获取完整字段目录。可选 SOCKS/HTTP/重定向端口用 `0` 禁用；混合端口必须为 1–65535。窗口效果受当前平台限制。DNS 覆盖关闭时，保存的 DNS 参数不会覆盖订阅配置。
+`settings` 覆盖语言、主题、强调色、窗口效果、背景、托盘行为、开机自启、轻量模式、更新源、WebDAV 备份和更新设置。`proxy config` 覆盖端口、LAN、认证、IPv6、延迟测试、TUN 与 TUN 持久开关、出站默认模式、系统代理主机/绕过/PAC、外置控制器、内核性能与日志级别参数；`dns` 覆盖应用 DNS 设置。运行 `schema` 获取完整字段目录。可选 SOCKS/HTTP/重定向端口用 `0` 禁用；混合端口必须为 1–65535；WebDAV 备份间隔为 1–24 小时，保留 1–5 份。窗口效果受当前平台限制；开启 TUN 需要已安装的特权服务或管理员模式，并在核心运行时生效。开机自启会写入或移除系统登录项。DNS 覆盖关闭时，保存的 DNS 参数不会覆盖订阅配置。
 
 写命令支持 `--dry-run`，检查参数并返回目标信息，不保存配置、下载订阅或执行延迟测试。预检查不能保证网络请求、系统代理和核心实际应用一定成功。配置修改复用应用校验和保存流程；核心相关修改等待现有运行时刷新。单次修改一个字段，没有批量事务或自动回滚。
 

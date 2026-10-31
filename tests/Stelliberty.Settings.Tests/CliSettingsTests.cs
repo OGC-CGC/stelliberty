@@ -20,6 +20,8 @@ public sealed class CliSettingsTests
                 {
                     "accent-color" => "#AABBCC",
                     "delay-test-url" => "https://example.com/",
+                    "custom-update-url" => "https://github.com/owner/repo",
+                    "webdav-url" => "https://dav.example.com/dav",
                     _ => "example"
                 })
             };

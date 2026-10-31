@@ -106,7 +106,7 @@ Grab the package for your platform from the **[Releases page](https://github.com
 
 Config format is fully compatible with Clash Meta — see the [mihomo documentation](https://wiki.metacubex.one/en/config/) for details.
 
-Agents can control the app through the CLI: [Agent CLI Help](.github/docs/CLI.zh-CN.md).
+Agents can control the app through the CLI: [Agent CLI Help](.github/docs/CLI.md).
 
 <br>
 
