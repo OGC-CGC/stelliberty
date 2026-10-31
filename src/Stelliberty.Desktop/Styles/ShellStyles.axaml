@@ -445,7 +445,7 @@
   </Style>
 
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon-proxy">
-    <Setter Property="Kind" Value="SafariLine" />
+    <Setter Property="Kind" Value="DepartmentLine" />
   </Style>
 
   <Style Selector="iconPacks|PackIconMingCuteIcons.nav-icon-connections">
@@ -483,7 +483,7 @@
   </Style>
 
   <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-proxy">
-    <Setter Property="Kind" Value="SafariFill" />
+    <Setter Property="Kind" Value="DepartmentFill" />
   </Style>
 
   <Style Selector="Button.nav-item.nav-icon-morph iconPacks|PackIconMingCuteIcons.nav-icon-connections">
