@@ -3,8 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Stelliberty.Application.Diagnostics;
 using Avalonia.Threading;
+using Stelliberty.Application.Diagnostics;
 using Stelliberty.Application.Settings;
 using Stelliberty.Presentation.ViewModels;
 
@@ -338,6 +338,7 @@ internal sealed class WindowAppearanceService : IDisposable
         }
 
         UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
+        AppLogger.Info($"Window effect applied: requested={effect} actual={_window.ActualTransparencyLevel} theme={_window.ActualThemeVariant}");
     }
 
     private bool IsCurrentLightTheme()
@@ -367,9 +368,12 @@ internal sealed class WindowAppearanceService : IDisposable
         var surfaceBrush = new SolidColorBrush(Color.Parse(effect == WindowEffect.FrutigerAero
             ? isLightTheme ? "#66FFFFFF" : "#66000000"
             : isLightTheme ? "#EEFFFFFF" : "#EE000000"));
-        var cardSurfaceBrush = new SolidColorBrush(Color.Parse(effect == WindowEffect.FrutigerAero
-            ? isLightTheme ? "#CCFFFFFF" : "#99000000"
-            : isLightTheme ? "#CCFFFFFF" : "#BB191919"));
+        var cardSurfaceBrush = new SolidColorBrush(Color.Parse(effect switch
+        {
+            WindowEffect.FrutigerAero => isLightTheme ? "#CCFFFFFF" : "#99000000",
+            WindowEffect.Acrylic => isLightTheme ? "#CCFFFFFF" : "#CC000000",
+            _ => isLightTheme ? "#CCFFFFFF" : "#BB191919"
+        }));
         var rootSurfaceBrush = effect switch
         {
             WindowEffect.None => surfaceBrush,
@@ -378,7 +382,9 @@ internal sealed class WindowAppearanceService : IDisposable
                 isLightTheme
                     ? _isWindowActive ? "#A0FFFFFF" : "#FFEEEEEE"
                     : _isWindowActive ? "#A0000000" : "#FF242424")),
-            WindowEffect.Acrylic or WindowEffect.Blur => new SolidColorBrush(Color.Parse(isLightTheme ? "#B3FFFFFF" : "#B3212121")),
+            // Zen 工具栏使用冷灰/近黑底色和 60% 不透明度。
+            WindowEffect.Acrylic => new SolidColorBrush(Color.Parse(isLightTheme ? "#99F0F0F4" : "#9917171A")),
+            WindowEffect.Blur => new SolidColorBrush(Color.Parse(isLightTheme ? "#B3FFFFFF" : "#B3212121")),
             _ => (IBrush)Brushes.Transparent
         };
         // 这里只处理窗口效果背景；其余样式归 Theme.axaml。
