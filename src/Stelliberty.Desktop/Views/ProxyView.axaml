@@ -175,6 +175,7 @@
 
       <ScrollViewer x:Name="NodeListScroll"
                     AutomationProperties.AutomationId="Proxy.NodeListScroll"
+                    controls:ScrollEdgeFade.IsEnabled="True"
                     IsVisible="{Binding IsHorizontalContentVisible}"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
@@ -255,6 +256,7 @@
 
       <ScrollViewer x:Name="GroupCardScroll"
                     AutomationProperties.AutomationId="Proxy.GroupCardScroll"
+                    controls:ScrollEdgeFade.IsEnabled="True"
                     IsVisible="{Binding IsVerticalContentVisible}"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">

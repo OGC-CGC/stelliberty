@@ -125,6 +125,7 @@
       </Border>
 
       <ScrollViewer IsVisible="{Binding !IsVisibleRulesEmpty}" AutomationProperties.AutomationId="Rules.EditorScroll"
+                    controls:ScrollEdgeFade.IsEnabled="True"
                     HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <ItemsControl x:Name="RuleList" ItemsSource="{Binding VisibleRules}" AutomationProperties.AutomationId="Rules.VisibleList" Margin="0,0,9,15">
           <ItemsControl.ItemsPanel>

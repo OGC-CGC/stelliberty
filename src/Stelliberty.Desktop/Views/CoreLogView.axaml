@@ -137,6 +137,7 @@
       </Border>
 
       <ScrollViewer AutomationProperties.AutomationId="CoreLogs.ListScroll"
+                    controls:ScrollEdgeFade.IsEnabled="True"
                     IsVisible="{Binding !IsEmptyVisible}"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">

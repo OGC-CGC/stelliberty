@@ -117,6 +117,8 @@ public sealed partial class SettingsView : UserControl
         SettingsScroll.UpdateLayout();
         SettingsScroll.Offset = _scrollOffsets.GetValueOrDefault(page);
         SettingsScroll.UpdateLayout();
+        // 恢复位置是程序化滚动，补一次顶部渐隐刷新。
+        ScrollEdgeFade.Refresh(SettingsScroll);
     }
 
     private void ShowSubPage(SettingsSubPage page)

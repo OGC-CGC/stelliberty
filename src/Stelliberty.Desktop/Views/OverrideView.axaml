@@ -79,6 +79,7 @@
       </Border>
 
       <ScrollViewer AutomationProperties.AutomationId="Overrides.ListScroll"
+                    controls:ScrollEdgeFade.IsEnabled="True"
                     IsVisible="{Binding IsListVisible}"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">

@@ -10,6 +10,7 @@
              Background="Transparent">
 
   <ScrollViewer x:Name="HomePageRoot"
+                controls:ScrollEdgeFade.IsEnabled="True"
                 HorizontalScrollBarVisibility="Disabled"
                 VerticalScrollBarVisibility="Auto"
                 AutomationProperties.AutomationId="Home.ScrollViewer">
