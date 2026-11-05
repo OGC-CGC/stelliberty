@@ -367,8 +367,8 @@ public sealed partial class App : Avalonia.Application
                 clipboardWriter: clipboardWriter,
                 appLogReader: new FileAppLogReader(DesktopApplicationLayout.RunningLogFilePath),
                 appLogExporter: new FileAppLogExporter(
-                    DesktopApplicationLayout.RunningLogFilePath,
-                    DesktopApplicationLayout.TrayRunningLogFilePath),
+                    [DesktopApplicationLayout.RunningLogFilePath, DesktopApplicationLayout.TrayRunningLogFilePath],
+                    [DesktopApplicationLayout.PreviousServiceLogFilePath, DesktopApplicationLayout.ServiceLogFilePath]),
                 networkDiagnostics: new NetworkDiagnosticsService(),
                 outboundInterfaceNames: SystemOutboundInterfaces.ListNames);
 #if DEBUG
