@@ -96,15 +96,15 @@
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="3">
-              <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.LazyModeText}" />
+              <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.RememberProxyStateText}" />
               <TextBlock Classes="settings-row-subtitle"
                          AutomationProperties.AutomationId="Settings.LazyModeDescriptionText"
-                         Text="{Binding AppBehavior.LazyModeDescriptionText}"
+                         Text="{Binding AppBehavior.RememberProxyStateDescriptionText}"
                          TextWrapping="Wrap" />
             </StackPanel>
             <ToggleSwitch Grid.Column="1"
                           AutomationProperties.AutomationId="Settings.LazyModeToggle"
-                          IsChecked="{Binding AppBehavior.IsLazyModeEnabled, Mode=TwoWay}" />
+                          IsChecked="{Binding AppBehavior.IsRememberProxyStateEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">

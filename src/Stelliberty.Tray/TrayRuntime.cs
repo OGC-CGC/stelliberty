@@ -4,8 +4,8 @@ using Stelliberty.Application.Platform;
 using Stelliberty.Application.Runtime;
 using Stelliberty.Infrastructure.Platform;
 using Stelliberty.Infrastructure.Proxies;
-using Stelliberty.Infrastructure.Tray;
 using Stelliberty.Infrastructure.Settings;
+using Stelliberty.Infrastructure.Tray;
 
 namespace Stelliberty.Tray;
 
@@ -28,6 +28,15 @@ internal sealed class TrayRuntime
 
         try
         {
+            var settingsStore = new JsonAppSettingsStore(new TrayPlatformDirectories());
+            var settings = settingsStore.Load();
+            if (!settings.IsRememberProxyStateEnabled && (settings.IsTunEnabled || settings.LastSystemProxyEnabled))
+            {
+                settings.IsTunEnabled = false;
+                settings.LastSystemProxyEnabled = false;
+                settingsStore.Save(settings);
+            }
+
             await using var uiLauncher = new DesktopUiLauncher();
             var uiSessions = new UiSessionManager(uiLauncher);
             var coreLogs = new CoreLogJournal();
@@ -38,7 +47,8 @@ internal sealed class TrayRuntime
                 coreRuntime,
                 new PipeCoreProxyClient(TrayCoreEndpoints.Core));
             await using var systemProxy = new LocalSystemProxyController(
-                SystemProxyServiceFactory.Create(CurrentSystemProxyPlatform(), TrayApplicationLayout.AppDataDirectory));
+                SystemProxyServiceFactory.Create(CurrentSystemProxyPlatform(), TrayApplicationLayout.AppDataDirectory),
+                settingsStore);
             await using var powerRecovery = new SystemPowerRecoveryService(
                 new TrayPowerRecoveryRuntime(coreRuntime, systemProxy, CurrentSystemProxyPlatform()));
             await using var powerMonitor = new SystemPowerMonitor(powerRecovery);
@@ -100,7 +110,7 @@ internal sealed class TrayRuntime
 
     private static async Task StartCoreAsync(
         ITrayCoreRuntime coreRuntime,
-        ISystemProxyController systemProxy,
+        LocalSystemProxyController systemProxy,
         CancellationToken cancellationToken)
     {
         var result = await coreRuntime.EnsureStartedAsync(cancellationToken).ConfigureAwait(false);
@@ -110,51 +120,8 @@ internal sealed class TrayRuntime
             return;
         }
 
-        var settingsStore = new JsonAppSettingsStore(new TrayPlatformDirectories());
-        var settings = settingsStore.Load();
-        if (!settings.IsLazyModeEnabled)
-        {
-            return;
-        }
-
-        // 懒惰模式等效于就绪后手动开启 TUN：不可用时不启用，应用失败回滚持久化状态。
-        if (!settings.IsTunEnabled && await CanEnableTunAsync(coreRuntime, cancellationToken).ConfigureAwait(false))
-        {
-            settings.IsTunEnabled = true;
-            settingsStore.Save(settings);
-            try
-            {
-                await coreRuntime.ApplyCurrentSettingsAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                settings.IsTunEnabled = false;
-                settingsStore.Save(settings);
-                AppLogger.Warning($"Background TUN startup failed: {exception.Message}");
-            }
-        }
-
-        var applied = await systemProxy.SetEnabledAsync(true,
-            SystemProxyApplicationRequest.Build(settings, CurrentSystemProxyPlatform()),
+        await systemProxy.RestoreRememberedAsync(CurrentSystemProxyPlatform(),
             cancellationToken).ConfigureAwait(false);
-        if (!applied.IsSuccess)
-        {
-            AppLogger.Warning($"Background system proxy startup failed: {applied.Message}");
-        }
-    }
-
-    // 与托盘 TUN 开关判定一致：管理员/服务运行模式或服务模式正在运行才可开启。
-    private static async Task<bool> CanEnableTunAsync(
-        ITrayCoreRuntime coreRuntime,
-        CancellationToken cancellationToken)
-    {
-        if (new SystemProcessPrivilegeProbe().Detect() is ProcessRunMode.Administrator or ProcessRunMode.Service)
-        {
-            return true;
-        }
-
-        var status = await coreRuntime.GetServiceModeStatusAsync(cancellationToken).ConfigureAwait(false);
-        return status.IsRunning;
     }
 
     private static SystemProxyPlatform CurrentSystemProxyPlatform()

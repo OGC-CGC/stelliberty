@@ -133,7 +133,7 @@ public static class CliCatalog
         new("proxy config", "tun-disable-icmp-forwarding", "CoreConfig", "IsTunIcmpForwardingDisabled", "IsTunIcmpForwardingDisabled", "boolean", "Disable ICMP forwarding.", "true"),
         new("proxy config", "tun-dns-hijack", "CoreConfig", "TunDnsHijackText", "TunDnsHijack", "lines", "TUN DNS hijack targets. Supply a JSON string array.", "'[\"any:53\"]'"),
         new("proxy config", "tun-route-exclude", "CoreConfig", "TunRouteExcludeAddressesText", "TunRouteExcludeAddresses", "lines", "Routes excluded from TUN. Supply a JSON string array.", "'[\"192.168.0.0/16\"]'"),
-        new("proxy config", "tun-enabled", "CoreConfig", "IsTunEnabled", "IsTunEnabled", "boolean", "Persistently enable TUN; requires the privileged service or administrator mode and applies while the core runs.", "true"),
+        new("proxy config", "tun-enabled", "CoreConfig", "IsTunEnabled", "IsTunEnabled", "boolean", "Enable TUN while the core runs. Requires the privileged service or administrator mode. Restored on app startup when Remember Proxy Switches is enabled.", "true"),
         new("proxy config", "outbound-mode", "Home", "OutboundMode", "OutboundMode", "string", "Persisted routing mode written into the runtime config; 'proxy mode set' switches a running core immediately.", "rule", "Rule|Global|Direct"),
         new("proxy config", "proxy-host", "SystemIntegration", "ProxyHost", "ProxyHost", "string", "Host address written to system proxy settings.", "\"127.0.0.1\""),
         new("proxy config", "system-proxy-bypass", "SystemIntegration", "SystemProxyBypass", "SystemProxyBypass", "string", "Platform-specific bypass list written to system proxy settings; use --stdin for long values.", "--stdin"),

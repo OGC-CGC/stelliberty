@@ -26,10 +26,15 @@ rules: []
         return new RuntimeConfigGenerationResult(Serialize(config));
     }
 
-    public RuntimeConfigGenerationResult GenerateEmpty(RuntimeConfigParams runtimeParams)
+    public RuntimeConfigGenerationResult GenerateEmpty(RuntimeConfigParams runtimeParams, string? corePipe = null)
     {
         var config = LoadRootMap(EmptyBaseConfigContent, "Empty config");
         InjectRuntimeParams(config, runtimeParams);
+        if (corePipe is not null)
+        {
+            Set(config, OperatingSystem.IsWindows() ? "external-controller-pipe" : "external-controller-unix", corePipe);
+        }
+
         return new RuntimeConfigGenerationResult(Serialize(config));
     }
 

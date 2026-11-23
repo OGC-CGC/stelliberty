@@ -36,7 +36,9 @@ rules: []
             if (string.IsNullOrWhiteSpace(selectedSubscriptionId))
             {
                 AppLogger.Info("No subscription selected; starting the core with an empty config");
-                return BuildEmptyYaml(runtimeParams.MixedPort, runtimeParams.ClashCoreLogLevel, corePipe);
+                return runtimeParams.IsTunEnabled
+                    ? new RuntimeConfigGenerator().GenerateEmpty(runtimeParams, corePipe).RuntimeConfigContent
+                    : BuildEmptyYaml(runtimeParams.MixedPort, runtimeParams.ClashCoreLogLevel, corePipe);
             }
 
             try

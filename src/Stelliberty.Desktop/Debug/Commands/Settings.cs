@@ -76,7 +76,7 @@ internal static partial class DebugCommands
             $"minimizeToTray={Bool(viewModel.AppBehavior.IsMinimizeToTrayEnabled)}",
             $"lightweightMode={Bool(viewModel.AppBehavior.IsLightweightModeEnabled)}",
             $"trayDoubleClick={Bool(viewModel.AppBehavior.IsTrayDoubleClickEnabled)}",
-            $"lazyMode={Bool(viewModel.AppBehavior.IsLazyModeEnabled)}",
+            $"lazyMode={Bool(viewModel.AppBehavior.IsRememberProxyStateEnabled)}",
             $"titleBarFps={Bool(viewModel.AppBehavior.IsTitleBarFpsVisible)}",
             $"autoStart={Bool(viewModel.AppBehavior.IsAutoStartEnabled)}",
             $"autoCheck={Bool(viewModel.Update.IsAutoCheckEnabled)}",
@@ -105,7 +105,7 @@ internal static partial class DebugCommands
             $"minimizeToTray={Bool(behavior.IsMinimizeToTrayEnabled)}",
             $"lightweightMode={Bool(behavior.IsLightweightModeEnabled)}",
             $"trayDoubleClick={Bool(behavior.IsTrayDoubleClickEnabled)}",
-            $"lazyMode={Bool(behavior.IsLazyModeEnabled)}",
+            $"lazyMode={Bool(behavior.IsRememberProxyStateEnabled)}",
             $"titleBarFps={Bool(behavior.IsTitleBarFpsVisible)}",
             $"autoStart={Bool(behavior.IsAutoStartEnabled)}",
             $"windowToggleHotkey={behavior.WindowToggleHotkey}",
@@ -700,7 +700,7 @@ internal static partial class DebugCommands
             case "minimize-to-tray": behavior.IsMinimizeToTrayEnabled = ParseBool(normalizedValue); break;
             case "lightweight-mode": behavior.IsLightweightModeEnabled = ParseBool(normalizedValue); break;
             case "tray-double-click": behavior.IsTrayDoubleClickEnabled = ParseBool(normalizedValue); break;
-            case "lazy-mode": behavior.IsLazyModeEnabled = ParseBool(normalizedValue); break;
+            case "lazy-mode": behavior.IsRememberProxyStateEnabled = ParseBool(normalizedValue); break;
             case "titlebar-fps": behavior.IsTitleBarFpsVisible = ParseBool(normalizedValue); break;
             case "auto-start": behavior.SetAutoStartEnabled(ParseBool(normalizedValue)); break;
             case "window-toggle-hotkey": await behavior.SetWindowToggleHotkeyAsync(normalizedValue); break;

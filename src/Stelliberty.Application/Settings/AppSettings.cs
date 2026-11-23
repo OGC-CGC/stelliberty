@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Stelliberty.Application.Platform;
 using Stelliberty.Application.Updates;
 
@@ -68,7 +69,8 @@ public sealed class AppSettings
 
     public bool IsTrayDoubleClickEnabled { get; set; } = true;
 
-    public bool IsLazyModeEnabled { get; set; }
+    [JsonPropertyName("IsLazyModeEnabled")]
+    public bool IsRememberProxyStateEnabled { get; set; }
 
     public bool IsTitleBarFpsVisible { get; set; }
 
@@ -172,6 +174,8 @@ public sealed class AppSettings
     public bool IsPacModeEnabled { get; set; }
 
     public string PacScript { get; set; } = string.Empty;
+
+    public bool LastSystemProxyEnabled { get; set; }
 
     public bool IsTunEnabled { get; set; }
 

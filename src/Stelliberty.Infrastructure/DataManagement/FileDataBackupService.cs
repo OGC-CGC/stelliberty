@@ -127,6 +127,7 @@ public sealed class FileDataBackupService(string appDataDirectory) : IDataManage
         "SystemProxyBypass",
         "IsPacModeEnabled",
         "PacScript",
+        "LastSystemProxyEnabled",
         "IsTunEnabled",
         "TunStack",
         "TunDevice",

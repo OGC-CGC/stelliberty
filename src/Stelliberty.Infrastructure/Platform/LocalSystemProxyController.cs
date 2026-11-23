@@ -1,5 +1,6 @@
 using Stelliberty.Application.Diagnostics;
 using Stelliberty.Application.Platform;
+using Stelliberty.Application.Settings;
 
 namespace Stelliberty.Infrastructure.Platform;
 
@@ -7,15 +8,17 @@ public sealed class LocalSystemProxyController : ISystemProxyController, IDispos
 {
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(2);
     private readonly ISystemProxyService _service;
+    private readonly IAppSettingsStore _settingsStore;
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly object _stateGate = new();
     private SystemProxyStatus _status = new(false, false);
     private int _operationVersion;
     private bool _isDisposed;
 
-    public LocalSystemProxyController(ISystemProxyService service)
+    public LocalSystemProxyController(ISystemProxyService service, IAppSettingsStore settingsStore)
     {
         _service = service;
+        _settingsStore = settingsStore;
     }
 
     public event EventHandler<SystemProxyStatus>? StatusChanged;
@@ -46,21 +49,79 @@ public sealed class LocalSystemProxyController : ISystemProxyController, IDispos
                 return new SystemProxyApplyResult(true, "System proxy request was superseded.", CurrentStatus);
             }
 
-            var result = await Task.Run(
-                () => isEnabled ? _service.Enable(request!) : _service.Disable(),
-                cancellationToken).ConfigureAwait(false);
-            if (!result.IsSuccess)
+            var result = await ApplyAsync(isEnabled, request, cancellationToken).ConfigureAwait(false);
+            if (result.IsSuccess)
             {
-                return new SystemProxyApplyResult(false, result.Message, CurrentStatus);
+                SaveProxyState(isEnabled);
             }
 
-            var status = new SystemProxyStatus(isEnabled, isEnabled);
-            UpdateStatus(status);
-            return new SystemProxyApplyResult(true, result.Message, status);
+            return result;
         }
         finally
         {
             _operationGate.Release();
+        }
+    }
+
+    public async Task RestoreRememberedAsync(SystemProxyPlatform platform, CancellationToken cancellationToken)
+    {
+        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (Volatile.Read(ref _operationVersion) != 0)
+            {
+                return;
+            }
+
+            var settings = _settingsStore.Load();
+            if (!settings.IsRememberProxyStateEnabled || !settings.LastSystemProxyEnabled)
+            {
+                return;
+            }
+
+            var result = await ApplyAsync(true, SystemProxyApplicationRequest.Build(settings, platform), cancellationToken)
+                .ConfigureAwait(false);
+            if (!result.IsSuccess)
+            {
+                AppLogger.Warning($"Background system proxy restore failed: {result.Message}");
+            }
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    private async Task<SystemProxyApplyResult> ApplyAsync(
+        bool isEnabled, SystemProxyApplicationRequest? request, CancellationToken cancellationToken)
+    {
+        var result = await Task.Run(
+            () => isEnabled ? _service.Enable(request!) : _service.Disable(),
+            cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess)
+        {
+            return new SystemProxyApplyResult(false, result.Message, CurrentStatus);
+        }
+
+        var status = new SystemProxyStatus(isEnabled, isEnabled);
+        UpdateStatus(status);
+        return new SystemProxyApplyResult(true, result.Message, status);
+    }
+
+    private void SaveProxyState(bool isEnabled)
+    {
+        try
+        {
+            var settings = _settingsStore.Load();
+            if (settings.LastSystemProxyEnabled != isEnabled)
+            {
+                settings.LastSystemProxyEnabled = isEnabled;
+                _settingsStore.Save(settings);
+            }
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Warning($"System proxy state could not be saved: {exception.Message}");
         }
     }
 

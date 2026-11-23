@@ -58,9 +58,9 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
 
     public string TrayDoubleClickDescriptionText => _localization.GetString("Settings.AppBehavior.TrayDoubleClick.Description");
 
-    public string LazyModeText => _localization.GetString("Settings.AppBehavior.LazyMode");
+    public string RememberProxyStateText => _localization.GetString("Settings.AppBehavior.RememberProxyState");
 
-    public string LazyModeDescriptionText => _localization.GetString("Settings.AppBehavior.LazyMode.Description");
+    public string RememberProxyStateDescriptionText => _localization.GetString("Settings.AppBehavior.RememberProxyState.Description");
 
     public string TitleBarFpsText => _localization.GetString("Settings.AppBehavior.TitleBarFps");
 
@@ -89,7 +89,7 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
         LightweightModeText,
         LightweightModeShutdownDelayText,
         TrayDoubleClickText,
-        LazyModeText,
+        RememberProxyStateText,
         TitleBarFpsText,
         StartupText,
         .. (IsHotkeysVisible
@@ -202,10 +202,10 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool IsLazyModeEnabled
+    public bool IsRememberProxyStateEnabled
     {
-        get => _settings.IsLazyModeEnabled;
-        set => Apply(_settings.IsLazyModeEnabled, value, next => _settings.IsLazyModeEnabled = next);
+        get => _settings.IsRememberProxyStateEnabled;
+        set => Apply(_settings.IsRememberProxyStateEnabled, value, next => _settings.IsRememberProxyStateEnabled = next);
     }
 
     public bool IsTrayDoubleClickEnabled
@@ -477,8 +477,8 @@ public sealed class SettingsAppBehaviorViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(LightweightModeShutdownDelayDescriptionText));
         OnPropertyChanged(nameof(TrayDoubleClickText));
         OnPropertyChanged(nameof(TrayDoubleClickDescriptionText));
-        OnPropertyChanged(nameof(LazyModeText));
-        OnPropertyChanged(nameof(LazyModeDescriptionText));
+        OnPropertyChanged(nameof(RememberProxyStateText));
+        OnPropertyChanged(nameof(RememberProxyStateDescriptionText));
         OnPropertyChanged(nameof(TitleBarFpsText));
         OnPropertyChanged(nameof(StartupText));
         OnPropertyChanged(nameof(HotkeysText));
