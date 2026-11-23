@@ -98,21 +98,21 @@
                     Command="{Binding TestCurrentGroupDelaysCommand}"
                     IsEnabled="{Binding !IsBatchDelayTesting}"
                     ToolTip.Tip="{loc:Loc Proxy.Tooltip.TestCurrentGroup}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="ChartBarFill" />
+              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="Dashboard2Fill" />
             </Button>
             <Button Classes="toolbar-icon"
                     IsVisible="{Binding !IsVerticalLayout}"
                     AutomationProperties.AutomationId="Proxy.LocateButton"
                     Command="{Binding LocateSelectedNodeCommand}"
                     ToolTip.Tip="{loc:Loc Proxy.Tooltip.LocateCurrent}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="AimingFill" />
+              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="LocationFill" />
             </Button>
             <Button Classes="toolbar-icon"
                     IsVisible="{Binding !IsVerticalLayout}"
                     AutomationProperties.AutomationId="Proxy.ScrollTopButton"
                     Command="{Binding ScrollToTopCommand}"
                     ToolTip.Tip="{loc:Loc Proxy.Tooltip.ScrollTop}">
-              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="ArrowUpLine" />
+              <iconPacks:PackIconMingCuteIcons Classes="icon" Width="15" Height="15" Kind="ArrowToUpLine" />
             </Button>
             <Button Classes="toolbar-icon"
                     Classes.sort-active="{Binding IsSortActive}"
