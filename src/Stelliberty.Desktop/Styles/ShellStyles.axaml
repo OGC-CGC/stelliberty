@@ -146,15 +146,15 @@
   </Style>
   <Style Selector="Button.mac-caption-button.close Border.mac-caption-dot">
     <Setter Property="Background" Value="{DynamicResource MacCaptionDotCloseBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotCloseBorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotCloseActiveBorderBrush}" />
   </Style>
   <Style Selector="Button.mac-caption-button.minimize Border.mac-caption-dot">
     <Setter Property="Background" Value="{DynamicResource MacCaptionDotMinimizeBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotMinimizeBorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotMinimizeActiveBorderBrush}" />
   </Style>
   <Style Selector="Button.mac-caption-button.zoom Border.mac-caption-dot">
     <Setter Property="Background" Value="{DynamicResource MacCaptionDotZoomBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotZoomBorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MacCaptionDotZoomActiveBorderBrush}" />
   </Style>
   <Style Selector="Button.mac-caption-button.pin Border.mac-caption-dot">
     <Setter Property="Background" Value="{DynamicResource MacCaptionDotPinBrush}" />
