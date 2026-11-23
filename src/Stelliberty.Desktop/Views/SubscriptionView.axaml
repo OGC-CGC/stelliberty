@@ -904,7 +904,7 @@
                                   AutomationProperties.AutomationId="Subscriptions.ChainProxyDialog"
                                   IsOpen="{Binding ChainProxy.IsDialogVisible}">
               <controls:DialogPanel.DialogContent>
-                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">
                   <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="24,24,24,0">
                     <TextBlock Classes="dialog-title" Text="{loc:Loc Subscriptions.Dialog.ChainProxy.Title}" VerticalAlignment="Center" />
                     <Button Grid.Column="1"
