@@ -240,7 +240,7 @@
                           AutomationProperties.AutomationId="Settings.WebDavBackupDialog"
                           IsOpen="{Binding DataManagement.IsWebDavBackupDialogVisible}">
       <controls:DialogPanel.DialogContent>
-        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
           <StackPanel Grid.Row="0" Margin="24,24,24,0">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <TextBlock Classes="dialog-title"
@@ -258,7 +258,7 @@
 
           <Grid Grid.Row="1">
             <ScrollViewer AutomationProperties.AutomationId="Settings.WebDavBackupDialog.Scroll"
-                          Height="360"
+                          MaxHeight="360"
                           IsEnabled="{Binding !DataManagement.IsLoadingWebDavBackups}"
                           VerticalScrollBarVisibility="Auto">
               <ItemsControl AutomationProperties.AutomationId="Settings.WebDavBackupDialog.List"

@@ -867,23 +867,22 @@
                                   AutomationProperties.AutomationId="Subscriptions.FileEditorDialog"
                                   IsOpen="{Binding FileEditor.IsDialogVisible}">
               <controls:DialogPanel.DialogContent>
-                <Grid RowDefinitions="Auto,Auto" RowSpacing="16">
-                  <StackPanel Grid.Row="0" Spacing="12" Margin="24,24,24,0">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                      <TextBlock Classes="dialog-title" Text="{loc:Loc Subscriptions.Dialog.EditFile.Title}" VerticalAlignment="Center" />
-                      <Button Grid.Column="1"
-                              Classes="dialog-close"
-                              AutomationProperties.AutomationId="Subscriptions.FileEditor.CloseButton"
-                              Command="{Binding FileEditor.CancelCommand}">
-                        <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="CloseFill" />
-                      </Button>
-                    </Grid>
-                    <controls:CodeEditor AutomationProperties.AutomationId="Subscriptions.FileEditor.ContentBox"
-                                         Text="{Binding FileEditor.Content, Mode=TwoWay}"
-                                         SyntaxLanguage="yaml"
-                                         Height="420" />
-                  </StackPanel>
-                  <Grid Grid.Row="1" Margin="24,0,24,24" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+                  <Grid Grid.Row="0" Margin="24,24,24,0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Classes="dialog-title" Text="{loc:Loc Subscriptions.Dialog.EditFile.Title}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Classes="dialog-close"
+                            AutomationProperties.AutomationId="Subscriptions.FileEditor.CloseButton"
+                            Command="{Binding FileEditor.CancelCommand}">
+                      <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="CloseFill" />
+                    </Button>
+                  </Grid>
+                  <controls:CodeEditor Grid.Row="1" Margin="24,0,24,0"
+                                       AutomationProperties.AutomationId="Subscriptions.FileEditor.ContentBox"
+                                       Text="{Binding FileEditor.Content, Mode=TwoWay}"
+                                       SyntaxLanguage="yaml"
+                                       MaxHeight="420" />
+                  <Grid Grid.Row="2" Margin="24,4,24,24" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <Button Grid.Column="1"
                             Classes="dialog-secondary"
                             AutomationProperties.AutomationId="Subscriptions.FileEditor.CancelButton"

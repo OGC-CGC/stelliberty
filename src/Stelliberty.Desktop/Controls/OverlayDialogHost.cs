@@ -33,8 +33,6 @@ public sealed class OverlayDialogHost : Control
     private bool _clearContentAfterClose;
     private long _animationRevision;
 
-    private const double DialogMargin = 32;
-
     private static readonly ITransform ClosedTransform = DialogAnimation.ClosedTransform;
     private static readonly ITransform OpenTransform = DialogAnimation.OpenTransform;
     private static readonly ITransform ExitTransform = DialogAnimation.ExitTransform;
@@ -154,11 +152,9 @@ public sealed class OverlayDialogHost : Control
             _boundsSubscription?.Dispose();
             _boundsSubscription = _layer.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(bounds =>
             {
+                // 遮罩提供完整可用尺寸，面板外边距由 DialogPanel 处理。
                 _scrim.Width = bounds.Width;
                 _scrim.Height = bounds.Height;
-
-                _presenter.MaxHeight = Math.Max(0, bounds.Height - DialogMargin * 2);
-                _presenter.MaxWidth = Math.Max(0, bounds.Width - DialogMargin * 2);
             }));
             _layer.Children.Add(_scrim);
         }
