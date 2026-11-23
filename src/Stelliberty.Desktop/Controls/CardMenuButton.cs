@@ -34,6 +34,9 @@ public sealed class CardMenuButton : Button
     public static readonly StyledProperty<string> MoreItemTextProperty =
         AvaloniaProperty.Register<CardMenuButton, string>(nameof(MoreItemText), "More");
 
+    public static readonly StyledProperty<bool> ShowAllItemsProperty =
+        AvaloniaProperty.Register<CardMenuButton, bool>(nameof(ShowAllItems));
+
     public static readonly StyledProperty<bool> ShowItemIconsProperty =
         AvaloniaProperty.Register<CardMenuButton, bool>(nameof(ShowItemIcons), true);
 
@@ -49,6 +52,7 @@ public sealed class CardMenuButton : Button
     private readonly Border _dismissLayer;
     private readonly Border _menu;
     private readonly StackPanel _itemsPanel;
+    private ScrollViewer? _itemsScrollViewer;
     private OverlayLayer? _layer;
     private TopLevel? _topLevel;
     private IDisposable? _boundsSubscription;
@@ -96,6 +100,12 @@ public sealed class CardMenuButton : Button
     {
         get => GetValue(MoreItemTextProperty);
         set => SetValue(MoreItemTextProperty, value);
+    }
+
+    public bool ShowAllItems
+    {
+        get => GetValue(ShowAllItemsProperty);
+        set => SetValue(ShowAllItemsProperty, value);
     }
 
     public bool ShowItemIcons
@@ -158,7 +168,7 @@ public sealed class CardMenuButton : Button
             OpenButton = this;
         }
 
-        _menu.Child = MenuContent ?? _itemsPanel;
+        _menu.Child = MenuContent ?? GetItemsContent();
         _menu.DataContext = DataContext;
         ReloadItems();
         _pageIndex = 0;
@@ -286,6 +296,33 @@ public sealed class CardMenuButton : Button
         _items = ItemsSource?.Cast<object>().ToList() ?? [];
     }
 
+    private Control GetItemsContent()
+    {
+        if (!ShowAllItems)
+        {
+            if (_itemsScrollViewer is not null)
+            {
+                _itemsScrollViewer.Content = null;
+            }
+
+            return _itemsPanel;
+        }
+
+        if (ReferenceEquals(_menu.Child, _itemsPanel))
+        {
+            _menu.Child = null;
+        }
+
+        _itemsScrollViewer ??= new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
+        _itemsScrollViewer.Content = _itemsPanel;
+        _itemsScrollViewer.Offset = default;
+        return _itemsScrollViewer;
+    }
+
     private void RenderPage()
     {
         _itemsPanel.Children.Clear();
@@ -298,7 +335,7 @@ public sealed class CardMenuButton : Button
 
     private IEnumerable<object> GetPageItems()
     {
-        if (_items.Count <= 6)
+        if (ShowAllItems || _items.Count <= 6)
         {
             return _items;
         }
@@ -398,6 +435,9 @@ public sealed class CardMenuButton : Button
 
         var bounds = _layer.Bounds;
         _menu.MaxWidth = Math.Max(0, bounds.Width - 2 * WindowMargin);
+        _menu.MaxHeight = ShowAllItems && MenuContent is null
+            ? Math.Max(0, bounds.Height - 2 * WindowMargin)
+            : double.PositiveInfinity;
         _menu.Measure(new Size(_menu.MaxWidth, double.PositiveInfinity));
         var menuSize = _menu.DesiredSize;
         var left = Math.Clamp(origin.X - menuSize.Width, WindowMargin, Math.Max(WindowMargin, bounds.Width - menuSize.Width - WindowMargin));

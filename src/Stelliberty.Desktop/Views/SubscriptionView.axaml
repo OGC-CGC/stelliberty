@@ -228,7 +228,7 @@
                                                AutomationProperties.AutomationId="{Binding MenuAutomationId}"
                                                ItemsSource="{Binding MenuOptions}"
                                                ItemCommand="{Binding #SubscriptionPageRoot.((vm:SubscriptionPageViewModel)DataContext).RowMenuActionCommand}"
-                                               MoreItemText="{loc:Loc Common.More}">
+                                               ShowAllItems="True">
                         <iconPacks:PackIconMingCuteIcons Classes="icon"
                                                           Width="12"
                                                           Height="12"
