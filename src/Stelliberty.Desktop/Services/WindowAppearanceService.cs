@@ -17,7 +17,6 @@ internal sealed class WindowAppearanceService : IDisposable
         : null;
     private MainWindow? _window;
     private SettingsThemeViewModel? _theme;
-    private bool _isWindowActive;
     private Border? _backgroundImageLayer;
     private Bitmap? _backgroundBitmap;
     private int _backgroundLoadVersion;
@@ -34,8 +33,6 @@ internal sealed class WindowAppearanceService : IDisposable
         if (_window is not null)
         {
             _window.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
-            _window.Activated -= OnWindowActivated;
-            _window.Deactivated -= OnWindowDeactivated;
             _window.Opened -= OnWindowOpened;
         }
 
@@ -43,13 +40,10 @@ internal sealed class WindowAppearanceService : IDisposable
         _window = window;
         _backgroundImageLayer = window.FindControl<Border>("BackgroundImageLayer");
         _theme = theme;
-        _isWindowActive = window.IsActive;
         _theme.BackgroundImageChanged += OnBackgroundImageChanged;
         _theme.ThemeChanged += OnThemeChanged;
         _theme.WindowEffectChanged += OnWindowEffectChanged;
         _window.ActualThemeVariantChanged += OnActualThemeVariantChanged;
-        _window.Activated += OnWindowActivated;
-        _window.Deactivated += OnWindowDeactivated;
         _window.Opened += OnWindowOpened;
         ApplyTheme(theme.SelectedOption.Value);
         ApplyWindowEffect(theme.SelectedWindowEffect);
@@ -77,7 +71,6 @@ internal sealed class WindowAppearanceService : IDisposable
             return;
         }
 
-        _isWindowActive = _window?.IsActive ?? _isWindowActive;
         ApplyWindowEffect(_theme.SelectedWindowEffect);
     }
 
@@ -93,8 +86,6 @@ internal sealed class WindowAppearanceService : IDisposable
         if (_window is not null)
         {
             _window.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
-            _window.Activated -= OnWindowActivated;
-            _window.Deactivated -= OnWindowDeactivated;
             _window.Opened -= OnWindowOpened;
         }
 
@@ -103,7 +94,6 @@ internal sealed class WindowAppearanceService : IDisposable
         _macOSGlassEffectService?.Dispose();
         _theme = null;
         _window = null;
-        _isWindowActive = false;
     }
 
     private void OnBackgroundImageChanged(object? sender, bool reloadImage)
@@ -236,7 +226,6 @@ internal sealed class WindowAppearanceService : IDisposable
 
                 if (!OperatingSystem.IsMacOS())
                 {
-                    _isWindowActive = window.IsActive;
                     ApplyWindowEffect(theme.SelectedWindowEffect);
                     return;
                 }
@@ -251,32 +240,11 @@ internal sealed class WindowAppearanceService : IDisposable
                             return;
                         }
 
-                        _isWindowActive = window.IsActive;
                         ApplyWindowEffect(theme.SelectedWindowEffect);
                     },
                     DispatcherPriority.Background);
             },
             DispatcherPriority.Render);
-    }
-
-    private void OnWindowActivated(object? sender, EventArgs args)
-    {
-        _isWindowActive = true;
-        if (OperatingSystem.IsMacOS()
-            && _theme?.SelectedWindowEffect is WindowEffect.Blur or WindowEffect.FrutigerAero)
-        {
-            UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
-        }
-    }
-
-    private void OnWindowDeactivated(object? sender, EventArgs args)
-    {
-        _isWindowActive = false;
-        if (OperatingSystem.IsMacOS()
-            && _theme?.SelectedWindowEffect is WindowEffect.Blur or WindowEffect.FrutigerAero)
-        {
-            UpdateRootSurfaceForCurrentEffect(IsCurrentLightTheme());
-        }
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs args)
@@ -379,9 +347,7 @@ internal sealed class WindowAppearanceService : IDisposable
             WindowEffect.None => surfaceBrush,
             WindowEffect.FrutigerAero when OperatingSystem.IsMacOS() => Brushes.Transparent,
             WindowEffect.Blur when OperatingSystem.IsMacOS() => new SolidColorBrush(Color.Parse(
-                isLightTheme
-                    ? _isWindowActive ? "#A0FFFFFF" : "#FFEEEEEE"
-                    : _isWindowActive ? "#A0000000" : "#FF242424")),
+                isLightTheme ? "#A0FFFFFF" : "#A0000000")),
             // Zen 工具栏使用冷灰/近黑底色和 60% 不透明度。
             WindowEffect.Acrylic => new SolidColorBrush(Color.Parse(isLightTheme ? "#99F0F0F4" : "#9917171A")),
             WindowEffect.Blur => new SolidColorBrush(Color.Parse(isLightTheme ? "#B3FFFFFF" : "#B3212121")),
