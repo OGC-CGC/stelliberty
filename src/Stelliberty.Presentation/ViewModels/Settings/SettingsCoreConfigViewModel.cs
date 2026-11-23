@@ -34,7 +34,8 @@ public sealed partial class SettingsCoreConfigViewModel : ViewModelBase, IDispos
         ILocalizationService localization,
         Action<string, string> requestRuntimeRefresh,
         Action<bool> applyTunStateToHome,
-        Action? systemProxyEndpointChanged = null)
+        Action? systemProxyEndpointChanged = null,
+        Func<IReadOnlyList<string>>? outboundInterfaceNames = null)
     {
         _settings = settings;
         _settingsStore = settingsStore;
@@ -42,6 +43,8 @@ public sealed partial class SettingsCoreConfigViewModel : ViewModelBase, IDispos
         _requestRuntimeRefresh = requestRuntimeRefresh;
         _applyTunStateToHome = applyTunStateToHome;
         _systemProxyEndpointChanged = systemProxyEndpointChanged;
+        _outboundInterfaceNames = outboundInterfaceNames ?? (() => []);
+        ToggleOutboundInterfaceCommand = new Stelliberty.Presentation.Commands.RelayCommand<string>(ToggleOutboundInterface);
         _uiContext = SynchronizationContext.Current;
         RefreshNumericTextFields();
         _localization.LanguageChanged += OnLanguageChanged;
@@ -283,6 +286,10 @@ public sealed partial class SettingsCoreConfigViewModel : ViewModelBase, IDispos
         OnPropertyChanged(nameof(NetworkLanAuthPasswordText));
         OnPropertyChanged(nameof(NetworkIpv6Text));
         OnPropertyChanged(nameof(NetworkTcpConcurrentText));
+        OnPropertyChanged(nameof(OutboundInterfaceText));
+        OnPropertyChanged(nameof(OutboundInterfaceModes));
+        OnPropertyChanged(nameof(SelectedOutboundInterfaceMode));
+        OnPropertyChanged(nameof(OutboundInterfaceListText));
         OnPropertyChanged(nameof(NetworkLanAllowedIpsText));
         OnPropertyChanged(nameof(NetworkLanDisallowedIpsText));
         OnPropertyChanged(nameof(NetworkSkipAuthPrefixesText));

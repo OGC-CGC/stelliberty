@@ -40,6 +40,8 @@ internal interface ITrayCoreRuntime
 
     Task RestartAsync(CancellationToken cancellationToken);
 
+    Task<bool> RefreshOutboundInterfaceAsync(CancellationToken cancellationToken);
+
     Task<CoreApplyConfigResult> ApplyCurrentSettingsAsync(CancellationToken cancellationToken);
 
     Task<CoreApplyConfigResult?> RefreshCurrentSettingsAsync(CancellationToken cancellationToken);
@@ -176,20 +178,55 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
         try
         {
             ThrowIfDisposed();
-            var manager = RequireManager();
-            ConfigurationChanging?.Invoke(this, EventArgs.Empty);
+            if (_manager is null && _isOutboundInterfaceUnavailable)
+            {
+                var started = await EnsureStartedCoreAsync(cancellationToken).ConfigureAwait(false);
+                if (!started.IsSuccess)
+                {
+                    throw new InvalidOperationException(started.Message);
+                }
+            }
+
+            var outboundInterface = await ResolveOutboundInterfaceAsync(LoadOutboundSettings(),
+                CurrentStatus.Snapshot.State == CoreState.Running, cancellationToken).ConfigureAwait(false);
+            return await ApplyPreparedConfigAsync(request, outboundInterface, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OutboundInterfaceUnavailableException)
+        {
+            _pendingOutboundConfig = request;
+            throw;
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    private async Task<CoreApplyConfigResult> ApplyPreparedConfigAsync(CoreApplyConfigRequest request,
+        string? outboundInterface, CancellationToken cancellationToken)
+    {
+        var manager = RequireManager();
+        var bound = request with { RuntimeYamlContent = ConfigureOutbound(request.RuntimeYamlContent, outboundInterface) };
+        ConfigurationChanging?.Invoke(this, EventArgs.Empty);
+        try
+        {
             var providerContext = string.IsNullOrWhiteSpace(request.SubscriptionId) ? null
-                : _providerSnapshots.CreateContext(request.SubscriptionId, request.RuntimeYamlContent, request.SubscriptionContentFingerprint);
+                : _providerSnapshots.CreateContext(request.SubscriptionId, bound.RuntimeYamlContent, request.SubscriptionContentFingerprint);
             _providerContext = null;
-            var result = await _restoringManager!.ApplyConfigAsync(request, cancellationToken).ConfigureAwait(false);
+            var result = await _restoringManager!.ApplyConfigAsync(bound, cancellationToken).ConfigureAwait(false);
             _providerContext = providerContext;
+            if (!_isServiceModeActive)
+            {
+                _normalOutboundBaseConfig = request;
+                _normalCoreHasManagedInterface = outboundInterface is not null;
+            }
+            RememberAppliedOutboundConfig(request, outboundInterface);
             UpdateStatus(await manager.GetSnapshotAsync(cancellationToken).ConfigureAwait(false));
             return result;
         }
         finally
         {
             ConfigurationChanged?.Invoke(this, EventArgs.Empty);
-            _operationGate.Release();
         }
     }
 
@@ -200,7 +237,24 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
         try
         {
             ThrowIfDisposed();
+            if (CurrentStatus.Snapshot.State != CoreState.Running &&
+                (_isOutboundInterfaceUnavailable || _appliedOutboundInterface is not null
+                    || LoadOutboundSettings().OutboundInterfaceMode != OutboundInterfaceMode.FollowConfiguration))
+            {
+                var started = await EnsureStartedCoreAsync(cancellationToken).ConfigureAwait(false);
+                if (!started.IsSuccess)
+                {
+                    throw new InvalidOperationException(started.Message);
+                }
+
+                return;
+            }
+
             var manager = RequireManager();
+            if (CurrentStatus.Snapshot.State == CoreState.Running)
+            {
+                await UpdateRunningOutboundInterfaceAsync(cancellationToken).ConfigureAwait(false);
+            }
             await _restoringManager!.RestartAsync(cancellationToken).ConfigureAwait(false);
             UpdateStatus(await manager.GetSnapshotAsync(cancellationToken).ConfigureAwait(false));
         }
@@ -324,6 +378,14 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
             if (current.State == CoreState.Running)
             {
                 return new TrayCoreOperationResult(true, "Core is already running.", UpdateStatus(current));
+            }
+
+            if (_isOutboundInterfaceUnavailable && _isServiceModeActive
+                && (await _serviceModeManager.GetStatusAsync(cancellationToken).ConfigureAwait(false)).State == ServiceModeState.NotInstalled)
+            {
+                var activation = await RequireServiceModeSwitcher().DeactivateAsync(cancellationToken).ConfigureAwait(false);
+                var activatedStatus = UpdateStatus(await _manager.GetSnapshotAsync(cancellationToken).ConfigureAwait(false));
+                return new TrayCoreOperationResult(activation.IsSuccess, activation.Message, activatedStatus);
             }
 
             var resumed = _isServiceModeActive
@@ -460,12 +522,28 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
 
     private async Task<CoreHostOperationResult> ResumeNormalCoreAsync(CancellationToken cancellationToken)
     {
-        var result = await Task.Run(
-            () => _isHubStarted ? HubBootstrap.StartCore() : StartHub(),
-            cancellationToken).ConfigureAwait(false);
+        var settings = LoadOutboundSettings();
+        if (_isHubStarted && settings.OutboundInterfaceMode == OutboundInterfaceMode.FollowConfiguration && !_normalCoreHasManagedInterface)
+        {
+            var resumed = await Task.Run(HubBootstrap.StartCore, cancellationToken).ConfigureAwait(false);
+            if (resumed.Ok && _normalOutboundBaseConfig is { } previous)
+            {
+                RememberAppliedOutboundConfig(previous, null);
+            }
+            return resumed.Ok ? CoreHostOperationResult.Success(resumed.Message) : CoreHostOperationResult.Failure(resumed.Message);
+        }
+
+        var outboundInterface = await ResolveOutboundInterfaceAsync(settings, coreIsRunning: false, cancellationToken).ConfigureAwait(false);
+        var request = BuildBootstrapRequest(CanUseTun());
+        var content = ConfigureOutbound(request.RuntimeYamlContent, outboundInterface);
+        var result = await Task.Run(() => StartHub(content), cancellationToken).ConfigureAwait(false);
         if (result.Ok)
         {
             _isHubStarted = true;
+            _normalOutboundBaseConfig = request;
+            _normalCoreHasManagedInterface = outboundInterface is not null;
+            SetProviderContext(request.SubscriptionId, content);
+            RememberAppliedOutboundConfig(request, outboundInterface);
             return CoreHostOperationResult.Success(result.Message);
         }
 
@@ -482,18 +560,27 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
             return CoreHostOperationResult.Failure(cleanup.Message);
         }
 
+        var settings = LoadOutboundSettings();
+        var outboundInterface = await ResolveOutboundInterfaceAsync(settings, coreIsRunning: false, cancellationToken).ConfigureAwait(false);
+        var request = BuildBootstrapRequest(canUseTun: true);
+        var content = ConfigureOutbound(request.RuntimeYamlContent, outboundInterface);
         var result = await _serviceModeManager.StartCoreHostAsync(
             new ServiceModeCoreHostRequest(
                 TrayApplicationLayout.CoreBinaryPath,
                 TrayApplicationLayout.CoreDirectory,
-                WriteServiceModeActiveConfig(BuildInitialBootstrapYaml(canUseTun: true))),
+                WriteServiceModeActiveConfig(content)),
             cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess
-            ? CoreHostOperationResult.Success(result.Message)
-            : CoreHostOperationResult.Failure(result.Message);
+        if (!result.IsSuccess)
+        {
+            return CoreHostOperationResult.Failure(result.Message);
+        }
+
+        SetProviderContext(request.SubscriptionId, content);
+        RememberAppliedOutboundConfig(request, outboundInterface);
+        return CoreHostOperationResult.Success(result.Message);
     }
 
-    private BootstrapResult StartHub()
+    private static BootstrapResult StartHub(string content)
     {
         return HubBootstrap.Start(new BootstrapOptions(
             PipeName: TrayCoreEndpoints.Hub,
@@ -501,22 +588,21 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
             DataCoreDir: TrayApplicationLayout.CoreDirectory,
             UserDataDir: TrayApplicationLayout.AppDataDirectory,
             CorePipe: TrayCoreEndpoints.Core,
-            BootstrapYaml: BuildInitialBootstrapYaml(CanUseTun())));
+            BootstrapYaml: content));
     }
 
-    private string BuildInitialBootstrapYaml(bool canUseTun)
+    private static CoreApplyConfigRequest BuildBootstrapRequest(bool canUseTun)
     {
         try
         {
             var content = BuildBootstrapYaml(canUseTun);
-            SetProviderContext(new FileSubscriptionSelectionStore(TrayApplicationLayout.AppDataDirectory).GetCurrentSubscriptionId(), content);
-            return content;
+            var subscriptionId = new FileSubscriptionSelectionStore(TrayApplicationLayout.AppDataDirectory).GetCurrentSubscriptionId();
+            return new CoreApplyConfigRequest(content, subscriptionId ?? string.Empty);
         }
         catch (Exception exception)
         {
             AppLogger.Warning($"Tray startup config generation failed: {exception.Message}");
-            _providerContext = null;
-            return StartupBootstrapConfigBuilder.BuildDefaultEmptyYaml(TrayCoreEndpoints.Core);
+            return new CoreApplyConfigRequest(StartupBootstrapConfigBuilder.BuildDefaultEmptyYaml(TrayCoreEndpoints.Core), string.Empty);
         }
     }
 
@@ -586,7 +672,11 @@ internal sealed partial class TrayCoreRuntimeHost : ITrayCoreRuntime, IAsyncDisp
                     ? _status.Snapshot.RunningSince ?? DateTimeOffset.UtcNow
                     : DateTimeOffset.UtcNow
                 : (DateTimeOffset?)null;
-            status = new TrayCoreStatus(snapshot with { RunningSince = runningSince }, generation);
+            status = new TrayCoreStatus(snapshot with
+            {
+                RunningSince = runningSince,
+                IsOutboundInterfaceUnavailable = _isOutboundInterfaceUnavailable
+            }, generation);
             _status = status;
         }
 

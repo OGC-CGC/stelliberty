@@ -75,6 +75,7 @@ internal sealed partial class TrayCoreRuntimeHost
             if (before.Snapshot.State == CoreState.Running)
             {
                 // 重建核心连接和虚拟网卡，清除休眠前残留的网络状态。
+                await UpdateRunningOutboundInterfaceAsync(cancellationToken).ConfigureAwait(false);
                 await _restoringManager!.RestartAsync(cancellationToken).ConfigureAwait(false);
             }
             else

@@ -318,6 +318,25 @@ public sealed class PipeCoreProxyClient : IProxyCoreClient, IDisposable
         }
     }
 
+    public async Task<string?> GetActiveTunDeviceAsync(CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(2));
+        using var response = await _client.GetAsync("configs", timeout.Token).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        using var config = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false));
+        if (!config.RootElement.TryGetProperty("tun", out var tun) || tun.ValueKind != JsonValueKind.Object
+            || !tun.TryGetProperty("enable", out var enabled) || enabled.ValueKind != JsonValueKind.True)
+        {
+            return null;
+        }
+
+        var device = tun.TryGetProperty("device", out var name) ? name.GetString() : null;
+        return string.IsNullOrWhiteSpace(device)
+            ? throw new InvalidOperationException("The active TUN device name is unavailable.")
+            : device;
+    }
+
     public async Task<CoreRuntimeStats?> GetRuntimeStatsAsync(CancellationToken cancellationToken = default)
     {
         EnsureStreamSubscriptions();

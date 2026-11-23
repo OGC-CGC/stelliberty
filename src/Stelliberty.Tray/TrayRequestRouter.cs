@@ -158,6 +158,10 @@ internal sealed class TrayRequestRouter : IDisposable
         {
             return TrayIpcResult.Error(exception.Code, exception.Message);
         }
+        catch (OutboundInterfaceUnavailableException exception)
+        {
+            return TrayIpcResult.Error(OutboundInterfaceUnavailableException.ErrorCode, exception.Message);
+        }
         catch (InvalidOperationException exception) when (
             request.Method.StartsWith("subscriptions.", StringComparison.Ordinal))
         {

@@ -1,3 +1,6 @@
+using System.Windows.Input;
+using Stelliberty.Application.Settings;
+
 namespace Stelliberty.Presentation.ViewModels;
 
 public sealed partial class SettingsCoreConfigViewModel
@@ -16,6 +19,63 @@ public sealed partial class SettingsCoreConfigViewModel
     public string NetworkLanAllowedIpsText => _localization.GetString("Settings.Network.LanAllowedIps");
     public string NetworkLanDisallowedIpsText => _localization.GetString("Settings.Network.LanDisallowedIps");
     public string NetworkSkipAuthPrefixesText => _localization.GetString("Settings.Network.SkipAuthPrefixes");
+    public string OutboundInterfaceText => _localization.GetString("Settings.Network.OutboundInterface");
+    public string OutboundInterfaceListText => _localization.GetString($"Settings.Network.OutboundInterface.{_settings.OutboundInterfaceMode}");
+
+    private readonly Func<IReadOnlyList<string>> _outboundInterfaceNames;
+
+    public ICommand ToggleOutboundInterfaceCommand { get; }
+
+    public IReadOnlyList<SelectionOption<OutboundInterfaceMode>> OutboundInterfaceModes => Enum.GetValues<OutboundInterfaceMode>()
+        .Select(mode => new SelectionOption<OutboundInterfaceMode>(mode, _localization.GetString($"Settings.Network.OutboundInterface.{mode}")))
+        .ToArray();
+
+    public SelectionOption<OutboundInterfaceMode> SelectedOutboundInterfaceMode
+    {
+        get => OutboundInterfaceModes.FirstOrDefault(mode => mode.Value == _settings.OutboundInterfaceMode) ?? OutboundInterfaceModes[0];
+        set
+        {
+            if (value is not null && SetLocalWithArea(_settings.OutboundInterfaceMode, value.Value,
+                mode => _settings.OutboundInterfaceMode = mode, "Network"))
+            {
+                OnPropertyChanged(nameof(HasOutboundInterfaceList));
+                OnPropertyChanged(nameof(OutboundInterfaceListText));
+                OnPropertyChanged(nameof(OutboundInterfaceChoices));
+            }
+        }
+    }
+
+    public bool HasOutboundInterfaceList => _settings.OutboundInterfaceMode is OutboundInterfaceMode.Blacklist or OutboundInterfaceMode.Whitelist;
+
+    private List<string> SelectedOutboundInterfaces => _settings.OutboundInterfaceMode == OutboundInterfaceMode.Whitelist
+        ? _settings.OutboundInterfaceWhitelist
+        : _settings.OutboundInterfaceBlacklist;
+
+    public IReadOnlyList<OutboundInterfaceChoice> OutboundInterfaceChoices => !HasOutboundInterfaceList ? [] : _outboundInterfaceNames()
+        .Union(SelectedOutboundInterfaces, StringComparer.Ordinal)
+        .Order(StringComparer.Ordinal)
+        .Select(name => new OutboundInterfaceChoice(name, SelectedOutboundInterfaces.Contains(name, StringComparer.Ordinal)))
+        .ToArray();
+
+    public void RefreshOutboundInterfaceChoices() => OnPropertyChanged(nameof(OutboundInterfaceChoices));
+
+    private void ToggleOutboundInterface(string? name)
+    {
+        if (name is null || !HasOutboundInterfaceList)
+        {
+            return;
+        }
+
+        var selection = SelectedOutboundInterfaces;
+        if (!selection.Remove(name))
+        {
+            selection.Add(name);
+        }
+
+        _settingsStore.Save(_settings);
+        RecordChangeArea("Network");
+        OnPropertyChanged(nameof(OutboundInterfaceChoices));
+    }
 
     public IReadOnlyList<string> NetworkItems =>
     [
@@ -25,6 +85,7 @@ public sealed partial class SettingsCoreConfigViewModel
         NetworkLanAllowedIpsText,
         NetworkLanDisallowedIpsText,
         NetworkSkipAuthPrefixesText,
+        OutboundInterfaceText,
         NetworkIpv6Text,
         NetworkTcpConcurrentText
     ];
@@ -106,3 +167,5 @@ public sealed partial class SettingsCoreConfigViewModel
             || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
     }
 }
+
+public sealed record OutboundInterfaceChoice(string Name, bool IsSelected);

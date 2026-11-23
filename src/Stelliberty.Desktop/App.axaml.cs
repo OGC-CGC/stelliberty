@@ -369,7 +369,8 @@ public sealed partial class App : Avalonia.Application
                 appLogExporter: new FileAppLogExporter(
                     DesktopApplicationLayout.RunningLogFilePath,
                     DesktopApplicationLayout.TrayRunningLogFilePath),
-                networkDiagnostics: new NetworkDiagnosticsService());
+                networkDiagnostics: new NetworkDiagnosticsService(),
+                outboundInterfaceNames: SystemOutboundInterfaces.ListNames);
 #if DEBUG
             LogStartupTrace("Main view model created", startupStartedAt);
 #endif

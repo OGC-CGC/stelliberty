@@ -5,4 +5,7 @@ public sealed record CoreSnapshot(
     int? Pid,
     string ExternalController,
     string? LastError,
-    DateTimeOffset? RunningSince = null);
+    DateTimeOffset? RunningSince = null)
+{
+    public bool IsOutboundInterfaceUnavailable { get; init; }
+}

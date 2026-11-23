@@ -153,6 +153,13 @@ public sealed class AppSettings
 
     public bool IsTcpConcurrentEnabled { get; set; }
 
+    [JsonConverter(typeof(JsonStringEnumConverter<OutboundInterfaceMode>))]
+    public OutboundInterfaceMode OutboundInterfaceMode { get; set; }
+
+    public List<string> OutboundInterfaceBlacklist { get; set; } = [];
+
+    public List<string> OutboundInterfaceWhitelist { get; set; } = [];
+
     public int MixedPort { get; set; } = DefaultMixedPort;
 
     public int? SocksPort { get; set; }

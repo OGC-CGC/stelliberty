@@ -86,10 +86,19 @@ public sealed class TrayIpcClient : IDisposable, IAsyncDisposable
     public Task<TrayCoreStatus> GetCoreStatusAsync(CancellationToken cancellationToken) =>
         RequestAsync<TrayCoreStatus>(TrayProtocol.CoreSnapshotMethod, new { }, cancellationToken);
 
-    public Task<CoreApplyConfigResult> ApplyCoreConfigAsync(
+    public async Task<CoreApplyConfigResult> ApplyCoreConfigAsync(
         CoreApplyConfigRequest request,
-        CancellationToken cancellationToken) =>
-        RequestAsync<CoreApplyConfigResult>(TrayProtocol.CoreApplyConfigMethod, request, cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await RequestAsync<CoreApplyConfigResult>(TrayProtocol.CoreApplyConfigMethod, request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (IpcRemoteException exception) when (exception.Code == OutboundInterfaceUnavailableException.ErrorCode)
+        {
+            throw new OutboundInterfaceUnavailableException();
+        }
+    }
 
     public Task<TrayCoreStatus> RestartCoreAsync(CancellationToken cancellationToken) =>
         RequestAsync<TrayCoreStatus>(TrayProtocol.CoreRestartMethod, new { }, cancellationToken);

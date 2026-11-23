@@ -82,7 +82,7 @@ internal sealed class TrayRuntime
             runtimeMonitor.Start(lifetime.StoppingToken);
             server.Start(lifetime.StoppingToken);
             var startup = StartCoreAsync(coreRuntime, systemProxy, lifetime.StoppingToken);
-            backgroundTasks.Start(startup);
+            backgroundTasks.Start(startup, token => systemProxy.RestoreRememberedAsync(CurrentSystemProxyPlatform(), token));
             AppLogger.Info($"Tray startup: pid={Environment.ProcessId} channel={AppRuntimeNames.ChannelName}");
             if (Program.ActivateUiOnStart)
             {

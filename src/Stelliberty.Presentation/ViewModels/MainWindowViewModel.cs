@@ -96,7 +96,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         IClipboardWriter? clipboardWriter = null,
         IAppLogReader? appLogReader = null,
         IAppLogExporter? appLogExporter = null,
-        INetworkDiagnosticsService? networkDiagnostics = null)
+        INetworkDiagnosticsService? networkDiagnostics = null,
+        Func<IReadOnlyList<string>>? outboundInterfaceNames = null)
     {
         _settingsStore = settingsStore;
         _localization = localization;
@@ -136,7 +137,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                     HomePage.ApplyTunState(isEnabled && HomePage.CanToggleTun);
                 }
             },
-            MarkSystemProxyEndpointChanged);
+            MarkSystemProxyEndpointChanged,
+            outboundInterfaceNames);
         CoreConfig.ToastRequested += OnToastRequested;
         _localization.LanguageChanged += OnLocalizationLanguageChanged;
 
@@ -492,6 +494,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         PostToUi(() =>
         {
+            if (snapshot.IsOutboundInterfaceUnavailable && !_wasOutboundInterfaceUnavailable)
+            {
+                ShowToast(Localize("Settings.Network.OutboundInterface.Unavailable"), ToastType.Warning);
+            }
+            _wasOutboundInterfaceUnavailable = snapshot.IsOutboundInterfaceUnavailable;
+
             var isRunning = snapshot.State == CoreState.Running;
             if (isRunning)
             {
@@ -565,6 +573,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             RulePage.ApplyCoreRunning(isRunning);
         });
     }
+
+    private bool _wasOutboundInterfaceUnavailable;
 
     private void PostToUi(Action action)
     {
@@ -879,8 +889,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         LastRuntimeApplyError = null;
         if (string.IsNullOrWhiteSpace(subscriptionId))
         {
-            await ApplyEmptyRuntimeToCoreAsync(refreshVersion, endpointChangeVersion);
-            AppLogger.Info($"{successMessage}: empty");
+            try
+            {
+                await ApplyEmptyRuntimeToCoreAsync(refreshVersion, endpointChangeVersion);
+                AppLogger.Info($"{successMessage}: empty");
+            }
+            catch (OutboundInterfaceUnavailableException exception)
+            {
+                RecordOutboundInterfaceApplyFailure(exception, refreshVersion);
+            }
             return;
         }
 
@@ -940,6 +957,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             AppLogger.Info($"{successMessage}: {subscriptionId}");
         }
+        catch (OutboundInterfaceUnavailableException exception)
+        {
+            RecordOutboundInterfaceApplyFailure(exception, refreshVersion);
+        }
         catch (Exception exception)
         {
             LastRuntimeApplyMode = "error";
@@ -964,6 +985,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                 ShowErrorToast(Localize("RuntimeConfig.Toast.LoadFailedRevertFailed"));
             }
         }
+    }
+
+    private void RecordOutboundInterfaceApplyFailure(OutboundInterfaceUnavailableException exception, int refreshVersion)
+    {
+        if (refreshVersion != Volatile.Read(ref _runtimeRefreshVersion))
+        {
+            return;
+        }
+
+        _pendingRuntimeSubscriptionId = null;
+        LastRuntimeApplyMode = "error";
+        LastRuntimeApplyError = exception.Message;
     }
 
     private SelectedSubscriptionRuntimeResult GenerateSelectedSubscriptionRuntimeWithOverrideFallback(

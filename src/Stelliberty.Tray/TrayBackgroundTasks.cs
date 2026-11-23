@@ -51,12 +51,12 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
         }
     }
 
-    public void Start(Task coreStartup)
+    public void Start(Task coreStartup, Func<CancellationToken, Task> restoreSystemProxy)
     {
-        _runTask = RunAsync(coreStartup, _stopping.Token);
+        _runTask = RunAsync(coreStartup, restoreSystemProxy, _stopping.Token);
     }
 
-    private async Task RunAsync(Task coreStartup, CancellationToken cancellationToken)
+    private async Task RunAsync(Task coreStartup, Func<CancellationToken, Task> restoreSystemProxy, CancellationToken cancellationToken)
     {
         await coreStartup.ConfigureAwait(false);
         var downloader = new HttpRemoteSubscriptionDownloader(() =>
@@ -79,6 +79,13 @@ internal sealed class TrayBackgroundTasks : IAsyncDisposable
 
         var startupUpdatesPending = true;
         await Task.WhenAll(
+            RunLoopAsync("outbound interface", TimeSpan.FromSeconds(5), async (_, token) =>
+            {
+                if (await _coreRuntime.RefreshOutboundInterfaceAsync(token).ConfigureAwait(false))
+                {
+                    await restoreSystemProxy(token).ConfigureAwait(false);
+                }
+            }, cancellationToken),
             // 低频采集提供者额度，界面关闭后仍保留最新记录。
             RunLoopAsync("provider snapshots", TimeSpan.FromSeconds(30), async (_, token) =>
             {
