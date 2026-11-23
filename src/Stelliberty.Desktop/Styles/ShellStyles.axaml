@@ -310,7 +310,7 @@
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector="Image.sidebar-app-icon">
+  <Style Selector="Viewbox.sidebar-app-icon">
     <Setter Property="Opacity" Value="0" />
     <Setter Property="RenderTransform" Value="translateX(-44px)" />
     <Setter Property="Transitions">
@@ -320,7 +320,7 @@
       </Transitions>
     </Setter>
   </Style>
-  <Style Selector="Window.sidebar-collapsed Image.sidebar-app-icon">
+  <Style Selector="Window.sidebar-collapsed Viewbox.sidebar-app-icon">
     <Setter Property="Opacity" Value="1" />
     <Setter Property="RenderTransform" Value="translateX(0px)" />
   </Style>

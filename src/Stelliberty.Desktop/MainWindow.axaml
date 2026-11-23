@@ -282,12 +282,61 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            IsHitTestVisible="False" />
               </Grid>
-              <Image Classes="sidebar-app-icon"
-                     Source="avares://stelliberty_ui/Assets/sidebar/app_icon.png"
-                     Width="36" Height="36"
-                     HorizontalAlignment="Left" Margin="7,0,0,0"
-                     Stretch="Uniform"
-                     IsHitTestVisible="False" />
+              <Viewbox Classes="sidebar-app-icon"
+                       Width="36" Height="36"
+                       HorizontalAlignment="Left" Margin="7,0,0,0"
+                       Stretch="Uniform" IsHitTestVisible="False">
+                <Canvas Width="1024" Height="1024">
+                  <Canvas.Clip>
+                    <RectangleGeometry Rect="0,0,1024,1024" RadiusX="272" RadiusY="272" />
+                  </Canvas.Clip>
+                  <Canvas.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                      <GradientStop Offset="0" Color="{DynamicResource AppBrandTitleMiddleColor}" />
+                      <GradientStop Offset="1" Color="{DynamicResource AppBrandTitleEndColor}" />
+                    </LinearGradientBrush>
+                  </Canvas.Background>
+                  <Path Fill="{DynamicResource AppAccentBrush}" Opacity="0.72"
+                        Data="M 0 875.692 C 82.457 767.942 126.578 734.02 198.629 696.942
+                              C 388.925 599.017 507.799 697.153 748.629 589.692
+                              C 807.02 563.638 1002.09 452.417 1024 344.942
+                              L 1024 1024 L 0 1024 Z" />
+                  <Path Opacity="0.62"
+                        Data="M 262.796 1024 C 262.796 1024 278.501 937.301 335.213 880.933
+                              C 484.629 732.422 691.688 757.606 799.046 704.933
+                              C 898.279 656.247 1004.43 571.543 1024 510.5 L 1024 1024 Z">
+                    <Path.Fill>
+                      <SolidColorBrush Color="{DynamicResource AppBrandTitleMiddleColor}" />
+                    </Path.Fill>
+                  </Path>
+                  <Path Fill="{DynamicResource AppBrandTitleOutlineBrush}"
+                        Data="M 812 606.54 C 812 821.82 212 821.82 212 606.54
+                              C 212 445.08 314.31 318.6 364.31 267.47
+                              C 401.97 228.96 462.77 299.76 512 299.76
+                              C 561.23 299.76 622.03 228.96 659.69 267.47
+                              C 709.69 318.6 812 445.08 812 606.54 Z" />
+                  <Path Data="M 389 420 C 393.87 420 404.54 447.13 415.2 457.79
+                              C 425.87 468.46 453 478.83 453 484
+                              C 453 489.17 425.87 499.54 415.2 510.21
+                              C 404.54 520.87 394.17 548 389 548
+                              C 383.82 548 373.46 520.87 362.79 510.21
+                              C 352.12 499.54 325 489.17 325 484
+                              C 325 478.83 352.12 468.46 362.79 457.79
+                              C 373.46 447.13 383.82 420 389 420 Z
+                              M 635 420 C 639.87 420 650.54 447.13 661.21 457.79
+                              C 671.87 468.46 699 478.83 699 484
+                              C 699 489.17 671.87 499.54 661.21 510.21
+                              C 650.54 520.87 640.17 548 635 548
+                              C 629.83 548 619.46 520.87 608.79 510.21
+                              C 598.13 499.54 571 489.17 571 484
+                              C 571 478.83 598.13 468.46 608.79 457.79
+                              C 619.46 447.13 629.83 420 635 420 Z">
+                    <Path.Fill>
+                      <SolidColorBrush Color="{DynamicResource AppBrandTitleMiddleColor}" />
+                    </Path.Fill>
+                  </Path>
+                </Canvas>
+              </Viewbox>
             </Grid>
           </Button>
 
