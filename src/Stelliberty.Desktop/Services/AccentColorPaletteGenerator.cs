@@ -40,17 +40,24 @@ internal static class AccentColorPaletteGenerator
     public static (Color Start, Color Middle, Color End, Color Outline) GenerateBrandTitle(Color source)
     {
         var accent = ToOklch(source);
-        var chroma = accent.Chroma;
+        return (RecolorAtReferenceLightness("#F8FFFF", accent), RecolorAtReferenceLightness("#7DD3FC", accent),
+            RecolorAtReferenceLightness("#2563EB", accent), RecolorAtReferenceLightness("#0F4C81", accent));
+    }
+
+    public static (Color Top, Color Upper, Color Lower, Color Bottom, Color BackWave, Color FrontWave)
+        GenerateSidebarIconBackground(Color source)
+    {
+        var accent = ToOklch(source);
+        return (RecolorAtReferenceLightness("#4A94E8", accent), RecolorAtReferenceLightness("#246BCE", accent),
+            RecolorAtReferenceLightness("#1A58B8", accent), RecolorAtReferenceLightness("#163F92", accent),
+            RecolorAtReferenceLightness("#398DF9", accent), RecolorAtReferenceLightness("#00A0FF", accent));
+    }
+
+    private static Color RecolorAtReferenceLightness(string reference, Oklch accent)
+    {
+        var tone = ToOklch(Color.Parse(reference));
         var hue = double.IsNaN(accent.Hue) ? 0 : accent.Hue;
-
-        Color Recolor(string reference)
-        {
-            var tone = ToOklch(Color.Parse(reference));
-            // 保留原标题各位置的感知明度，以强调色的色相和浓度重新着色。
-            return FromOklch(tone.Lightness, tone.Chroma * chroma / 0.18, hue);
-        }
-
-        return (Recolor("#F8FFFF"), Recolor("#7DD3FC"), Recolor("#2563EB"), Recolor("#0F4C81"));
+        return FromOklch(tone.Lightness, tone.Chroma * accent.Chroma / 0.18, hue);
     }
 
     private static Color EnsureSurfaceContrast(Color color, double chroma, double hue, Color surface, bool isLightTheme)

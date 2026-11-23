@@ -119,6 +119,14 @@ internal sealed class SystemAccentColorService : IDisposable
         _window.Resources["AppBrandTitleMiddleColor"] = brandTitle.Middle;
         _window.Resources["AppBrandTitleEndColor"] = brandTitle.End;
         _window.Resources["AppBrandTitleOutlineBrush"] = new SolidColorBrush(brandTitle.Outline, 0.8);
+
+        var iconBackground = AccentColorPaletteGenerator.GenerateSidebarIconBackground(accent);
+        _window.Resources["AppSidebarIconTopColor"] = iconBackground.Top;
+        _window.Resources["AppSidebarIconUpperColor"] = iconBackground.Upper;
+        _window.Resources["AppSidebarIconLowerColor"] = iconBackground.Lower;
+        _window.Resources["AppSidebarIconBottomColor"] = iconBackground.Bottom;
+        _window.Resources["AppSidebarIconBackWaveBrush"] = new SolidColorBrush(iconBackground.BackWave);
+        _window.Resources["AppSidebarIconFrontWaveBrush"] = new SolidColorBrush(iconBackground.FrontWave);
         AppLogger.Info(
             $"Accent color applied: {_theme.AccentMode} source=#{accent.R:X2}{accent.G:X2}{accent.B:X2} accent=#{palette.Accent.R:X2}{palette.Accent.G:X2}{palette.Accent.B:X2}");
     }

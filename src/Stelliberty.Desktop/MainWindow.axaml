@@ -291,24 +291,22 @@
                     <RectangleGeometry Rect="0,0,1024,1024" RadiusX="272" RadiusY="272" />
                   </Canvas.Clip>
                   <Canvas.Background>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                      <GradientStop Offset="0" Color="{DynamicResource AppBrandTitleMiddleColor}" />
-                      <GradientStop Offset="1" Color="{DynamicResource AppBrandTitleEndColor}" />
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                      <GradientStop Offset="0" Color="{DynamicResource AppSidebarIconTopColor}" />
+                      <GradientStop Offset="0.38" Color="{DynamicResource AppSidebarIconUpperColor}" />
+                      <GradientStop Offset="0.72" Color="{DynamicResource AppSidebarIconLowerColor}" />
+                      <GradientStop Offset="1" Color="{DynamicResource AppSidebarIconBottomColor}" />
                     </LinearGradientBrush>
                   </Canvas.Background>
-                  <Path Fill="{DynamicResource AppAccentBrush}" Opacity="0.72"
+                  <Path Fill="{DynamicResource AppSidebarIconBackWaveBrush}"
                         Data="M 0 875.692 C 82.457 767.942 126.578 734.02 198.629 696.942
                               C 388.925 599.017 507.799 697.153 748.629 589.692
                               C 807.02 563.638 1002.09 452.417 1024 344.942
                               L 1024 1024 L 0 1024 Z" />
-                  <Path Opacity="0.62"
+                  <Path Fill="{DynamicResource AppSidebarIconFrontWaveBrush}"
                         Data="M 262.796 1024 C 262.796 1024 278.501 937.301 335.213 880.933
                               C 484.629 732.422 691.688 757.606 799.046 704.933
-                              C 898.279 656.247 1004.43 571.543 1024 510.5 L 1024 1024 Z">
-                    <Path.Fill>
-                      <SolidColorBrush Color="{DynamicResource AppBrandTitleMiddleColor}" />
-                    </Path.Fill>
-                  </Path>
+                              C 898.279 656.247 1004.43 571.543 1024 510.5 L 1024 1024 Z" />
                   <Path Fill="{DynamicResource AppBrandTitleOutlineBrush}"
                         Data="M 812 606.54 C 812 821.82 212 821.82 212 606.54
                               C 212 445.08 314.31 318.6 364.31 267.47

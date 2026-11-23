@@ -227,6 +227,12 @@
   <Color x:Key="AppBrandTitleMiddleColor">#7DD3FC</Color>
   <Color x:Key="AppBrandTitleEndColor">#2563EB</Color>
   <SolidColorBrush x:Key="AppBrandTitleOutlineBrush" Color="#CC0F4C81" />
+  <Color x:Key="AppSidebarIconTopColor">#4A94E8</Color>
+  <Color x:Key="AppSidebarIconUpperColor">#246BCE</Color>
+  <Color x:Key="AppSidebarIconLowerColor">#1A58B8</Color>
+  <Color x:Key="AppSidebarIconBottomColor">#163F92</Color>
+  <SolidColorBrush x:Key="AppSidebarIconBackWaveBrush" Color="#398DF9" />
+  <SolidColorBrush x:Key="AppSidebarIconFrontWaveBrush" Color="#00A0FF" />
   <SolidColorBrush x:Key="AppOnDangerBrush" Color="#FFFFFFFF" />
   <SolidColorBrush x:Key="TitleBarCloseButtonHoverBrush" Color="#DC2626" />
   <SolidColorBrush x:Key="AppSwitchThumbOnBrush" Color="#FFFFFFFF" />
