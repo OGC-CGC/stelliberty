@@ -784,6 +784,7 @@ public sealed partial class MainWindow : Window
             || args.KeyModifiers != KeyModifiers.None
             || DialogHost.IsOpen
             || ConnectivityDialogHost.IsOpen
+            || CoreUpdateDialogHost.IsOpen
             || UpdateDialogHost.IsOpen
             || RestartRequiredDialogHost.IsOpen
             || DataContext is not MainWindowViewModel viewModel

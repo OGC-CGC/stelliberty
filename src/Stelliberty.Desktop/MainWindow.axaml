@@ -495,6 +495,30 @@
       </controls:OverlayDialogHost.DialogContent>
     </controls:OverlayDialogHost>
 
+    <controls:OverlayDialogHost x:Name="CoreUpdateDialogHost" Grid.RowSpan="2"
+                                DataContext="{Binding HomePage}" x:DataType="vm:HomePageViewModel"
+                                IsOpen="{Binding IsCoreUpdating}">
+      <controls:OverlayDialogHost.DialogContent>
+        <controls:DialogPanel PanelWidth="360" IsOpen="{Binding IsCoreUpdating}"
+                              AutomationProperties.AutomationId="Home.CoreUpdateDialog">
+          <controls:DialogPanel.DialogContent>
+            <StackPanel Spacing="12">
+              <TextBlock Classes="dialog-title" Text="{loc:Loc Home.Core.Update}" />
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Classes="dialog-subtitle" Text="{Binding CoreUpdateStageText}" />
+                <TextBlock Grid.Column="1" Classes="dialog-subtitle"
+                           IsVisible="{Binding !IsCoreUpdateIndeterminate}"
+                           Text="{Binding CoreUpdatePercent, StringFormat='{}{0}%'}" />
+              </Grid>
+              <ProgressBar Maximum="100" Value="{Binding CoreUpdatePercent, Mode=OneWay}"
+                           Foreground="{DynamicResource AppAccentBrush}"
+                           IsIndeterminate="{Binding IsCoreUpdateIndeterminate}" />
+            </StackPanel>
+          </controls:DialogPanel.DialogContent>
+        </controls:DialogPanel>
+      </controls:OverlayDialogHost.DialogContent>
+    </controls:OverlayDialogHost>
+
     <controls:OverlayDialogHost x:Name="UpdateDialogHost"
                                 Grid.RowSpan="2"
                                 AutomationProperties.AutomationId="Settings.UpdateDialogOverlay"

@@ -73,6 +73,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     private bool _isCoreRestarting;
     private bool _isCoreUpdating;
+    private CoreUpdateProgress _coreUpdateProgress;
     private bool _isServiceModeBusy;
     private bool _isRefreshingServiceMode;
     private long _runtimeRefreshVersion;
@@ -428,6 +429,18 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     public bool IsCoreRestarting => _isCoreRestarting;
 
     public bool IsCoreUpdating => _isCoreUpdating;
+
+    public string CoreUpdateStageText => Localize(_coreUpdateProgress.Stage switch
+    {
+        CoreUpdateStage.Downloading => "Home.Core.UpdateStage.Downloading",
+        CoreUpdateStage.Installing => "Home.Core.UpdateStage.Installing",
+        CoreUpdateStage.Restarting => "Home.Core.UpdateStage.Restarting",
+        _ => "Home.Core.UpdateStage.Checking",
+    });
+
+    public bool IsCoreUpdateIndeterminate => _coreUpdateProgress.DownloadPercent is null;
+
+    public int CoreUpdatePercent => _coreUpdateProgress.DownloadPercent ?? 0;
 
     public bool IsServiceModeBusy => _isServiceModeBusy;
 
@@ -948,11 +961,12 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
         }
 
         _isCoreUpdating = true;
+        SetCoreUpdateProgress(new CoreUpdateProgress(CoreUpdateStage.Checking));
         RaiseHomeStateChanged();
-        RaiseToast(Localize("Home.Toast.CoreUpdateChecking"), ToastType.Info);
         try
         {
-            var result = await _coreUpdater.UpdateAsync(_refreshCancellation?.Token ?? CancellationToken.None);
+            var progress = new Progress<CoreUpdateProgress>(SetCoreUpdateProgress);
+            var result = await _coreUpdater.UpdateAsync(_refreshCancellation?.Token ?? CancellationToken.None, progress);
             switch (result.Status)
             {
                 case CoreUpdateStatus.Updated:
@@ -978,6 +992,19 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
             _isCoreUpdating = false;
             Post(RaiseHomeStateChanged);
         }
+    }
+
+    private void SetCoreUpdateProgress(CoreUpdateProgress progress)
+    {
+        if (!_isCoreUpdating || _coreUpdateProgress == progress)
+        {
+            return;
+        }
+
+        _coreUpdateProgress = progress;
+        OnPropertyChanged(nameof(CoreUpdateStageText));
+        OnPropertyChanged(nameof(IsCoreUpdateIndeterminate));
+        OnPropertyChanged(nameof(CoreUpdatePercent));
     }
 
     private async Task ToggleServiceModeAsync()
@@ -1333,6 +1360,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     private void OnLanguageChanged(object? sender, EventArgs args)
     {
         RaiseHomeStateChanged();
+        OnPropertyChanged(nameof(CoreUpdateStageText));
         foreach (var item in ConnectivityChecks.Concat(PublicIpChecks))
         {
             item.RefreshPresentation();

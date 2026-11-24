@@ -14,10 +14,14 @@ public sealed class MihomoCoreUpdater(string coreExecutablePath, ICoreManager co
     private const string LatestReleaseUrl = "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest";
     private static readonly HttpClient Http = CreateClient();
 
-    public async Task<CoreUpdateResult> UpdateAsync(CancellationToken cancellationToken = default)
+    public Task<CoreUpdateResult> UpdateAsync(CancellationToken cancellationToken = default)
+        => UpdateAsync(cancellationToken, progress: null);
+
+    public async Task<CoreUpdateResult> UpdateAsync(CancellationToken cancellationToken, IProgress<CoreUpdateProgress>? progress)
     {
         try
         {
+            progress?.Report(new CoreUpdateProgress(CoreUpdateStage.Checking));
             var (platform, arch, ext) = ResolvePlatform();
             var (tag, assetUrl) = await GetLatestReleaseAsync(platform, arch, ext, cancellationToken).ConfigureAwait(false);
             var latest = NormalizeVersion(tag);
@@ -27,7 +31,9 @@ public sealed class MihomoCoreUpdater(string coreExecutablePath, ICoreManager co
                 return new CoreUpdateResult(CoreUpdateStatus.UpToDate, current, $"Core is already up to date at v{current}");
             }
 
-            var archive = await Http.GetByteArrayAsync(assetUrl, cancellationToken).ConfigureAwait(false);
+            progress?.Report(new CoreUpdateProgress(CoreUpdateStage.Downloading));
+            var archive = await DownloadArchiveAsync(assetUrl, progress, cancellationToken).ConfigureAwait(false);
+            progress?.Report(new CoreUpdateProgress(CoreUpdateStage.Installing));
             var coreBytes = Extract(archive, ext == ".zip");
             if (coreBytes.Length == 0)
             {
@@ -38,6 +44,7 @@ public sealed class MihomoCoreUpdater(string coreExecutablePath, ICoreManager co
             ReplaceCore(coreBytes);
             try
             {
+                progress?.Report(new CoreUpdateProgress(CoreUpdateStage.Restarting));
                 await coreManager.RestartAsync(cancellationToken).ConfigureAwait(false);
 
                 if (!await WaitForCoreRunningAsync(cancellationToken).ConfigureAwait(false))
@@ -66,6 +73,43 @@ public sealed class MihomoCoreUpdater(string coreExecutablePath, ICoreManager co
             AppLogger.Warning(message);
             return new CoreUpdateResult(CoreUpdateStatus.Failed, null, message);
         }
+    }
+
+    private static async Task<byte[]> DownloadArchiveAsync(
+        string assetUrl, IProgress<CoreUpdateProgress>? progress, CancellationToken cancellationToken)
+    {
+        // ResponseHeadersRead 返回后，下载正文继续使用 HTTP 请求的超时限制。
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(Http.Timeout);
+        var token = timeout.Token;
+        using var response = await Http.GetAsync(assetUrl, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await using var source = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+        using var archive = new MemoryStream();
+        var contentLength = response.Content.Headers.ContentLength;
+        var reportedPercent = 0;
+        if (contentLength is > 0)
+        {
+            progress?.Report(new CoreUpdateProgress(CoreUpdateStage.Downloading, reportedPercent));
+        }
+
+        var buffer = new byte[81920];
+        int bytesRead;
+        while ((bytesRead = await source.ReadAsync(buffer.AsMemory(), token).ConfigureAwait(false)) > 0)
+        {
+            archive.Write(buffer, 0, bytesRead);
+            if (contentLength is > 0)
+            {
+                var percent = (int)(archive.Length * 100 / contentLength.Value);
+                if (percent != reportedPercent)
+                {
+                    reportedPercent = percent;
+                    progress?.Report(new CoreUpdateProgress(CoreUpdateStage.Downloading, percent));
+                }
+            }
+        }
+
+        return archive.ToArray();
     }
 
     private async Task<(string Tag, string AssetUrl)> GetLatestReleaseAsync(string platform, string arch, string ext, CancellationToken cancellationToken)
