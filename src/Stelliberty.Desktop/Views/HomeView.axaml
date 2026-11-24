@@ -178,7 +178,7 @@
               <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{loc:Loc Home.Outbound.Title}" Classes="card-title" />
             </Grid>
             <Border Grid.Row="1" Margin="0,14,0,0" Classes="segment-track">
-              <Grid ColumnDefinitions="*,*,*">
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="4">
                 <Button Grid.Column="0" Classes="segment" Classes.selected="{Binding IsRuleOutboundSelected}" Classes.pending="{Binding IsRuleOutboundPending}"
                         AutomationProperties.AutomationId="Home.Outbound.RuleButton"
                         IsEnabled="{Binding IsCoreInteractive}"
@@ -212,7 +212,7 @@
               <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{loc:Loc Home.Takeover.Title}" Classes="card-title" />
             </Grid>
             <Border Classes="segment-track">
-              <Grid ColumnDefinitions="*,*">
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
                 <Button Grid.Column="0" Classes="segment" Classes.selected="{Binding IsTakeoverProxyTabSelected}"
                         AutomationProperties.AutomationId="Home.Takeover.SystemProxyTab"
                         Command="{Binding SelectTakeoverProxyTabCommand}" Content="{loc:Loc Home.SystemProxy.Title}" />
