@@ -13,6 +13,7 @@ internal sealed class SystemAccentColorService : IDisposable
     private Window? _window;
     private SettingsThemeViewModel? _theme;
     private IPlatformSettings? _platformSettings;
+    private Color? _backgroundAccent;
 
     public void Attach(Window window, SettingsThemeViewModel theme)
     {
@@ -52,6 +53,20 @@ internal sealed class SystemAccentColorService : IDisposable
         Apply();
     }
 
+    public void SetBackgroundAccent(Color? color)
+    {
+        if (_backgroundAccent == color)
+        {
+            return;
+        }
+
+        _backgroundAccent = color;
+        if (_theme?.AccentMode == AccentColorMode.BackgroundImage)
+        {
+            Apply();
+        }
+    }
+
     public void Dispose()
     {
         if (_platformSettings is not null)
@@ -73,6 +88,7 @@ internal sealed class SystemAccentColorService : IDisposable
         _window = null;
         _theme = null;
         _platformSettings = null;
+        _backgroundAccent = null;
     }
 
     private void OnThemeAccentChanged(object? sender, EventArgs args)
@@ -92,7 +108,8 @@ internal sealed class SystemAccentColorService : IDisposable
 
     private void OnColorValuesChanged(object? sender, PlatformColorValues args)
     {
-        if (_theme?.AccentMode == AccentColorMode.System)
+        if (_theme?.AccentMode == AccentColorMode.System
+            || (_theme?.AccentMode == AccentColorMode.BackgroundImage && _backgroundAccent is null))
         {
             Apply();
         }
@@ -105,9 +122,12 @@ internal sealed class SystemAccentColorService : IDisposable
             return;
         }
 
-        var accent = _theme.AccentMode == AccentColorMode.Custom
-            ? Color.Parse(_theme.CustomAccentColor)
-            : _platformSettings?.GetColorValues().AccentColor1 ?? Color.Parse(_theme.CustomAccentColor);
+        var accent = _theme.AccentMode switch
+        {
+            AccentColorMode.Custom => Color.Parse(_theme.CustomAccentColor),
+            AccentColorMode.BackgroundImage when _backgroundAccent is { } color => color,
+            _ => _platformSettings?.GetColorValues().AccentColor1 ?? Color.Parse(_theme.CustomAccentColor),
+        };
 
         var palette = AccentColorPaletteGenerator.Generate(accent, _window.ActualThemeVariant == ThemeVariant.Light);
         foreach (var (key, brush) in CreateAccentResourceBrushes(palette))

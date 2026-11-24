@@ -10,7 +10,7 @@ using Stelliberty.Presentation.ViewModels;
 
 namespace Stelliberty.Desktop.Services;
 
-internal sealed class WindowAppearanceService : IDisposable
+internal sealed class WindowAppearanceService(Action<Color?> setBackgroundAccent) : IDisposable
 {
     private readonly MacOSGlassEffectService? _macOSGlassEffectService = OperatingSystem.IsMacOS()
         ? new MacOSGlassEffectService()
@@ -113,7 +113,6 @@ internal sealed class WindowAppearanceService : IDisposable
         }
 
         ReleaseBackgroundImage();
-        _theme.SetBackgroundImageLoadFailed(false);
         if (_theme.HasBackgroundImage)
         {
             _ = LoadBackgroundImageAsync(_theme.BackgroundImagePath, _backgroundLoadVersion);
@@ -123,19 +122,30 @@ internal sealed class WindowAppearanceService : IDisposable
     private async Task LoadBackgroundImageAsync(string path, int version)
     {
         // 解码在后台进行；快速替换图片或关闭窗口后，丢弃旧加载结果。
-        var bitmap = await Task.Run(() =>
+        var (bitmap, accent) = await Task.Run<(Bitmap?, Color?)>(() =>
         {
+            Bitmap bitmap;
             try
             {
                 using var stream = path == AppSettings.DefaultBackgroundImagePath
                     ? AssetLoader.Open(new Uri("avares://stelliberty_ui/Assets/backgrounds/default.png"))
                     : File.OpenRead(path);
-                return new Bitmap(stream);
+                bitmap = new Bitmap(stream);
             }
             catch (Exception exception)
             {
                 AppLogger.Error(exception, "Background image load failed");
-                return null;
+                return (null, null);
+            }
+
+            try
+            {
+                return (bitmap, BackgroundImageAccentExtractor.Extract(bitmap));
+            }
+            catch (Exception exception)
+            {
+                AppLogger.Warning($"Background image accent extraction failed: {exception.Message}");
+                return (bitmap, null);
             }
         });
 
@@ -148,8 +158,12 @@ internal sealed class WindowAppearanceService : IDisposable
             }
 
             _backgroundBitmap = bitmap;
-            _theme.SetBackgroundImageLoadFailed(bitmap is null);
             ApplyBackgroundImage();
+            setBackgroundAccent(accent);
+            if (bitmap is null && _window?.DataContext is MainWindowViewModel viewModel)
+            {
+                viewModel.ShowErrorToast(_theme.BackgroundImageErrorText);
+            }
         });
     }
 
@@ -195,6 +209,7 @@ internal sealed class WindowAppearanceService : IDisposable
         }
         _backgroundBitmap?.Dispose();
         _backgroundBitmap = null;
+        setBackgroundAccent(null);
     }
 
     private void OnThemeChanged(object? sender, AppTheme theme)
@@ -352,7 +367,7 @@ internal sealed class WindowAppearanceService : IDisposable
                 new SolidColorBrush(Color.Parse(isLightTheme ? "#EFEFEF" : "#212121")),
             WindowEffect.FrutigerAero when OperatingSystem.IsMacOS() => Brushes.Transparent,
             WindowEffect.Blur when OperatingSystem.IsMacOS() => new SolidColorBrush(Color.Parse(
-                isLightTheme ? "#A0FFFFFF" : "#A0000000")),
+                isLightTheme ? "#A0FFFFFF" : "#A0191919")),
             // Zen 工具栏使用冷灰/近黑底色和 60% 不透明度。
             WindowEffect.Acrylic => new SolidColorBrush(Color.Parse(isLightTheme ? "#99F0F0F4" : "#9917171A")),
             WindowEffect.Blur => new SolidColorBrush(Color.Parse(isLightTheme ? "#B3FFFFFF" : "#B3212121")),

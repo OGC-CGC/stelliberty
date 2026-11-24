@@ -119,18 +119,17 @@
     <Border Classes="surface-group">
       <StackPanel>
         <Border Classes="settings-inline-row">
-          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-            <StackPanel Spacing="4" VerticalAlignment="Center">
-              <TextBlock Text="{Binding Theme.BackgroundImagePathText}" TextTrimming="CharacterEllipsis"
-                         ToolTip.Tip="{Binding Theme.BackgroundImagePathText}" />
-              <TextBlock Text="{Binding Theme.BackgroundImageErrorText}" TextWrapping="Wrap"
-                         Foreground="{DynamicResource AppDangerBrush}"
-                         IsVisible="{Binding Theme.BackgroundImageLoadFailed}" />
-            </StackPanel>
-            <Button Grid.Column="1" Classes="soft-action primary" Content="{Binding Theme.BackgroundImageChooseText}"
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+            <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
+                       Text="{Binding Theme.BackgroundImageSectionTitle}" />
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"
+                       IsVisible="{Binding Theme.HasBackgroundImage}"
+                       Text="{Binding Theme.BackgroundImageFileName}" TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{Binding Theme.BackgroundImagePathText}" />
+            <Button Grid.Column="2" Classes="soft-action primary" Content="{Binding Theme.BackgroundImageChooseText}"
                     AutomationProperties.AutomationId="Settings.BackgroundImage.Choose"
                     Click="OnChooseBackgroundImageClicked" />
-            <Button Grid.Column="2" Classes="soft-action" Content="{Binding Theme.BackgroundImageClearText}"
+            <Button Grid.Column="3" Classes="soft-action" Content="{Binding Theme.BackgroundImageClearText}"
                     AutomationProperties.AutomationId="Settings.BackgroundImage.Clear"
                     IsEnabled="{Binding Theme.HasBackgroundImage}"
                     Command="{Binding Theme.ClearBackgroundImageCommand}" />

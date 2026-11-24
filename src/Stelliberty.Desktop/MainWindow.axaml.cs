@@ -61,7 +61,7 @@ public sealed partial class MainWindow : Window
     // 旧项的图标提前回落到线条形态，跑在底板滑动前段。
     private static readonly TimeSpan NavIconUnmorphDelay = TimeSpan.FromMilliseconds(40);
     private static readonly TimeSpan NavScrollAnimationDuration = TimeSpan.FromMilliseconds(100);
-    private readonly WindowAppearanceService _windowAppearanceService = new();
+    private readonly WindowAppearanceService _windowAppearanceService;
     private readonly MacOSWindowControlsService _macOSWindowControls = new();
     private readonly WindowStateService _windowStateService;
     private readonly SystemAccentColorService _systemAccentColorService = new();
@@ -104,6 +104,7 @@ public sealed partial class MainWindow : Window
     {
         IsSidebarManuallyCollapsed = settings?.IsSidebarCollapsed ?? true;
         _windowStateService = new WindowStateService(settingsStore, settings);
+        _windowAppearanceService = new WindowAppearanceService(_systemAccentColorService.SetBackgroundAccent);
         _hiddenReleaseTimer = new DispatcherTimer { Interval = HiddenReleaseDelay };
         _hiddenReleaseTimer.Tick += OnHiddenReleaseTimerTick;
         _relativeTimeTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
@@ -736,8 +737,8 @@ public sealed partial class MainWindow : Window
         _attachedViewModel.Theme.WindowDecorationRestartRequested -= OnWindowDecorationRestartRequested;
         _attachedViewModel.PropertyChanged -= OnAttachedViewModelPropertyChanged;
         DetachNavIndicator();
-        _windowAppearanceService.Dispose();
         _systemAccentColorService.Dispose();
+        _windowAppearanceService.Dispose();
         _attachedViewModel = null;
     }
 

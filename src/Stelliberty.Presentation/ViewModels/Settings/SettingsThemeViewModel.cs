@@ -18,7 +18,6 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     private WindowEffect _windowEffect;
     private WindowDecorationStyle _windowDecorationStyle;
     private string _customAccentColor;
-    private bool _backgroundImageLoadFailed;
 
     public SettingsThemeViewModel(AppSettings settings, IAppSettingsStore settingsStore, ILocalizationService localization, IWindowEffectCapability? windowEffectCapability = null)
     {
@@ -63,11 +62,13 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     public string BackgroundImageTransparencyHint => _localization.GetString("Settings.Background.TransparencyHint");
     public string BackgroundImagePath => _settings.BackgroundImagePath;
     public bool HasBackgroundImage => !string.IsNullOrWhiteSpace(BackgroundImagePath);
-    public bool BackgroundImageLoadFailed => _backgroundImageLoadFailed;
     public string BackgroundImageErrorText => _localization.GetString("Settings.Background.LoadFailed");
     public string BackgroundImagePathText => BackgroundImagePath == AppSettings.DefaultBackgroundImagePath
         ? _localization.GetString("Settings.Background.BuiltIn")
-        : HasBackgroundImage ? BackgroundImagePath : _localization.GetString("Settings.Background.None");
+        : HasBackgroundImage ? BackgroundImagePath : string.Empty;
+    public string BackgroundImageFileName => BackgroundImagePath == AppSettings.DefaultBackgroundImagePath
+        ? BackgroundImagePathText
+        : Path.GetFileName(BackgroundImagePathText);
 
     public BackgroundImageStretchMode BackgroundStretch => ParseBackgroundOption(
         _settings.BackgroundImageStretch, BackgroundImageStretchMode.None);
@@ -152,13 +153,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     public void SetBackgroundImagePath(string path)
     {
         _settings.BackgroundImagePath = path;
-        SetBackgroundImageLoadFailed(false);
         SaveBackgroundSettings(nameof(BackgroundImagePath), reloadImage: true);
-    }
-
-    public void SetBackgroundImageLoadFailed(bool failed)
-    {
-        SetProperty(ref _backgroundImageLoadFailed, failed, nameof(BackgroundImageLoadFailed));
     }
 
     private void SaveBackgroundSettings(string propertyName, bool reloadImage = false)
@@ -168,6 +163,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         if (reloadImage)
         {
             OnPropertyChanged(nameof(BackgroundImagePathText));
+            OnPropertyChanged(nameof(BackgroundImageFileName));
             OnPropertyChanged(nameof(HasBackgroundImage));
         }
         BackgroundImageChanged?.Invoke(this, reloadImage);
@@ -186,6 +182,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(BackgroundImageErrorText));
         OnPropertyChanged(nameof(BackgroundImagePath));
         OnPropertyChanged(nameof(BackgroundImagePathText));
+        OnPropertyChanged(nameof(BackgroundImageFileName));
         OnPropertyChanged(nameof(HasBackgroundImage));
         OnPropertyChanged(nameof(BackgroundStretchOptions));
         OnPropertyChanged(nameof(BackgroundHorizontalOptions));
@@ -292,6 +289,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<SelectionOption<AccentColorMode>> AccentModeOptions =>
     [
         new(AccentColorMode.System, _localization.GetString("Settings.AccentMode.System")),
+        new(AccentColorMode.BackgroundImage, _localization.GetString("Settings.AccentMode.BackgroundImage")),
         new(AccentColorMode.Custom, _localization.GetString("Settings.AccentMode.Custom")),
     ];
 
