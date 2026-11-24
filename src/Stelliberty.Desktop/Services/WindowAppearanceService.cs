@@ -336,14 +336,15 @@ internal sealed class WindowAppearanceService : IDisposable
         var surfaceBrush = new SolidColorBrush(Color.Parse(effect == WindowEffect.FrutigerAero
             ? isLightTheme ? "#66FFFFFF" : "#66000000"
             : isLightTheme ? "#EEFFFFFF" : "#EE000000"));
+        const string darkAeroCardColor = "#99000000";
         var cardSurfaceBrush = new SolidColorBrush(Color.Parse(effect switch
         {
-            WindowEffect.FrutigerAero => isLightTheme ? "#CCFFFFFF" : "#99000000",
+            WindowEffect.FrutigerAero => isLightTheme ? "#CCFFFFFF" : darkAeroCardColor,
             WindowEffect.Acrylic => isLightTheme ? "#CCFFFFFF" : "#CC000000",
             _ => isLightTheme ? "#CCFFFFFF" : "#BB191919"
         }));
         var cardBackgroundBrush = !isLightTheme && OperatingSystem.IsMacOS() && effect == WindowEffect.Blur
-            ? new SolidColorBrush(Color.Parse("#212121"))
+            ? new SolidColorBrush(Color.Parse(darkAeroCardColor))
             : cardSurfaceBrush;
         var rootSurfaceBrush = effect switch
         {
