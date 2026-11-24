@@ -546,6 +546,7 @@
   "Settings.Background.Stretch.Uniform": "Fit",
   "Settings.Background.Stretch.UniformToFill": "Fill proportionally",
   "Settings.Background.Stretch.Fill": "Stretch to fill",
+  "Settings.Background.Stretch.Tile": "Tile",
   "Settings.Background.Align.Left": "Left",
   "Settings.Background.Align.Center": "Center",
   "Settings.Background.Align.Right": "Right",

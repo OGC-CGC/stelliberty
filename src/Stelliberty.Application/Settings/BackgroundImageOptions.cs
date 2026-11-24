@@ -5,7 +5,8 @@ public enum BackgroundImageStretchMode
     None,
     Uniform,
     UniformToFill,
-    Fill
+    Fill,
+    Tile
 }
 
 public enum BackgroundImageHorizontalAlignment

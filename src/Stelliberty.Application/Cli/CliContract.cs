@@ -86,7 +86,7 @@ public static class CliCatalog
         new("settings", "accent-color", "Theme", "CustomAccentColor", "AccentColor", "string", "Custom accent in #RRGGBB format; also selects custom accent mode.", "\"#3B82F6\""),
         new("settings", "window-effect", "Theme", "SelectedWindowEffectOption", "WindowEffect", "string", "Window material; only effects supported on this platform can be selected.", "none", "None|Mica|Acrylic|Blur|FrutigerAero"),
         new("settings", "background-image", "Theme", "BackgroundImagePath", "BackgroundImagePath", "string", "Absolute readable image path, builtin:default, or an empty string to clear.", "\"/absolute/path/background.png\""),
-        new("settings", "background-stretch", "Theme", "SelectedBackgroundStretchOption", "BackgroundImageStretch", "string", "Background scaling without changing the source image.", "uniform", "None|Uniform|UniformToFill|Fill"),
+        new("settings", "background-stretch", "Theme", "SelectedBackgroundStretchOption", "BackgroundImageStretch", "string", "Background scaling or tiling without changing the source image.", "uniform", "None|Uniform|UniformToFill|Fill|Tile"),
         new("settings", "background-horizontal", "Theme", "SelectedBackgroundHorizontalOption", "BackgroundImageHorizontalAlignment", "string", "Background horizontal alignment.", "right", "Left|Center|Right"),
         new("settings", "background-vertical", "Theme", "SelectedBackgroundVerticalOption", "BackgroundImageVerticalAlignment", "string", "Background vertical alignment.", "bottom", "Top|Center|Bottom"),
         new("settings", "background-transparency", "Theme", "BackgroundImageTransparency", "BackgroundImageTransparency", "integer", "0 is opaque; 100 is invisible.", "80", null, 0, 100),

@@ -546,6 +546,7 @@
   "Settings.Background.Stretch.Uniform": "等比适应",
   "Settings.Background.Stretch.UniformToFill": "等比填充",
   "Settings.Background.Stretch.Fill": "拉伸铺满",
+  "Settings.Background.Stretch.Tile": "平铺",
   "Settings.Background.Align.Left": "左",
   "Settings.Background.Align.Center": "居中",
   "Settings.Background.Align.Right": "右",

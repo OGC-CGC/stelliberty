@@ -38,7 +38,7 @@ internal sealed class WindowAppearanceService(Action<Color?> setBackgroundAccent
 
         ReleaseBackgroundImage();
         _window = window;
-        _backgroundImageLayer = window.FindControl<Border>("BackgroundImageLayer");
+        SetBackgroundImageLayer(window.FindControl<Border>("BackgroundImageLayer"));
         _theme = theme;
         _theme.BackgroundImageChanged += OnBackgroundImageChanged;
         _theme.ThemeChanged += OnThemeChanged;
@@ -59,7 +59,7 @@ internal sealed class WindowAppearanceService(Action<Color?> setBackgroundAccent
 
         ApplyTheme(_theme.SelectedOption.Value);
         ApplyWindowEffect(_theme.SelectedWindowEffect);
-        _backgroundImageLayer = _window?.FindControl<Border>("BackgroundImageLayer");
+        SetBackgroundImageLayer(_window?.FindControl<Border>("BackgroundImageLayer"));
         UpdateBackgroundImage(reloadImage: true);
     }
 
@@ -90,7 +90,7 @@ internal sealed class WindowAppearanceService(Action<Color?> setBackgroundAccent
         }
 
         ReleaseBackgroundImage();
-        _backgroundImageLayer = null;
+        SetBackgroundImageLayer(null);
         _macOSGlassEffectService?.Dispose();
         _theme = null;
         _window = null;
@@ -98,6 +98,35 @@ internal sealed class WindowAppearanceService(Action<Color?> setBackgroundAccent
 
     private void OnBackgroundImageChanged(object? sender, bool reloadImage)
         => UpdateBackgroundImage(reloadImage);
+
+    private void SetBackgroundImageLayer(Border? layer)
+    {
+        if (ReferenceEquals(_backgroundImageLayer, layer))
+        {
+            return;
+        }
+
+        if (_backgroundImageLayer is { } previous)
+        {
+            previous.SizeChanged -= OnBackgroundImageLayerSizeChanged;
+            previous.Background = null;
+        }
+
+        _backgroundImageLayer = layer;
+        if (layer is not null)
+        {
+            layer.SizeChanged += OnBackgroundImageLayerSizeChanged;
+        }
+    }
+
+    private void OnBackgroundImageLayerSizeChanged(object? sender, SizeChangedEventArgs args)
+    {
+        if (sender is Border { Background: DrawingBrush { TileMode: TileMode.Tile } brush }
+            && _backgroundBitmap is { } bitmap)
+        {
+            UpdateTileDestination(brush, args.NewSize, bitmap.Size);
+        }
+    }
 
     private void UpdateBackgroundImage(bool reloadImage)
     {
@@ -174,9 +203,44 @@ internal sealed class WindowAppearanceService(Action<Color?> setBackgroundAccent
             return;
         }
 
-        _backgroundImageLayer.Background = _backgroundBitmap is null ? null : new ImageBrush
+        if (_backgroundBitmap is not { } bitmap)
         {
-            Source = _backgroundBitmap,
+            _backgroundImageLayer.Background = null;
+            return;
+        }
+
+        var horizontalAlignment = _theme.BackgroundHorizontalAlignment switch
+        {
+            BackgroundImageHorizontalAlignment.Left => AlignmentX.Left,
+            BackgroundImageHorizontalAlignment.Right => AlignmentX.Right,
+            _ => AlignmentX.Center
+        };
+        var verticalAlignment = _theme.BackgroundVerticalAlignment switch
+        {
+            BackgroundImageVerticalAlignment.Top => AlignmentY.Top,
+            BackgroundImageVerticalAlignment.Bottom => AlignmentY.Bottom,
+            _ => AlignmentY.Center
+        };
+        var opacity = 1 - _theme.BackgroundImageTransparency / 100d;
+        if (_theme.BackgroundStretch == BackgroundImageStretchMode.Tile)
+        {
+            var tileBrush = new DrawingBrush
+            {
+                Drawing = new ImageDrawing { ImageSource = bitmap, Rect = new Rect(bitmap.Size) },
+                TileMode = TileMode.Tile,
+                Stretch = Stretch.None,
+                AlignmentX = horizontalAlignment,
+                AlignmentY = verticalAlignment,
+                Opacity = opacity
+            };
+            UpdateTileDestination(tileBrush, _backgroundImageLayer.Bounds.Size, bitmap.Size);
+            _backgroundImageLayer.Background = tileBrush;
+            return;
+        }
+
+        _backgroundImageLayer.Background = new ImageBrush
+        {
+            Source = bitmap,
             Stretch = _theme.BackgroundStretch switch
             {
                 BackgroundImageStretchMode.None => Stretch.None,
@@ -184,20 +248,29 @@ internal sealed class WindowAppearanceService(Action<Color?> setBackgroundAccent
                 BackgroundImageStretchMode.Fill => Stretch.Fill,
                 _ => Stretch.UniformToFill
             },
-            AlignmentX = _theme.BackgroundHorizontalAlignment switch
-            {
-                BackgroundImageHorizontalAlignment.Left => AlignmentX.Left,
-                BackgroundImageHorizontalAlignment.Right => AlignmentX.Right,
-                _ => AlignmentX.Center
-            },
-            AlignmentY = _theme.BackgroundVerticalAlignment switch
-            {
-                BackgroundImageVerticalAlignment.Top => AlignmentY.Top,
-                BackgroundImageVerticalAlignment.Bottom => AlignmentY.Bottom,
-                _ => AlignmentY.Center
-            },
-            Opacity = 1 - _theme.BackgroundImageTransparency / 100d
+            AlignmentX = horizontalAlignment,
+            AlignmentY = verticalAlignment,
+            Opacity = opacity
         };
+    }
+
+    private static void UpdateTileDestination(DrawingBrush brush, Size area, Size tile)
+    {
+        var remainingWidth = area.Width - tile.Width;
+        var remainingHeight = area.Height - tile.Height;
+        var x = brush.AlignmentX switch
+        {
+            AlignmentX.Right => remainingWidth,
+            AlignmentX.Center => remainingWidth / 2,
+            _ => 0
+        };
+        var y = brush.AlignmentY switch
+        {
+            AlignmentY.Bottom => remainingHeight,
+            AlignmentY.Center => remainingHeight / 2,
+            _ => 0
+        };
+        brush.DestinationRect = new RelativeRect(x, y, tile.Width, tile.Height, RelativeUnit.Absolute);
     }
 
     private void ReleaseBackgroundImage()
