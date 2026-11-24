@@ -120,6 +120,9 @@ jobs:
   beta-build:
     name: Trigger beta build
     needs: [detect-beta-build-changes]
+    permissions:
+      contents: write
+      actions: read
     if: >-
       ${{
         always() &&
