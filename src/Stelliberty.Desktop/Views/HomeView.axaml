@@ -25,7 +25,7 @@
                 x:DataType="vm:SubscriptionPageViewModel">
           <Grid RowDefinitions="Auto,*">
             <Grid ColumnDefinitions="Auto,*,Auto">
-              <Border Classes="tile-icon sm cyan" VerticalAlignment="Center">
+              <Border Classes="tile-icon sm" VerticalAlignment="Center">
                 <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ServerLine"
                                                 Foreground="{DynamicResource AppAccentBrush}" />
               </Border>
@@ -108,7 +108,7 @@
         <Border Classes="surface-tile" Grid.Column="1" MinHeight="200">
           <Grid RowDefinitions="Auto,*,Auto">
             <Grid ColumnDefinitions="Auto,*">
-              <Border Classes="tile-icon sm success" VerticalAlignment="Center">
+              <Border Classes="tile-icon sm" VerticalAlignment="Center">
                 <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ComputerLine"
                                                 Foreground="{DynamicResource AppAccentBrush}" />
               </Border>
@@ -209,7 +209,7 @@
         <Border Classes="surface-tile" Grid.Column="1" MinHeight="172">
           <StackPanel Spacing="14">
             <Grid ColumnDefinitions="Auto,*">
-              <Border Classes="tile-icon sm violet" VerticalAlignment="Center">
+              <Border Classes="tile-icon sm" VerticalAlignment="Center">
                 <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="RouteLine"
                                                 Foreground="{DynamicResource AppAccentBrush}" />
               </Border>
@@ -268,7 +268,7 @@
       <Border Classes="surface-tile">
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="Auto,*,Auto">
-            <Border Classes="tile-icon sm warning" VerticalAlignment="Center">
+            <Border Classes="tile-icon sm" VerticalAlignment="Center">
               <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="PerformanceLine"
                                               Foreground="{DynamicResource AppAccentBrush}" />
             </Border>
