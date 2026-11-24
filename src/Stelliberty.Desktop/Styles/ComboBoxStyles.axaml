@@ -3,8 +3,7 @@
         xmlns:controls="using:Stelliberty.Desktop.Controls">
   <Styles.Resources>
     <Thickness x:Key="ComboBoxPopupBorderPadding">0</Thickness>
-    <Thickness x:Key="ComboBoxPopupBorderMargin">12</Thickness>
-    <CornerRadius x:Key="ComboBoxPopupBoxCornerRadius">16</CornerRadius>
+    <Thickness x:Key="ComboBoxPopupBorderMargin">0,6</Thickness>
     <BoxShadows x:Key="ComboBoxPopupBoxShadow">0 4 12 -2 #26000000</BoxShadows>
   </Styles.Resources>
 
@@ -16,6 +15,10 @@
   <!-- 模态层内的特定下拉框改用平台弹窗，避免 Overlay 弹层截断鼠标路由。 -->
   <Style Selector="ComboBox.platform-popup /template/ Popup#PART_Popup">
     <Setter Property="ShouldUseOverlayLayer" Value="False" />
+  </Style>
+  <Style Selector="ComboBox:dropdownopen /template/ Border#PopupBorder">
+    <Setter Property="Margin" Value="{DynamicResource ComboBoxPopupBorderMargin}" />
+    <Setter Property="CornerRadius" Value="{ReflectionBinding CornerRadius, RelativeSource={RelativeSource TemplatedParent}}" />
   </Style>
 
   <Style Selector="ComboBox">
@@ -51,10 +54,11 @@
   </Style>
 
   <Style Selector="ComboBoxItem">
-    <Setter Property="MinHeight" Value="30" />
-    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="6,3" />
     <Setter Property="Margin" Value="0" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius"
+            Value="{ReflectionBinding CornerRadius, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ComboBox}, Tree=Logical}}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
     <Setter Property="FontSize" Value="13" />
