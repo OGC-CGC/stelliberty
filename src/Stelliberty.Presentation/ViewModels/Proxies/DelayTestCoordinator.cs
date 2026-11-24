@@ -5,7 +5,9 @@ namespace Stelliberty.Presentation.ViewModels;
 internal sealed class DelayTestCoordinator
 {
     private readonly Dictionary<string, CancellationTokenSource> _singleTests = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _singleTestingNodeNames = new(StringComparer.Ordinal);
     private readonly HashSet<string> _batchTargetNodeNames = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _batchQueuedNodeNames = new(StringComparer.Ordinal);
     private readonly HashSet<string> _batchTestingNodeNames = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _batchResults = new(StringComparer.Ordinal);
     private readonly HashSet<string> _testingNodeNames = new(StringComparer.Ordinal);
@@ -25,6 +27,10 @@ internal sealed class DelayTestCoordinator
     // 批测覆盖的节点不再接受单测，避免同一节点被两条链路同时测。
     public bool IsBatchTarget(string nodeName) => _batchTargetNodeNames.Contains(nodeName);
 
+    public bool IsNodeQueued(string nodeName) =>
+        !_testingNodeNames.Contains(nodeName)
+        && (_batchQueuedNodeNames.Contains(nodeName) || _singleTests.ContainsKey(nodeName));
+
     public CancellationTokenSource BeginSingle(string nodeName)
     {
         // 只有同一节点被重复触发才取消它上一次的测试，不同节点互不影响。
@@ -35,6 +41,7 @@ internal sealed class DelayTestCoordinator
 
         var cancellation = new CancellationTokenSource();
         _singleTests[nodeName] = cancellation;
+        _singleTestingNodeNames.Remove(nodeName);
         RefreshTestingNodeNames();
         return cancellation;
     }
@@ -56,16 +63,25 @@ internal sealed class DelayTestCoordinator
         }
 
         _singleTests.Remove(nodeName);
+        _singleTestingNodeNames.Remove(nodeName);
         RefreshTestingNodeNames();
     }
 
-    public CancellationTokenSource BeginBatch(IReadOnlyList<string> targetNodeNames)
+    public void MarkSingleNodeTesting(string nodeName)
+    {
+        _singleTestingNodeNames.Add(nodeName);
+        RefreshTestingNodeNames();
+    }
+
+    public CancellationTokenSource BeginBatch(IReadOnlyList<string> targetNodeNames, IReadOnlyList<string> queuedNodeNames)
     {
         _batchCancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         _batchCancellation = cancellation;
         _batchTargetNodeNames.Clear();
         _batchTargetNodeNames.UnionWith(targetNodeNames);
+        _batchQueuedNodeNames.Clear();
+        _batchQueuedNodeNames.UnionWith(queuedNodeNames);
         _batchTestingNodeNames.Clear();
         _batchResults.Clear();
         RefreshTestingNodeNames();
@@ -87,6 +103,7 @@ internal sealed class DelayTestCoordinator
 
         _batchCancellation = null;
         _batchTargetNodeNames.Clear();
+        _batchQueuedNodeNames.Clear();
         _batchTestingNodeNames.Clear();
         _batchResults.Clear();
         RefreshTestingNodeNames();
@@ -94,12 +111,14 @@ internal sealed class DelayTestCoordinator
 
     public void MarkBatchNodeTesting(string nodeName)
     {
+        _batchQueuedNodeNames.Remove(nodeName);
         _batchTestingNodeNames.Add(nodeName);
         RefreshTestingNodeNames();
     }
 
     public void MarkBatchNodeCompleted(string nodeName, int delay)
     {
+        _batchQueuedNodeNames.Remove(nodeName);
         _batchTestingNodeNames.Remove(nodeName);
         _batchResults[nodeName] = delay;
         RefreshTestingNodeNames();
@@ -116,7 +135,9 @@ internal sealed class DelayTestCoordinator
         }
 
         _singleTests.Clear();
+        _singleTestingNodeNames.Clear();
         _batchTargetNodeNames.Clear();
+        _batchQueuedNodeNames.Clear();
         _batchTestingNodeNames.Clear();
         _batchResults.Clear();
         RefreshTestingNodeNames();
@@ -126,6 +147,6 @@ internal sealed class DelayTestCoordinator
     {
         _testingNodeNames.Clear();
         _testingNodeNames.UnionWith(_batchTestingNodeNames);
-        _testingNodeNames.UnionWith(_singleTests.Keys);
+        _testingNodeNames.UnionWith(_singleTestingNodeNames);
     }
 }

@@ -659,10 +659,11 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             var configVersion = _configVersion;
             if (_shouldTestDelaysThroughService && _delayService is not null)
             {
+                var started = new Progress<string>(name => OnSingleDelayStarted(name, cancellation, configVersion));
                 ProxyDelayResult result;
                 try
                 {
-                    result = await _delayService.TestNodeAsync(_config, nodeName, cancellation.Token);
+                    result = await _delayService.TestNodeAsync(_config, nodeName, cancellation.Token, started);
                 }
                 catch (OperationCanceledException)
                 {
@@ -766,7 +767,10 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             : await _operations.TryAcquireAsync(new(BackgroundOperationRequest.Delay, []));
         if (_operations is not null && lease is null) return;
         var batchNodeNames = nodeNames.Except(excludedNodeNames, StringComparer.Ordinal).ToList();
-        var cancellation = BeginBatchDelayTest(nodeNames);
+        string[] queuedNodeNames = _shouldTestDelaysThroughService && _delayService is not null
+            ? batchNodeNames.Where(name => ProxyConfigSelectionNormalizer.HasEntry(_config, name)).ToArray()
+            : [];
+        var cancellation = BeginBatchDelayTest(nodeNames, queuedNodeNames);
         var configVersion = _configVersion;
         var progress = new Progress<ProxyDelayProgress>(item => OnDelayProgress(item, cancellation, configVersion));
         try
@@ -851,6 +855,17 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         RefreshSelectedGroup();
     }
 
+    private void OnSingleDelayStarted(string nodeName, CancellationTokenSource cancellation, int configVersion)
+    {
+        if (IsStaleSingleDelayResult(nodeName, cancellation, configVersion))
+        {
+            return;
+        }
+
+        _delayTests.MarkSingleNodeTesting(nodeName);
+        ShowNodeDelayTesting(nodeName);
+    }
+
     private void OnDelayProgress(ProxyDelayProgress progress, CancellationTokenSource cancellation, int configVersion)
     {
         if (IsStaleBatchDelayResult(cancellation, configVersion))
@@ -861,12 +876,7 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         if (!progress.IsCompleted)
         {
             _delayTests.MarkBatchNodeTesting(progress.ProxyName);
-            if (_visibleNodeIndexes.TryGetValue(progress.ProxyName, out var testingIndex)
-                && _visibleNodeRows.GetRealizedRow(testingIndex) is { } testingRow)
-            {
-                testingRow.SetDelayTesting(true);
-            }
-
+            ShowNodeDelayTesting(progress.ProxyName);
             return;
         }
 
@@ -878,6 +888,19 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         {
             row.ApplyDelay(progress.Delay);
         }
+
+        OnPropertyChanged(nameof(DelayTestingNodeNames));
+    }
+
+    private void ShowNodeDelayTesting(string nodeName)
+    {
+        if (_visibleNodeIndexes.TryGetValue(nodeName, out var index)
+            && _visibleNodeRows.GetRealizedRow(index) is { } row)
+        {
+            row.SetDelayActivity(isTesting: true, isQueued: false);
+        }
+
+        OnPropertyChanged(nameof(DelayTestingNodeNames));
     }
 
     public void LocateSelectedNode()
@@ -1158,7 +1181,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             string.Equals(name, _locatedNodeName, StringComparison.Ordinal),
             _selectedGroup?.IsManualSelectable == true,
             _delayTests.TestingNodeNames.Contains(name),
-            VisibleGroups.Any(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal)));
+            VisibleGroups.Any(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal)),
+            isDelayQueued: _delayTests.IsNodeQueued(name));
         ApplyPendingBatchDelay(row, name);
         return row;
     }
@@ -1171,7 +1195,8 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
             string.Equals(name, _locatedNodeName, StringComparison.Ordinal),
             group?.IsManualSelectable == true,
             _delayTests.TestingNodeNames.Contains(name),
-            VisibleGroups.Any(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal)));
+            VisibleGroups.Any(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal)),
+            isDelayQueued: _delayTests.IsNodeQueued(name));
         ApplyPendingBatchDelay(row, name);
     }
 
@@ -1295,9 +1320,9 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         return cancellation;
     }
 
-    private CancellationTokenSource BeginBatchDelayTest(IReadOnlyList<string> targetNodeNames)
+    private CancellationTokenSource BeginBatchDelayTest(IReadOnlyList<string> targetNodeNames, IReadOnlyList<string> queuedNodeNames)
     {
-        var cancellation = _delayTests.BeginBatch(targetNodeNames);
+        var cancellation = _delayTests.BeginBatch(targetNodeNames, queuedNodeNames);
         RaiseProxyStateChanged();
         return cancellation;
     }

@@ -86,6 +86,16 @@
       </ControlTemplate>
     </Setter>
   </Style>
+  <Style Selector="Button.delay-test-button.center-status">
+    <!-- 16 宽的状态内容与右侧留 5、宽 24 的分组按钮中心对齐。 -->
+    <Setter Property="Padding" Value="0,0,9,9" />
+  </Style>
+  <Style Selector="Button.delay-test-button.center-status Panel.delay-content">
+    <Setter Property="Width" Value="16" />
+  </Style>
+  <Style Selector="Button.delay-test-button.center-status TextBlock.delay-badge">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
   <Style Selector="Button.delay-test-button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>
@@ -96,16 +106,18 @@
     <Setter Property="Opacity" Value="0.72" />
   </Style>
 
-  <Style Selector="iconPacks|PackIconMingCuteIcons.delay-spinner">
+  <Style Selector="iconPacks|PackIconMingCuteIcons.delay-spinner, iconPacks|PackIconMingCuteIcons.delay-queued">
     <Setter Property="Width" Value="16" />
     <Setter Property="Height" Value="16" />
     <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}" />
-    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
     <Setter Property="Transitions">
       <Transitions>
         <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
       </Transitions>
     </Setter>
+  </Style>
+  <Style Selector="iconPacks|PackIconMingCuteIcons.delay-spinner">
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
     <Style.Animations>
       <Animation Duration="0:0:0.8" IterationCount="Infinite" Easing="LinearEasing">
         <KeyFrame Cue="0%">
@@ -117,7 +129,7 @@
       </Animation>
     </Style.Animations>
   </Style>
-  <Style Selector="Button.delay-test-button:pointerover iconPacks|PackIconMingCuteIcons.delay-spinner">
+  <Style Selector="Button.delay-test-button:pointerover iconPacks|PackIconMingCuteIcons.delay-spinner, Button.delay-test-button:pointerover iconPacks|PackIconMingCuteIcons.delay-queued">
     <Setter Property="Opacity" Value="0.7" />
   </Style>
   <Style Selector="Button.selector-dropdown-arrow">

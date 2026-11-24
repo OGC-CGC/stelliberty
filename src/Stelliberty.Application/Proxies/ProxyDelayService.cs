@@ -11,7 +11,14 @@ public sealed class ProxyDelayService(IProxyDelayTester tester, IProxyDelayResul
     private const int DelayTestConcurrency = 15;
     private readonly SemaphoreSlim _delayTestSemaphore = new(DelayTestConcurrency);
 
-    public async Task<ProxyDelayResult> TestNodeAsync(ProxyConfig config, string proxyName, CancellationToken cancellationToken = default)
+    public Task<ProxyDelayResult> TestNodeAsync(ProxyConfig config, string proxyName, CancellationToken cancellationToken = default)
+        => TestNodeAsync(config, proxyName, cancellationToken, null);
+
+    public async Task<ProxyDelayResult> TestNodeAsync(
+        ProxyConfig config,
+        string proxyName,
+        CancellationToken cancellationToken,
+        IProgress<string>? started)
     {
         if (!ProxyConfigSelectionNormalizer.HasEntry(config, proxyName))
         {
@@ -20,7 +27,8 @@ public sealed class ProxyDelayService(IProxyDelayTester tester, IProxyDelayResul
 
         var scope = await CaptureScopeAsync(cancellationToken);
         var stopwatch = Stopwatch.StartNew();
-        var delay = await TestDelayAsync(config, proxyName, cancellationToken);
+        var delay = await TestDelayAsync(config, proxyName, cancellationToken,
+            started is null ? null : () => started.Report(proxyName));
         await PublishAsync(scope, proxyName, delay, cancellationToken);
         if (delay >= 0)
         {

@@ -11,6 +11,7 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
     private bool _isLocated;
     private bool _isClickable;
     private bool _isDelayTesting;
+    private bool _isDelayQueued;
     private bool _isProxyGroup;
 
     public ProxyNodeRowViewModel(
@@ -19,13 +20,15 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
         bool isLocated = false,
         bool isClickable = true,
         bool isDelayTesting = false,
-        bool isProxyGroup = false)
+        bool isProxyGroup = false,
+        bool isDelayQueued = false)
     {
         _node = node;
         _isSelected = isSelected;
         _isLocated = isLocated;
         _isClickable = isClickable;
         _isDelayTesting = isDelayTesting;
+        _isDelayQueued = isDelayQueued;
         _isProxyGroup = isProxyGroup;
     }
 
@@ -34,6 +37,7 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
     public string DelayAutomationId => $"Proxy.Node.{Name}.DelayText";
     public string TestDelayAutomationId => $"Proxy.Node.{Name}.TestDelayButton";
     public string DelayTestingAutomationId => $"Proxy.Node.{Name}.DelaySpinner";
+    public string DelayQueuedAutomationId => $"Proxy.Node.{Name}.DelayQueued";
     public string SelectAutomationId => $"Proxy.Node.{Name}.SelectButton";
 
     public string Type => _node.Type;
@@ -63,17 +67,10 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
         private set => SetProperty(ref _isClickable, value);
     }
 
-    public bool IsDelayTesting
-    {
-        get => _isDelayTesting;
-        private set
-        {
-            if (SetProperty(ref _isDelayTesting, value))
-            {
-                OnPropertyChanged(nameof(DelayState));
-            }
-        }
-    }
+    public bool IsDelayTesting => _isDelayTesting;
+    public bool IsDelayQueued => _isDelayQueued;
+    public bool ShowsDelayText => !IsDelayTesting && !IsDelayQueued;
+    public bool IsDelayStatusCentered => !ShowsDelayText || _node.Delay is null;
 
     public string DelayText => _node.Delay switch
     {
@@ -82,18 +79,25 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
         _ => $"{_node.Delay} ms"
     };
 
-    public string DelayState => IsDelayTesting
-        ? "testing"
-        : _node.Delay switch
-        {
-            null => "untested",
-            < 0 => "failed",
-            _ => "tested"
-        };
+    public string DelayState => (IsDelayTesting, IsDelayQueued, _node.Delay) switch
+    {
+        (true, _, _) => "testing",
+        (_, true, _) => "queued",
+        (_, _, null) => "untested",
+        (_, _, < 0) => "failed",
+        _ => "tested"
+    };
 
     public string DelayLevel => ProxyDelayPresentation.GetLevel(_node.Delay);
 
-    public void Update(ProxyNode node, bool isSelected, bool isLocated, bool isClickable, bool isDelayTesting, bool isProxyGroup = false)
+    public void Update(
+        ProxyNode node,
+        bool isSelected,
+        bool isLocated,
+        bool isClickable,
+        bool isDelayTesting,
+        bool isProxyGroup = false,
+        bool isDelayQueued = false)
     {
         if (!ReferenceEquals(_node, node))
         {
@@ -101,9 +105,7 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
             _node = node;
             if (delayChanged)
             {
-                OnPropertyChanged(nameof(DelayText));
-                OnPropertyChanged(nameof(DelayState));
-                OnPropertyChanged(nameof(DelayLevel));
+                NotifyDelayChanged();
             }
         }
 
@@ -111,17 +113,37 @@ public sealed class ProxyNodeRowViewModel : ViewModelBase
         IsSelected = isSelected;
         IsLocated = isLocated;
         IsClickable = isClickable;
-        IsDelayTesting = isDelayTesting;
+        SetDelayActivity(isDelayTesting, isDelayQueued);
     }
 
     public void ApplyDelay(int delay)
     {
         _node = _node with { Delay = delay };
+        SetDelayActivity(isTesting: false, isQueued: false);
+        NotifyDelayChanged();
+    }
+
+    private void NotifyDelayChanged()
+    {
         OnPropertyChanged(nameof(DelayText));
         OnPropertyChanged(nameof(DelayState));
         OnPropertyChanged(nameof(DelayLevel));
-        IsDelayTesting = false;
+        OnPropertyChanged(nameof(IsDelayStatusCentered));
     }
 
-    internal void SetDelayTesting(bool isDelayTesting) => IsDelayTesting = isDelayTesting;
+    internal void SetDelayActivity(bool isTesting, bool isQueued)
+    {
+        if (_isDelayTesting == isTesting && _isDelayQueued == isQueued)
+        {
+            return;
+        }
+
+        _isDelayTesting = isTesting;
+        _isDelayQueued = isQueued;
+        OnPropertyChanged(nameof(IsDelayTesting));
+        OnPropertyChanged(nameof(IsDelayQueued));
+        OnPropertyChanged(nameof(ShowsDelayText));
+        OnPropertyChanged(nameof(IsDelayStatusCentered));
+        OnPropertyChanged(nameof(DelayState));
+    }
 }

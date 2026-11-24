@@ -213,10 +213,10 @@
                                VerticalAlignment="Center" />
                     <Border Grid.Row="1"
                             Classes="list-pill"
-                            Tag="neutral"
                             HorizontalAlignment="Left"
                             Margin="0,5,64,0">
-                      <TextBlock Text="{Binding Type}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Type}" TextTrimming="CharacterEllipsis"
+                                 Foreground="{DynamicResource AppAccentBrush}" />
                     </Border>
                   </Grid>
                   <Button Classes="node-action-button"
@@ -229,14 +229,15 @@
                     <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="SquareArrowRightLine" />
                   </Button>
                   <Button Classes="delay-test-button"
+                          Classes.center-status="{Binding IsDelayStatusCentered}"
                           AutomationProperties.AutomationId="{Binding TestDelayAutomationId}"
                           Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).TestNodeDelayCommand}"
                           CommandParameter="{Binding Name}">
-                    <Panel Height="18">
+                    <Panel Classes="delay-content" Height="18">
                       <TextBlock Classes="delay-badge"
                                  AutomationProperties.AutomationId="{Binding DelayAutomationId}"
                                  Tag="{Binding DelayLevel}"
-                                 IsVisible="{Binding !IsDelayTesting}"
+                                 IsVisible="{Binding ShowsDelayText}"
                                  Text="{Binding DelayText}"
                                  VerticalAlignment="Center" />
                       <iconPacks:PackIconMingCuteIcons Classes="delay-spinner"
@@ -245,6 +246,12 @@
                                                         VerticalAlignment="Center"
                                                         IsVisible="{Binding IsDelayTesting}"
                                                         Kind="LoadingFill" />
+                      <iconPacks:PackIconMingCuteIcons Classes="delay-queued"
+                                                        AutomationProperties.AutomationId="{Binding DelayQueuedAutomationId}"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        IsVisible="{Binding IsDelayQueued}"
+                                                        Kind="More1Line" />
                     </Panel>
                   </Button>
                 </Grid>
@@ -363,10 +370,10 @@
                                              VerticalAlignment="Center" />
                                   <Border Grid.Row="1"
                                           Classes="list-pill"
-                                          Tag="neutral"
                                           HorizontalAlignment="Left"
                                           Margin="0,5,64,0">
-                                    <TextBlock Text="{Binding Type}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Type}" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource AppAccentBrush}" />
                                   </Border>
                                 </Grid>
                                 <Button Classes="node-action-button"
@@ -379,14 +386,15 @@
                                   <iconPacks:PackIconMingCuteIcons Width="16" Height="16" Kind="SquareArrowRightLine" />
                                 </Button>
                                 <Button Classes="delay-test-button"
+                                        Classes.center-status="{Binding IsDelayStatusCentered}"
                                         AutomationProperties.AutomationId="{Binding TestDelayAutomationId}"
                                         Command="{Binding #ProxyPageRoot.((vm:ProxyPageViewModel)DataContext).TestNodeDelayCommand}"
                                         CommandParameter="{Binding Name}">
-                                  <Panel Height="18">
+                                  <Panel Classes="delay-content" Height="18">
                                     <TextBlock Classes="delay-badge"
                                                AutomationProperties.AutomationId="{Binding DelayAutomationId}"
                                                Tag="{Binding DelayLevel}"
-                                               IsVisible="{Binding !IsDelayTesting}"
+                                               IsVisible="{Binding ShowsDelayText}"
                                                Text="{Binding DelayText}"
                                                VerticalAlignment="Center" />
                                     <iconPacks:PackIconMingCuteIcons Classes="delay-spinner"
@@ -395,6 +403,12 @@
                                                                       VerticalAlignment="Center"
                                                                       IsVisible="{Binding IsDelayTesting}"
                                                                       Kind="LoadingFill" />
+                                    <iconPacks:PackIconMingCuteIcons Classes="delay-queued"
+                                                                      AutomationProperties.AutomationId="{Binding DelayQueuedAutomationId}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"
+                                                                      IsVisible="{Binding IsDelayQueued}"
+                                                                      Kind="More1Line" />
                                   </Panel>
                                 </Button>
                               </Grid>
