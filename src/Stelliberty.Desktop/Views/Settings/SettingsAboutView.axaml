@@ -10,11 +10,9 @@
 <!-- 关于 -->
 <StackPanel Spacing="14" IsVisible="{Binding Settings.IsAboutVisible}">
   <Border CornerRadius="20"
-          BorderThickness="1"
-          BorderBrush="Transparent"
           BoxShadow="{DynamicResource AppSurfaceRaisedShadow}"
           AutomationProperties.AutomationId="Settings.About.VersionCard">
-    <Border CornerRadius="19" ClipToBounds="True">
+    <Border CornerRadius="20" ClipToBounds="True">
       <Panel>
         <Border IsHitTestVisible="False" Opacity="0.45">
           <Border.Background>

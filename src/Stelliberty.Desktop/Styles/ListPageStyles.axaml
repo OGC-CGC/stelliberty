@@ -4,8 +4,6 @@
 
   <Style Selector="Border.surface-header">
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="20,18" />
     <Setter Property="BoxShadow" Value="{DynamicResource AppSurfaceRaisedShadow}" />
@@ -152,7 +150,6 @@
   <Style Selector="Border.surface-card">
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="16" />
     <Setter Property="BoxShadow" Value="{DynamicResource AppSurfaceListShadow}" />
     <Setter Property="Transitions">
@@ -165,6 +162,7 @@
   </Style>
   <Style Selector="Border.surface-card.selected">
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
   </Style>
 
   <!-- rule: 规则页卡片 -->
@@ -175,8 +173,10 @@
 
   <!-- node: 代理节点卡片 -->
   <Style Selector="Border.surface-card.node">
-    <Setter Property="BorderThickness" Value="2" />
     <Setter Property="CornerRadius" Value="12" />
+  </Style>
+  <Style Selector="Border.surface-card.node.selected">
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
   <Style Selector="Border.surface-card.node:not(.selected)">
     <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
@@ -264,8 +264,6 @@
   <Style Selector="Border.surface-row">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="14" />
   </Style>
 
@@ -328,6 +326,7 @@
   </Style>
   <Style Selector="ListBox.template-list ListBoxItem:selected Border.surface-panel">
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
   </Style>
   <!-- 弹层内容移到窗口覆盖层，提供者样式须注册在窗口。 -->
   <Style Selector="TextBlock.provider-warning">

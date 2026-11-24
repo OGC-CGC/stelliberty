@@ -268,8 +268,6 @@
 
   <Style Selector="Border.dialog-section">
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="14" />
   </Style>
@@ -312,7 +310,7 @@
   <Style Selector="ToggleButton.radio-card">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="11,9" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -367,6 +365,8 @@
   <Style Selector="ToggleButton.radio-card:checked /template/ Border#CardRoot">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="10,8" />
   </Style>
   <Style Selector="ToggleButton.radio-card:checked /template/ Ellipse#RadioRing">
     <Setter Property="Stroke" Value="{DynamicResource AppOnAccentBrush}" />

@@ -23,8 +23,6 @@
 
   <Style Selector="Border.surface-group">
     <Setter Property="Background" Value="{DynamicResource AppSettingsGroupBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="15" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="BoxShadow" Value="{DynamicResource AppSurfaceRaisedShadow}" />
@@ -61,13 +59,13 @@
     <Setter Property="Opacity" Value="0.45" />
   </Style>
   <Style Selector="Button.settings-row.first">
-    <Setter Property="CornerRadius" Value="14,14,0,0" />
+    <Setter Property="CornerRadius" Value="15,15,0,0" />
   </Style>
   <Style Selector="Button.settings-row.last">
-    <Setter Property="CornerRadius" Value="0,0,14,14" />
+    <Setter Property="CornerRadius" Value="0,0,15,15" />
   </Style>
   <Style Selector="Button.settings-row.only">
-    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="CornerRadius" Value="15" />
   </Style>
 
   <Style Selector="Border.settings-icon-badge">
@@ -224,8 +222,6 @@
 
   <Style Selector="Border.surface-panel">
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="15" />
     <Setter Property="Padding" Value="20,14" />
     <Setter Property="BoxShadow" Value="{DynamicResource AppSurfaceRaisedShadow}" />
@@ -244,7 +240,7 @@
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="18" />
   </Style>
   <Style Selector="Button.about-link /template/ ContentPresenter#PART_ContentPresenter">
@@ -258,6 +254,8 @@
   <Style Selector="Button.about-link:pointerover">
     <Setter Property="Background" Value="{DynamicResource AppOverlaySubtleBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="15,14" />
   </Style>
   <Style Selector="Button.about-link:pressed">
     <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
@@ -307,8 +305,6 @@
 
   <Style Selector="Border.settings-breadcrumb">
     <Setter Property="Background" Value="{DynamicResource AppSettingsGroupBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="16,9" />
   </Style>
