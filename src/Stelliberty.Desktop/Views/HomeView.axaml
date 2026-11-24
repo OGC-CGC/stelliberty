@@ -26,7 +26,8 @@
           <Grid RowDefinitions="Auto,*">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <Border Classes="tile-icon sm cyan" VerticalAlignment="Center">
-                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ServerLine" />
+                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ServerLine"
+                                                Foreground="{DynamicResource AppAccentBrush}" />
               </Border>
               <TextBlock Grid.Column="1" Margin="10,0,8,0" Text="{loc:Loc Home.Subscription.Title}" Classes="card-title"
                          TextTrimming="CharacterEllipsis" />
@@ -108,7 +109,8 @@
           <Grid RowDefinitions="Auto,*,Auto">
             <Grid ColumnDefinitions="Auto,*">
               <Border Classes="tile-icon sm success" VerticalAlignment="Center">
-                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ComputerLine" />
+                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="ComputerLine"
+                                                Foreground="{DynamicResource AppAccentBrush}" />
               </Border>
               <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{loc:Loc Home.RuntimeStatus.Title}" Classes="card-title" />
             </Grid>
@@ -173,7 +175,8 @@
           <Grid RowDefinitions="Auto,Auto,*">
             <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
               <Border Classes="tile-icon sm" VerticalAlignment="Center">
-                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="Tree3Line" />
+                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="Tree3Line"
+                                                Foreground="{DynamicResource AppAccentBrush}" />
               </Border>
               <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{loc:Loc Home.Outbound.Title}" Classes="card-title" />
             </Grid>
@@ -207,7 +210,8 @@
           <StackPanel Spacing="14">
             <Grid ColumnDefinitions="Auto,*">
               <Border Classes="tile-icon sm violet" VerticalAlignment="Center">
-                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="RouteLine" />
+                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="RouteLine"
+                                                Foreground="{DynamicResource AppAccentBrush}" />
               </Border>
               <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{loc:Loc Home.Takeover.Title}" Classes="card-title" />
             </Grid>
@@ -265,7 +269,8 @@
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <Border Classes="tile-icon sm warning" VerticalAlignment="Center">
-              <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="PerformanceLine" />
+              <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="PerformanceLine"
+                                              Foreground="{DynamicResource AppAccentBrush}" />
             </Border>
             <StackPanel Grid.Column="1" Margin="10,0,0,0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
               <TextBlock Text="{loc:Loc Home.NetworkSpeed.Title}" Classes="card-title" VerticalAlignment="Center" />
@@ -389,7 +394,8 @@
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <Border Classes="tile-icon sm" VerticalAlignment="Center">
-              <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="EarthLine" />
+              <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="EarthLine"
+                                              Foreground="{DynamicResource AppAccentBrush}" />
             </Border>
             <TextBlock Grid.Column="1" Margin="10,0,8,0" Classes="card-title"
                        Text="{loc:Loc Home.Connectivity.Title}" />
