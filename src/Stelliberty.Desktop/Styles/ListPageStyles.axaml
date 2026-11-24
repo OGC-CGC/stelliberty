@@ -178,6 +178,11 @@
     <Setter Property="BorderThickness" Value="2" />
     <Setter Property="CornerRadius" Value="12" />
   </Style>
+  <Style Selector="Border.surface-card.node:not(.selected)">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="1" />
+  </Style>
 
   <!-- group: 代理组卡片 -->
   <Style Selector="Border.surface-card.group">
