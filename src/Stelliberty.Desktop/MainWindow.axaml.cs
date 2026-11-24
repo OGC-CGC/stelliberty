@@ -55,13 +55,11 @@ public sealed partial class MainWindow : Window
     // 隐藏后等待：轻量模式结束 UI 进程，常规模式回收页面视觉树。
     private static readonly TimeSpan HiddenReleaseDelay = TimeSpan.FromSeconds(AppSettings.DefaultLightweightModeShutdownDelaySeconds);
     private static readonly TimeSpan PageLoadingMinVisible = TimeSpan.FromMilliseconds(300);
-    private static readonly TimeSpan NavColorFadeDuration = TimeSpan.FromMilliseconds(120);
-    // 选中态（文字与图标配色）等底板基本到位后再切换。
-    private static readonly TimeSpan NavSelectionRevealDelay = TimeSpan.FromMilliseconds(100);
-    // 图标形状在配色渐变到一半时切换。
-    private static readonly TimeSpan NavIconMorphDelay = NavSelectionRevealDelay + NavColorFadeDuration / 2;
+    // 目标项的文字和图标在底板滑动期间开始变色。
+    private static readonly TimeSpan NavSelectionRevealDelay = TimeSpan.FromMilliseconds(80);
+    private static readonly TimeSpan NavIconMorphDelay = TimeSpan.FromMilliseconds(120);
     // 旧项的图标提前回落到线条形态，跑在底板滑动前段。
-    private static readonly TimeSpan NavIconUnmorphDelay = TimeSpan.FromMilliseconds(60);
+    private static readonly TimeSpan NavIconUnmorphDelay = TimeSpan.FromMilliseconds(40);
     private static readonly TimeSpan NavScrollAnimationDuration = TimeSpan.FromMilliseconds(100);
     private readonly WindowAppearanceService _windowAppearanceService = new();
     private readonly MacOSWindowControlsService _macOSWindowControls = new();
@@ -346,7 +344,7 @@ public sealed partial class MainWindow : Window
         _navIndicatorRect = null;
     }
 
-    // 一次切换的三段时序：60ms 旧项回落线条图标，100ms 新项开始配色渐变，160ms 切换图标形状。
+    // 旧项先恢复线条图标，目标项随后开始变色，并在渐变期间切换图标形状。
     private void StartNavVisualTimeline()
     {
         _navVisualTimer?.Stop();
@@ -427,7 +425,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // 图标形状（线条 ↔ 实心）跟随点击立即切换，配色仍走延迟渐变。
     private void ApplyNavIconMorph(AppNavigationPage? page) => SetNavItemClass("nav-icon-morph", page);
 
     private void SetNavItemClass(string className, AppNavigationPage? page)
@@ -845,7 +842,6 @@ public sealed partial class MainWindow : Window
         }
 
         _navIndicatorTarget = target;
-        // 旧项立刻回到普通色并在 60ms 回落到线条图标；新项 100ms 后渐变选中色，160ms 切换形状。
         RevertNavSelectionImmediately();
 
         // 需要滚动时先贴住目标当前位置，随后随滚动逐帧跟入；否则直接平滑滑过去。
