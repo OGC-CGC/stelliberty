@@ -131,6 +131,39 @@ public sealed class RuleOverrideService(
         overrideStore.Save(new RuleOverrideSet(subscriptionId, customRules.ToList(), disabledBuiltinRuleKeys, RuleOrder: ruleOrder?.ToList() ?? []));
     }
 
+    public void SetRuleEnabled(string subscriptionId, RuleEditorItem item, bool enabled)
+    {
+        var saved = overrideStore.Load(subscriptionId);
+        var customRules = saved.CustomRules.ToList();
+        var disabledKeys = saved.DisabledBuiltinRuleKeys.ToHashSet(StringComparer.Ordinal);
+        if (item.IsBuiltIn)
+        {
+            if (enabled)
+            {
+                disabledKeys.Remove(item.Key);
+            }
+            else
+            {
+                disabledKeys.Add(item.Key);
+            }
+        }
+        else
+        {
+            var index = customRules.FindIndex(rule => rule.Id == item.Id);
+            if (index < 0)
+            {
+                throw new RuleOverrideException(RuleOverrideError.InvalidRule);
+            }
+
+            customRules[index] = customRules[index] with { IsEnabled = enabled };
+        }
+
+        // 使用规则页展示的去重视图校验，保留存储中的原有规则和顺序。
+        var distinctCustomRules = customRules.DistinctBy(rule => rule.Key, StringComparer.Ordinal).ToList();
+        ValidateCustomRules(subscriptionId, distinctCustomRules, disabledKeys, saved.RuleOrder);
+        overrideStore.Save(saved with { CustomRules = customRules, DisabledBuiltinRuleKeys = disabledKeys });
+    }
+
     public void UpsertTemplate(RuleTemplate template) => overrideStore.UpsertTemplate(template);
 
     public void DeleteTemplate(string templateId) => overrideStore.DeleteTemplate(templateId);

@@ -219,6 +219,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         CoreLogPage.LogsCleared += OnCoreLogsCleared;
         RulePage = rulePage ?? new RulePageViewModel(localization: localization);
         RulePage.RuntimeRefreshRequested += OnRuleRuntimeRefreshRequested;
+        RulePage.ApplyRuleToggleAsync = ApplyRuleToggleRuntimeAsync;
         RulePage.ToastRequested += OnToastRequested;
         SubscriptionPage = subscriptionPage;
         ProxyPage.PropertyChanged += OnProxyPagePropertyChanged;
@@ -300,6 +301,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         OverridePage.OverridesEdited -= OnOverridesEdited;
         OverridePage.OverrideDeleted -= OnOverrideDeleted;
         OverridePage.ToastRequested -= OnToastRequested;
+        RulePage.ApplyRuleToggleAsync = null;
         RulePage.ToastRequested -= OnToastRequested;
         if (CoreManager is not null)
         {
@@ -332,6 +334,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             SubscriptionPage.CurrentSubscriptionId,
             "Runtime config refreshed after rule update",
             "Runtime config refresh failed after rule update");
+    }
+
+    private Task ApplyRuleToggleRuntimeAsync(string subscriptionId)
+    {
+        if (SubscriptionPage.CurrentSubscriptionId != subscriptionId)
+        {
+            return Task.CompletedTask;
+        }
+
+        var refreshTask = RefreshSelectedSubscriptionRuntimeAsync(
+            subscriptionId,
+            "Runtime config refreshed after rule toggle",
+            "Runtime config refresh failed after rule toggle",
+            ruleToggle: true);
+        LastRuntimeRefreshTask = refreshTask;
+        return refreshTask;
     }
 
     public string Title => AppMetadata.DisplayName;
@@ -882,10 +900,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         LastRuntimeRefreshTask = RefreshSelectedSubscriptionRuntimeAsync(subscriptionId, successMessage, failureMessage);
     }
 
-    private async Task RefreshSelectedSubscriptionRuntimeAsync(string? subscriptionId, string successMessage, string failureMessage)
+    private async Task RefreshSelectedSubscriptionRuntimeAsync(
+        string? subscriptionId, string successMessage, string failureMessage, bool ruleToggle = false)
     {
         using var proxyLoading = ProxyPage.Loading.BeginLoading();
-        using var ruleLoading = RulePage.Loading.BeginLoading();
+        using var ruleLoading = ruleToggle ? null : RulePage.Loading.BeginLoading();
         var refreshVersion = Interlocked.Increment(ref _runtimeRefreshVersion);
         var endpointChangeVersion = Volatile.Read(ref _systemProxyEndpointChangeVersion);
         LastRuntimeRefreshSubscriptionId = subscriptionId;
@@ -954,7 +973,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
                 ShowToast(Localize("RuntimeConfig.Toast.ChainProxyCycleWarning"), ToastType.Warning);
             }
 
-            RulePage.RefreshRulesCommand.Execute(null);
+            if (!ruleToggle)
+            {
+                RulePage.RefreshRulesCommand.Execute(null);
+            }
+            else if (refreshVersion == Volatile.Read(ref _runtimeRefreshVersion))
+            {
+                RulePage.RefreshToggledRuleSnapshot();
+            }
             if (shouldClearFailureNow)
             {
                 SubscriptionPage.ClearSubscriptionRuntimeFailure(subscriptionId);

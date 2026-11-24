@@ -6,6 +6,7 @@ namespace Stelliberty.Presentation.ViewModels;
 public sealed class RuleEditorRowViewModel : ViewModelBase
 {
     private bool _isEnabled;
+    private bool? _pendingEnabled;
     private int _sequenceNumber;
 
     public RuleEditorRowViewModel(RuleEditorItem item)
@@ -16,6 +17,7 @@ public sealed class RuleEditorRowViewModel : ViewModelBase
 
     public RuleEditorItem Item { get; }
     public event EventHandler? StateChanged;
+    internal event EventHandler<bool>? ToggleRequested;
 
     public string Id => Item.Id;
     public string OrderId => Item.OrderId;
@@ -43,11 +45,56 @@ public sealed class RuleEditorRowViewModel : ViewModelBase
         get => _isEnabled;
         set
         {
-            if (SetProperty(ref _isEnabled, value))
+            if (!CanToggle || value == _isEnabled)
             {
-                StateChanged?.Invoke(this, EventArgs.Empty);
+                return;
             }
+
+            if (ToggleRequested is { } requestToggle)
+            {
+                requestToggle(this, value);
+                return;
+            }
+
+            CommitToggle(value);
         }
+    }
+
+    public bool? ToggleState
+    {
+        get => CanToggle ? IsEnabled : null;
+        set => IsEnabled = value ?? !IsEnabled;
+    }
+
+    public bool CanToggle => _pendingEnabled is null;
+    public bool ToggleTarget => _pendingEnabled ?? IsEnabled;
+
+    internal void SetPendingEnabled(bool? target)
+    {
+        _pendingEnabled = target;
+        OnPropertyChanged(nameof(ToggleTarget));
+        OnPropertyChanged(nameof(CanToggle));
+        OnPropertyChanged(nameof(ToggleState));
+    }
+
+    internal void CommitToggle(bool enabled)
+    {
+        if (SyncEnabled(enabled))
+        {
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    internal bool SyncEnabled(bool enabled)
+    {
+        if (!SetProperty(ref _isEnabled, enabled, nameof(IsEnabled)))
+        {
+            return false;
+        }
+
+        OnPropertyChanged(nameof(ToggleTarget));
+        OnPropertyChanged(nameof(ToggleState));
+        return true;
     }
 
     public EditableRule ToEditableRule() => Item.ToEditableRule() with { IsEnabled = IsEnabled };

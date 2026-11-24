@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Windows.Input;
+using Stelliberty.Application.Diagnostics;
 using Stelliberty.Application.Localization;
 using Stelliberty.Application.Rules;
 using Stelliberty.Domain.Rules;
@@ -14,6 +15,7 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
     private readonly RuleListLoader? _loader;
     private readonly ILocalizationService? _localization;
     private readonly RuleSearch _search = new();
+    private readonly SemaphoreSlim _ruleToggleLock = new(1);
     private static readonly IReadOnlyList<RuleTypeOptionViewModel> RuleTypeOptions = [
         new("DOMAIN", "DOMAIN"),
         new("DOMAIN-SUFFIX", "DOMAIN-SUFFIX"),
@@ -99,6 +101,7 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
     public event EventHandler? RuntimeRefreshRequested;
     public event EventHandler<(string Message, ToastType Type)>? ToastRequested;
     public event EventHandler<DialogInputField>? InputFocusRequested;
+    internal Func<string, Task>? ApplyRuleToggleAsync { get; set; }
 
     public ObservableCollection<RuleEditorRowViewModel> BuiltinRules { get; } = [];
     public ObservableCollection<RuleEditorRowViewModel> CustomRules { get; } = [];
@@ -316,19 +319,65 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        _snapshot = _overrideService.LoadCurrent();
+        ApplyEditorSnapshot(_overrideService.LoadCurrent());
+    }
+
+    internal void RefreshToggledRuleSnapshot()
+    {
+        if (_overrideService is null)
+        {
+            return;
+        }
+
+        var previous = _snapshot;
+        var snapshot = _overrideService.LoadCurrent();
+        if (snapshot.SubscriptionId != previous.SubscriptionId
+            || snapshot.HasSubscription != previous.HasSubscription
+            || snapshot.IsBaselineReady != previous.IsBaselineReady
+            || snapshot.Items.Count != previous.Items.Count
+            || !snapshot.Items.Zip(previous.Items).All(pair =>
+                pair.First == pair.Second || (pair.First with { IsEnabled = pair.Second.IsEnabled }) == pair.Second))
+        {
+            ApplyEditorSnapshot(snapshot);
+            return;
+        }
+
+        _snapshot = snapshot;
+        foreach (var (row, item) in BuiltinRules.Zip(snapshot.Items.Where(item => item.IsBuiltIn)))
+        {
+            row.SyncEnabled(item.IsEnabled);
+        }
+        foreach (var (row, item) in CustomRules.Zip(snapshot.Items.Where(item => !item.IsBuiltIn)))
+        {
+            row.SyncEnabled(item.IsEnabled);
+        }
+
+        if (!snapshot.ProxyOptions.SequenceEqual(previous.ProxyOptions))
+        {
+            RebuildOutboundTargets();
+        }
+        if (snapshot.HasCustomOrder != previous.HasCustomOrder)
+        {
+            OnPropertyChanged(nameof(CanResetRuleOrder));
+            ((RelayCommand)ResetRuleOrderCommand).RaiseCanExecuteChanged();
+        }
+    }
+
+    private void ApplyEditorSnapshot(RuleEditorSnapshot snapshot)
+    {
+        _snapshot = snapshot;
         BuiltinRules.Clear();
         CustomRules.Clear();
         foreach (var item in _snapshot.Items.Where(item => item.IsBuiltIn))
         {
             var row = new RuleEditorRowViewModel(item);
-            row.StateChanged += OnRuleStateChanged;
+            row.ToggleRequested += OnRuleToggleRequested;
             BuiltinRules.Add(row);
         }
         foreach (var item in _snapshot.Items.Where(item => !item.IsBuiltIn))
         {
             var row = new RuleEditorRowViewModel(item);
-            row.StateChanged += OnRuleStateChanged;
+            row.ToggleRequested += OnRuleToggleRequested;
             CustomRules.Add(row);
         }
 
@@ -461,6 +510,59 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
         {
             LoadEditorSnapshot();
             ShowRuleSaveToast(exception.Error);
+        }
+    }
+
+    private void OnRuleToggleRequested(object? sender, bool enabled)
+    {
+        if (sender is RuleEditorRowViewModel row && CanEditRules)
+        {
+            _ = ToggleRuleAsync(row, enabled);
+        }
+    }
+
+    private async Task ToggleRuleAsync(RuleEditorRowViewModel row, bool enabled)
+    {
+        if (_overrideService is null)
+        {
+            return;
+        }
+
+        var subscriptionId = _snapshot.SubscriptionId;
+        row.SetPendingEnabled(enabled);
+        await _ruleToggleLock.WaitAsync();
+        try
+        {
+            var rows = row.IsBuiltIn ? BuiltinRules : CustomRules;
+            if (_snapshot.SubscriptionId != subscriptionId || !rows.Contains(row) || row.IsEnabled == enabled)
+            {
+                return;
+            }
+
+            _overrideService.SetRuleEnabled(subscriptionId, row.Item, enabled);
+            row.CommitToggle(enabled);
+            if (ApplyRuleToggleAsync is { } applyRuleToggle)
+            {
+                await applyRuleToggle(subscriptionId);
+            }
+            else
+            {
+                RuntimeRefreshRequested?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        catch (RuleOverrideException exception)
+        {
+            ShowRuleSaveToast(exception.Error);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            AppLogger.Error(exception, "Failed to update rule state");
+            ToastRequested?.Invoke(this, (Localize("Common.Error.OperationFailed"), ToastType.Error));
+        }
+        finally
+        {
+            row.SetPendingEnabled(null);
+            _ruleToggleLock.Release();
         }
     }
 
@@ -738,7 +840,6 @@ public sealed class RulePageViewModel : ViewModelBase, IDisposable
         RuleOverrideError.BaselineNotReady => "Rules.Error.BaselineNotReady",
         _ => "Rules.Error.InvalidRule",
     });
-    private void OnRuleStateChanged(object? sender, EventArgs args) => SaveChanges();
 
     public void SetTypeBucket(RuleTypeBucket bucket)
     {
