@@ -4,7 +4,7 @@
 
   <Style Selector="Border.surface-header">
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="18" />
     <Setter Property="Padding" Value="20,18" />
@@ -151,7 +151,7 @@
   <!-- 卡片基类: 基类不带悬停, 语义卡片作修饰类叠加 -->
   <Style Selector="Border.surface-card">
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="16" />
     <Setter Property="BoxShadow" Value="{DynamicResource AppSurfaceListShadow}" />
@@ -259,7 +259,7 @@
   <Style Selector="Border.surface-row">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="14" />
   </Style>

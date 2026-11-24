@@ -342,9 +342,13 @@ internal sealed class WindowAppearanceService : IDisposable
             WindowEffect.Acrylic => isLightTheme ? "#CCFFFFFF" : "#CC000000",
             _ => isLightTheme ? "#CCFFFFFF" : "#BB191919"
         }));
+        var cardBackgroundBrush = !isLightTheme && OperatingSystem.IsMacOS() && effect == WindowEffect.Blur
+            ? new SolidColorBrush(Color.Parse("#212121"))
+            : cardSurfaceBrush;
         var rootSurfaceBrush = effect switch
         {
-            WindowEffect.None => surfaceBrush,
+            WindowEffect.None =>
+                new SolidColorBrush(Color.Parse(isLightTheme ? "#EFEFEF" : "#212121")),
             WindowEffect.FrutigerAero when OperatingSystem.IsMacOS() => Brushes.Transparent,
             WindowEffect.Blur when OperatingSystem.IsMacOS() => new SolidColorBrush(Color.Parse(
                 isLightTheme ? "#A0FFFFFF" : "#A0000000")),
@@ -359,8 +363,8 @@ internal sealed class WindowAppearanceService : IDisposable
         _window.Resources["AppPopupSurfaceBrush"] = surfaceBrush;
         _window.Resources["ComboBoxPopupBackground"] = surfaceBrush;
         _window.Resources["AppSurfaceBrush"] = cardSurfaceBrush;
-        _window.Resources["AppCardBrush"] = cardSurfaceBrush;
-        _window.Resources["AppSettingsGroupBrush"] = cardSurfaceBrush;
+        _window.Resources["AppCardBrush"] = cardBackgroundBrush;
+        _window.Resources["AppSettingsGroupBrush"] = cardBackgroundBrush;
         _window.Resources["AppSurfaceRaisedShadow"] = BoxShadows.Parse(effect == WindowEffect.FrutigerAero
             ? isLightTheme
                 ? "inset 1 1 2 0 #B8FFFFFF, 0 12 32 -18 #40000000"

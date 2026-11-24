@@ -11,7 +11,7 @@
 <StackPanel Spacing="14" IsVisible="{Binding Settings.IsAboutVisible}">
   <Border CornerRadius="20"
           BorderThickness="1"
-          BorderBrush="{DynamicResource AppBorderBrush}"
+          BorderBrush="Transparent"
           BoxShadow="{DynamicResource AppSurfaceRaisedShadow}"
           AutomationProperties.AutomationId="Settings.About.VersionCard">
     <Border CornerRadius="19" ClipToBounds="True">

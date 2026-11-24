@@ -155,8 +155,8 @@
   </Style>
   <!-- 首页图标卡片 -->
   <Style Selector="Border.surface-tile">
-    <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="16" />
     <Setter Property="Padding" Value="16" />

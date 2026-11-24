@@ -60,7 +60,6 @@
   </Window.Styles>
 
   <Grid x:Name="RootGrid" RowDefinitions="36,*">
-    <!-- Linux 无模糊合成器时，用不透明底色替代窗口 93% alpha，避免透出桌面。 -->
     <Border x:Name="BaseColorLayer" Grid.RowSpan="2"
             Background="{DynamicResource AppBaseColorBrush}"
             IsHitTestVisible="False"

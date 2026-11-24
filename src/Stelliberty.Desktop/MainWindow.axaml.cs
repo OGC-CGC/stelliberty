@@ -190,12 +190,10 @@ public sealed partial class MainWindow : Window
         return property?.GetValue(this) is { } value ? Convert.ToInt32(value) : AllWindowActions;
     }
 
-    // Linux 合成器不保证模糊；macOS 全屏后透明/玻璃效果会失效。
-    // 两种情况都垫一层跟随明暗主题的不透明底色，避免窗口透出桌面或发黑。
+    // macOS 系统全屏时用不透明底色替代失效的透明或玻璃背景。
     private void UpdateBaseColorLayer()
     {
-        BaseColorLayer.IsVisible = OperatingSystem.IsLinux()
-                                   || (OperatingSystem.IsMacOS() && WindowState == WindowState.FullScreen);
+        BaseColorLayer.IsVisible = OperatingSystem.IsMacOS() && WindowState == WindowState.FullScreen;
     }
 
     // macOS 系统红绿灯只在系统装饰模式保留，自绘或无边框时隐藏；
