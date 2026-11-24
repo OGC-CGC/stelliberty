@@ -71,11 +71,33 @@ else
   form+=(--form-string "media=${media}")
 fi
 
-response="$(curl --silent --show-error --connect-timeout 30 --max-time 1200 \
-  "${form[@]}" "${bot_api}${TELEGRAM_BOT_TOKEN}/${method}")"
-if ! jq -e '.ok == true' >/dev/null <<< "$response"; then
-  echo '::error::Telegram did not accept the release assets.'
-  jq -r '.description // empty' <<< "$response" >&2
+upload_bytes="$(stat -c '%s' -- "${assets[@]}" | awk '{ total += $1 } END { printf "%.0f", total }')"
+request_summary="${method}, ${asset_count} asset(s), ${upload_bytes} bytes"
+response_file="${asset_dir}/telegram-response.json"
+
+http_status="$(curl --silent --show-error --connect-timeout 30 --max-time 1200 \
+  --output "$response_file" --write-out '%{http_code}' \
+  "${form[@]}" "${bot_api}${TELEGRAM_BOT_TOKEN}/${method}")" || {
+  curl_status=$?
+  echo "::error::Telegram upload transfer failed (${request_summary}, curl exit ${curl_status}, HTTP ${http_status:-000})."
+  exit 1
+}
+
+if ! api_result="$(jq -er '
+  if type != "object" or (.ok | type) != "boolean" then empty
+  elif .ok then "ok"
+  else "error \(.error_code // "unknown" | @json): \(.description // "No error description" | @json)"
+  end
+' "$response_file" 2>/dev/null)"; then
+  echo "::error::Upload endpoint returned an unexpected response (${request_summary}, HTTP ${http_status}). Expected Telegram Bot API JSON."
+  exit 1
+fi
+
+if [[ "$http_status" != 2?? || "$api_result" != ok ]]; then
+  echo "::error::Telegram upload failed (${request_summary}, HTTP ${http_status})."
+  if [[ "$api_result" != ok ]]; then
+    printf 'Telegram API %s\n' "$api_result" >&2
+  fi
   exit 1
 fi
 
