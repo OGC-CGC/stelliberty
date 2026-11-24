@@ -1,6 +1,9 @@
 using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Media;
 
 namespace Stelliberty.Desktop.Controls;
@@ -9,10 +12,12 @@ namespace Stelliberty.Desktop.Controls;
 // 底部不参与，避免与列表末项的留白叠加。
 public static class ScrollEdgeFade
 {
+    private const string VerticalScrollBarPartName = "PART_VerticalScrollBar";
     // 顶部渐隐高度，各页面统一。
     private const double FadeHeight = 18;
     // 每个滚动区复用自己的渐变笔刷，滚动时只改停止点，不反复分配。
     private static readonly ConditionalWeakTable<ScrollViewer, LinearGradientBrush> Masks = new();
+    private static readonly ConditionalWeakTable<ScrollViewer, IDisposable> ScrollBarMarginBindings = new();
 
     public static readonly AttachedProperty<bool> IsEnabledProperty =
         AvaloniaProperty.RegisterAttached<ScrollViewer, bool>("IsEnabled", typeof(ScrollEdgeFade));
@@ -34,13 +39,49 @@ public static class ScrollEdgeFade
         if (args.NewValue is true)
         {
             scrollViewer.ScrollChanged += OnScrollChanged;
+            scrollViewer.TemplateApplied += OnTemplateApplied;
+            BindScrollBarMargin(scrollViewer, scrollViewer.GetTemplateDescendants()
+                .OfType<ScrollBar>()
+                .FirstOrDefault(scrollBar => scrollBar.Name == VerticalScrollBarPartName));
             UpdateFade(scrollViewer);
         }
         else
         {
             scrollViewer.ScrollChanged -= OnScrollChanged;
+            scrollViewer.TemplateApplied -= OnTemplateApplied;
+            BindScrollBarMargin(scrollViewer, null);
             scrollViewer.OpacityMask = null;
         }
+    }
+
+    private static void OnTemplateApplied(object? sender, TemplateAppliedEventArgs args)
+    {
+        if (sender is ScrollViewer scrollViewer)
+        {
+            BindScrollBarMargin(scrollViewer, args.NameScope.Find<ScrollBar>(VerticalScrollBarPartName));
+        }
+    }
+
+    private static void BindScrollBarMargin(ScrollViewer scrollViewer, ScrollBar? scrollBar)
+    {
+        if (ScrollBarMarginBindings.Remove(scrollViewer, out var previousBinding))
+        {
+            previousBinding.Dispose();
+        }
+
+        if (scrollBar is null)
+        {
+            return;
+        }
+
+        // 边距只随视口变化，渐变不可见时也保留，以免滑块跳动。
+        var margins = scrollViewer.GetObservable(ScrollViewer.ViewportProperty, static viewport =>
+        {
+            var fadeHeight = GetFadeHeight(viewport.Height);
+            return new Thickness(0, fadeHeight, 0, fadeHeight);
+        });
+        var binding = scrollBar.Bind(ScrollBar.MarginProperty, margins, BindingPriority.StyleTrigger);
+        ScrollBarMarginBindings.Add(scrollViewer, binding);
     }
 
     private static void OnScrollChanged(object? sender, ScrollChangedEventArgs args)
@@ -60,8 +101,7 @@ public static class ScrollEdgeFade
             return;
         }
 
-        // 渐变长度按视口换算并封顶一半，短视口下不会整屏发虚。
-        var fadeOffset = Math.Min(0.5, FadeHeight / viewportHeight);
+        var fadeOffset = GetFadeHeight(viewportHeight) / viewportHeight;
         var mask = Masks.GetValue(scrollViewer, _ => new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
@@ -76,4 +116,6 @@ public static class ScrollEdgeFade
         mask.GradientStops[1].Offset = fadeOffset;
         scrollViewer.OpacityMask = mask;
     }
+
+    private static double GetFadeHeight(double viewportHeight) => Math.Min(FadeHeight, viewportHeight / 2);
 }
