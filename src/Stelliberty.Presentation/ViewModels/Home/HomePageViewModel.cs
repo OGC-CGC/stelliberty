@@ -50,6 +50,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     private bool _isCoreRunning;
     private OutboundMode _outboundMode = OutboundMode.Rule;
     private OutboundMode? _pendingOutboundMode;
+    private long _outboundModeVersion;
     private DateTimeOffset? _coreRunningSince;
     private TimeSpan _uptime = TimeSpan.Zero;
     private string? _memoryValueText;
@@ -154,6 +155,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     }
 
     public event EventHandler<(string Message, ToastType Type)>? ToastRequested;
+    internal event EventHandler<OutboundMode>? OutboundModeChanged;
 
     public bool IsSystemProxyEnabled
     {
@@ -209,13 +211,21 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     public void ApplyOutboundMode(OutboundMode mode)
     {
-        if (_outboundMode == mode && _pendingOutboundMode is null)
+        var modeChanged = _outboundMode != mode;
+        if (!modeChanged && _pendingOutboundMode is null)
         {
             return;
         }
 
+        ++_outboundModeVersion;
         _outboundMode = mode;
         _pendingOutboundMode = null;
+        if (modeChanged)
+        {
+            OnPropertyChanged(nameof(OutboundMode));
+            OutboundModeChanged?.Invoke(this, mode);
+        }
+
         RaiseOutboundStateChanged();
     }
 
@@ -234,6 +244,11 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
             _memoryValueText = null;
             _activeConnectionCount = 0;
             SeedZeroHistory();
+        }
+
+        if (_isCoreRunning != isRunning || (!isRunning && _pendingOutboundMode is not null))
+        {
+            ++_outboundModeVersion;
         }
 
         _isCoreRunning = isRunning;
@@ -500,6 +515,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
         var snapshotLoader = new CoreRuntimeSnapshotLoader(_proxyClient);
         // 快照耗时常超过轮询周期，只应用最后发起的一次，避免总量倒退。
         var refreshVersion = Interlocked.Increment(ref _runtimeRefreshVersion);
+        var outboundModeVersion = _outboundModeVersion;
         _ = Task.Run(async () =>
         {
             try
@@ -509,12 +525,20 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
                     && !cancellationToken.IsCancellationRequested
                     && refreshVersion == Volatile.Read(ref _runtimeRefreshVersion))
                 {
-                    Post(() => ApplyRuntime(
-                        snapshot.Stats,
-                        snapshot.Mode,
-                        snapshot.Version,
-                        snapshot.ConnectionCount,
-                        snapshot.History));
+                    Post(() =>
+                    {
+                        if (cancellationToken.IsCancellationRequested
+                            || refreshVersion != Volatile.Read(ref _runtimeRefreshVersion))
+                        {
+                            return;
+                        }
+
+                        // 等待切换答复时，以及答复之后收到旧回读时，只更新流量等指标。
+                        var mode = outboundModeVersion == _outboundModeVersion && _pendingOutboundMode is null
+                            ? snapshot.Mode
+                            : null;
+                        ApplyRuntime(snapshot.Stats, mode, snapshot.Version, snapshot.ConnectionCount, snapshot.History);
+                    });
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -631,11 +655,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
         if (mode is { } coreMode)
         {
-            _outboundMode = coreMode;
-            if (_pendingOutboundMode == coreMode)
-            {
-                _pendingOutboundMode = null;
-            }
+            ApplyOutboundMode(coreMode);
         }
 
         if (!string.IsNullOrWhiteSpace(version))
@@ -1097,7 +1117,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     private async Task SetOutboundModeAsync(OutboundMode mode)
     {
-        if (_outboundMode == mode || _pendingOutboundMode is not null)
+        if (_isDisposed || _outboundMode == mode || _pendingOutboundMode is not null)
         {
             return;
         }
@@ -1108,6 +1128,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        var requestVersion = ++_outboundModeVersion;
         _pendingOutboundMode = mode;
         RaiseOutboundStateChanged();
 
@@ -1118,19 +1139,33 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var applied = await _proxyClient.SetOutboundModeAsync(mode);
-        Post(() => CompleteOutboundModeRequest(mode, applied));
+        var cancellationToken = _refreshCancellation?.Token ?? CancellationToken.None;
+        bool applied;
+        try
+        {
+            applied = await _proxyClient.SetOutboundModeAsync(mode, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception exception)
+        {
+            AppLogger.Warning($"Outbound mode switch failed: {exception.Message}");
+            applied = false;
+        }
+
+        Post(() => CompleteOutboundModeRequest(mode, requestVersion, applied));
     }
 
-    private void CompleteOutboundModeRequest(OutboundMode mode, bool applied)
+    private void CompleteOutboundModeRequest(OutboundMode mode, long requestVersion, bool applied)
     {
-        if (_isDisposed || _pendingOutboundMode != mode || applied)
+        if (_isDisposed || requestVersion != _outboundModeVersion || _pendingOutboundMode != mode)
         {
             return;
         }
 
-        _pendingOutboundMode = null;
-        RaiseOutboundStateChanged();
+        ApplyOutboundMode(applied ? mode : _outboundMode);
     }
 
     private void SetTakeoverTab(bool tun)
@@ -1249,7 +1284,6 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CanToggleServiceMode));
         OnPropertyChanged(nameof(IsCoreRunning));
         OnPropertyChanged(nameof(CoreStatusValueText));
-        OnPropertyChanged(nameof(OutboundMode));
         OnPropertyChanged(nameof(IsRuleOutboundSelected));
         OnPropertyChanged(nameof(IsGlobalOutboundSelected));
         OnPropertyChanged(nameof(IsDirectOutboundSelected));
@@ -1287,7 +1321,6 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     private void RaiseOutboundStateChanged()
     {
-        OnPropertyChanged(nameof(OutboundMode));
         OnPropertyChanged(nameof(IsRuleOutboundSelected));
         OnPropertyChanged(nameof(IsGlobalOutboundSelected));
         OnPropertyChanged(nameof(IsDirectOutboundSelected));

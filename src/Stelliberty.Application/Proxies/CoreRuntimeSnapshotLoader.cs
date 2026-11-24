@@ -16,10 +16,14 @@ public sealed class CoreRuntimeSnapshotLoader(IProxyCoreClient client)
     {
         if (client is IRuntimeSnapshotClient runtimeClient)
         {
-            var snapshot = await runtimeClient.GetRuntimeSnapshotAsync(cancellationToken);
+            // 流量复用托盘快照，出站模式直接读取核心，避免快照中的旧模式覆盖刚完成的切换。
+            var snapshotTask = runtimeClient.GetRuntimeSnapshotAsync(cancellationToken);
+            var modeTask = client.GetOutboundModeAsync(cancellationToken);
+            await Task.WhenAll(snapshotTask, modeTask);
+            var snapshot = await snapshotTask;
             return new CoreRuntimeSnapshotData(
                 snapshot.Stats,
-                snapshot.Mode,
+                await modeTask,
                 includeVersion ? snapshot.Version : null,
                 snapshot.ConnectionCount,
                 snapshot.History);

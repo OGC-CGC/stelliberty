@@ -191,7 +191,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Update.ToastRequested += OnToastRequested;
         // TUN 权限由托盘判定，界面只同步结果。
         HomePage.ApplyTunState(_settings.IsTunEnabled);
-        // 模式偏好是应用级状态；先注入主页和代理基线，再加载订阅。
+        // 首页用持久偏好初始化，等待核心提供运行模式。
         HomePage.ApplyOutboundMode(OutboundModeParser.TryParse(_settings.OutboundMode) ?? Domain.Proxies.OutboundMode.Rule);
         HomePage.RefreshNetworkConnection();
         ConnectionPage = connectionPage ?? new ConnectionPageViewModel(
@@ -211,8 +211,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
             });
         ProxyPage = proxyPage ?? new ProxyPageViewModel(localization: localization);
         HomePage.PropertyChanged += OnHomePagePropertyChanged;
-        // 初始化代理页出站模式和核心运行状态。
-        ProxyPage.SetOutboundMode(HomePage.OutboundMode);
+        HomePage.OutboundModeChanged += OnHomeOutboundModeChanged;
         ProxyPage.SetCoreRunning(HomePage.IsCoreRunning);
         // 节点切换会关闭核心连接；无需耦合连接页即可清空本地连接行。
         ProxyPage.NodeSelectionClosedConnections += OnProxyNodeSelectionClosedConnections;
@@ -283,6 +282,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         Update.ToastRequested -= OnToastRequested;
         AppBehavior.ToastRequested -= OnToastRequested;
         HomePage.PropertyChanged -= OnHomePagePropertyChanged;
+        HomePage.OutboundModeChanged -= OnHomeOutboundModeChanged;
         ProxyPage.NodeSelectionClosedConnections -= OnProxyNodeSelectionClosedConnections;
         ProxyPage.PropertyChanged -= OnProxyPagePropertyChanged;
         CoreLogPage.LogsCleared -= OnCoreLogsCleared;
@@ -760,10 +760,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (settingsChanged)
         {
+            var previousMode = OutboundModeParser.TryParse(_settings.OutboundMode) ?? OutboundMode.Rule;
             ReloadSettingsFromStore();
             SyncRestoredSettingsPages();
             HomePage.ApplyTunState(_settings.IsTunEnabled && HomePage.CanToggleTun);
-            HomePage.ApplyOutboundMode(OutboundModeParser.TryParse(_settings.OutboundMode) ?? Domain.Proxies.OutboundMode.Rule);
+            var storedMode = OutboundModeParser.TryParse(_settings.OutboundMode) ?? OutboundMode.Rule;
+            if (storedMode != previousMode)
+            {
+                HomePage.ApplyOutboundMode(storedMode);
+            }
         }
         if (subscriptionsChanged) await SubscriptionPage.ReloadFromStoreAsync();
         if (proxiesChanged)
@@ -1159,19 +1164,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnHomePagePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(HomePage.OutboundMode))
-        {
-            ProxyPage.SetOutboundMode(HomePage.OutboundMode);
-            PersistOutboundMode(HomePage.OutboundMode);
-        }
-        else if (e.PropertyName == nameof(HomePage.IsCoreRunning))
+        if (e.PropertyName == nameof(HomePage.IsCoreRunning))
         {
             ProxyPage.SetCoreRunning(HomePage.IsCoreRunning);
         }
     }
 
-    // 主页广播频繁，只有值实际变化时才保存设置。
-    private void PersistOutboundMode(Domain.Proxies.OutboundMode mode)
+    private void OnHomeOutboundModeChanged(object? sender, OutboundMode mode)
     {
         var modeName = mode.ToString();
         if (string.Equals(_settings.OutboundMode, modeName, StringComparison.Ordinal))

@@ -398,33 +398,6 @@ public sealed class ProxyPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public void SetOutboundMode(Domain.Proxies.OutboundMode mode)
-    {
-        if (_outboundMode == mode && _config.Mode == mode)
-        {
-            return;
-        }
-
-        CancelDelayTests();
-        // 出站模式会重建可见分组，所以按分组名恢复选择。
-        var selectedGroupName = _selectedGroup?.Name;
-        _outboundMode = mode;
-        _config = _config with { Mode = mode };
-        if (_isPresentationActive)
-        {
-            RefreshConfigIndexes();
-        }
-        else
-        {
-            _visibleGroups = _config.VisibleGroups;
-            _isPresentationCacheReleased = true;
-        }
-
-        _selectedGroup = VisibleGroups.FirstOrDefault(group => string.Equals(group.Name, selectedGroupName, StringComparison.Ordinal))
-            ?? VisibleGroups.FirstOrDefault();
-        RaiseProxyStateChanged();
-    }
-
     public void SetCoreRunning(bool isRunning)
     {
         if (_isCoreRunning == isRunning)
