@@ -12,13 +12,6 @@ public sealed partial class SubscriptionPageViewModel
     public string HomeCardTypeText => CurrentSubscription?.TypeText
         ?? Localize("Subscriptions.Type.Local");
 
-    public string HomeCardTypeTag => CurrentSubscription?.TypePillTag ?? "local";
-
-    public string HomeCardSourceFormatText => CurrentSubscription?.SourceFormatText
-        ?? Localize("Subscriptions.SourceFormat.Standard");
-
-    public string HomeCardSourceFormatTag => CurrentSubscription?.SourceFormatPillTag ?? "success";
-
     public string HomeCardUpdatedText => CurrentSubscription?.LastUpdatedText
         ?? Localize("Common.NotUpdated");
 
@@ -85,9 +78,6 @@ public sealed partial class SubscriptionPageViewModel
     {
         OnPropertyChanged(nameof(HomeCardNameText));
         OnPropertyChanged(nameof(HomeCardTypeText));
-        OnPropertyChanged(nameof(HomeCardTypeTag));
-        OnPropertyChanged(nameof(HomeCardSourceFormatText));
-        OnPropertyChanged(nameof(HomeCardSourceFormatTag));
         OnPropertyChanged(nameof(HomeCardUpdatedText));
         OnPropertyChanged(nameof(HomeCardUpdatedTooltip));
         OnPropertyChanged(nameof(HomeCardUpdatedIconType));

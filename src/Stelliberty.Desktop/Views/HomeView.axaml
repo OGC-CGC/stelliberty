@@ -46,14 +46,9 @@
               <StackPanel Spacing="10" VerticalAlignment="Top">
                 <TextBlock Text="{Binding HomeCardNameText}" Classes="home-subscription-name large"
                            AutomationProperties.AutomationId="Home.SubscriptionNameText" />
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                  <Border Classes="list-pill" Tag="{Binding HomeCardTypeTag}">
-                    <TextBlock Text="{Binding HomeCardTypeText}" />
-                  </Border>
-                  <Border Classes="list-pill" Tag="{Binding HomeCardSourceFormatTag}">
-                    <TextBlock Text="{Binding HomeCardSourceFormatText}" />
-                  </Border>
-                </StackPanel>
+                <Border Classes="list-pill" HorizontalAlignment="Left">
+                  <TextBlock Text="{Binding HomeCardTypeText}" Foreground="{DynamicResource AppAccentBrush}" />
+                </Border>
               </StackPanel>
 
               <StackPanel Grid.Row="1" Spacing="10" VerticalAlignment="Bottom">

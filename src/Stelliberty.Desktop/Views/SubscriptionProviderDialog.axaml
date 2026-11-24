@@ -12,7 +12,7 @@
       <Border Classes="surface-panel list" Padding="16,14" Margin="0,0,0,10">
         <Grid RowDefinitions="Auto,Auto" RowSpacing="12">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-            <Border Classes="surface-card-badge" Tag="{Binding VehicleBadgeTag}" VerticalAlignment="Top"
+            <Border Classes="surface-card-badge" VerticalAlignment="Top"
                     ToolTip.Tip="{Binding DisplayName}">
               <iconPacks:PackIconMingCuteIcons Width="18" Height="18" Kind="{Binding VehicleIconType}" />
             </Border>
@@ -24,8 +24,8 @@
                            ToolTip.Tip="{Binding Name}" TextTrimming="CharacterEllipsis"
                            MaxWidth="240"
                            VerticalAlignment="Center" />
-                <Border Classes="list-pill" Tag="{Binding VehiclePillTag}" VerticalAlignment="Center">
-                  <TextBlock Text="{Binding VehicleText}" />
+                <Border Classes="list-pill" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding VehicleText}" Foreground="{DynamicResource AppAccentBrush}" />
                 </Border>
               </StackPanel>
               <TextBlock AutomationProperties.AutomationId="{Binding StatAutomationId}"

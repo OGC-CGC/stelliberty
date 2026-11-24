@@ -133,15 +133,11 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
 
     public string TypePillTag => IsLocalFile ? "local" : "remote";
 
-    public string SourceFormatText => SourceFormat == SubscriptionSourceFormat.StandardClash
-        ? Localize("Subscriptions.SourceFormat.Standard")
-        : Localize("Subscriptions.SourceFormat.NonStandard");
-
-    public string SourceFormatPillTag => SourceFormat == SubscriptionSourceFormat.StandardClash ? "success" : "warning";
-
     public string IconType => HasError ? "WarningFill" : IsLocalFile ? "FileLine" : "CloudLine";
 
     public string IconTag => HasError ? "error" : TypePillTag;
+
+    public string? ErrorBadgeTag => HasError ? "error" : null;
 
     public string AutoUpdateText => AutoUpdateMode switch
     {
@@ -373,7 +369,6 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
     public void RefreshLanguage()
     {
         OnPropertyChanged(nameof(TypeText));
-        OnPropertyChanged(nameof(SourceFormatText));
         OnPropertyChanged(nameof(AutoUpdateText));
         OnPropertyChanged(nameof(IsAutoUpdatePillVisible));
         OnPropertyChanged(nameof(AutoTestDelayText));

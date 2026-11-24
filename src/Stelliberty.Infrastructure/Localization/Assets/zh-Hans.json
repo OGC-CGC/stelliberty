@@ -329,8 +329,6 @@
   "Subscriptions.Empty.Hint": "添加订阅后在这里管理，长按卡片可拖动排序",
   "Subscriptions.Type.Local": "本地",
   "Subscriptions.Type.Remote": "远程",
-  "Subscriptions.SourceFormat.Standard": "标准",
-  "Subscriptions.SourceFormat.NonStandard": "非标准",
   "Subscriptions.AutoUpdate.Title": "自动更新",
   "Subscriptions.AutoUpdate.Disabled": "关闭",
   "Subscriptions.AutoUpdate.Startup": "启动时更新",

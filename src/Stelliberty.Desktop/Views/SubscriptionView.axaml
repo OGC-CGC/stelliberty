@@ -106,7 +106,7 @@
                   <Grid Margin="14" RowDefinitions="Auto,Auto,Auto" IsHitTestVisible="False">
                     <Grid ColumnDefinitions="Auto,*,58" ColumnSpacing="12">
                       <Border Classes="surface-card-badge"
-                              Tag="{Binding IconTag}">
+                              Tag="{Binding ErrorBadgeTag}">
                         <iconPacks:PackIconMingCuteIcons Width="18" Height="18"
                                                          AutomationProperties.AutomationId="{Binding IconAutomationId}"
                                                          Kind="{Binding IconType}" />
@@ -119,16 +119,12 @@
                                    FontSize="15"
                                    TextTrimming="CharacterEllipsis" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                          <Border Classes="list-pill" Tag="{Binding TypePillTag}">
-                            <TextBlock Text="{Binding TypeText}" />
-                          </Border>
-                          <Border Classes="list-pill" Tag="{Binding SourceFormatPillTag}">
-                            <TextBlock Text="{Binding SourceFormatText}" />
+                          <Border Classes="list-pill">
+                            <TextBlock Text="{Binding TypeText}" Foreground="{DynamicResource AppAccentBrush}" />
                           </Border>
                           <Border Classes="list-pill"
-                                  Tag="neutral"
                                   IsVisible="{Binding IsAutoUpdatePillVisible}">
-                            <TextBlock Text="{Binding AutoUpdateText}" />
+                            <TextBlock Text="{Binding AutoUpdateText}" Foreground="{DynamicResource AppAccentBrush}" />
                           </Border>
                         </StackPanel>
                       </StackPanel>

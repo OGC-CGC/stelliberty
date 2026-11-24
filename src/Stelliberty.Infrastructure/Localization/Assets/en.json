@@ -329,8 +329,6 @@
   "Subscriptions.Empty.Hint": "Add subscriptions here. Press and hold a card to reorder",
   "Subscriptions.Type.Local": "Local",
   "Subscriptions.Type.Remote": "Remote",
-  "Subscriptions.SourceFormat.Standard": "Standard",
-  "Subscriptions.SourceFormat.NonStandard": "Non-standard",
   "Subscriptions.AutoUpdate.Title": "Auto Update",
   "Subscriptions.AutoUpdate.Disabled": "Off",
   "Subscriptions.AutoUpdate.Startup": "On Startup",

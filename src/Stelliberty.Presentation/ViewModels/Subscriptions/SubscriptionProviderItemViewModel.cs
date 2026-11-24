@@ -74,12 +74,7 @@ public sealed record SubscriptionProviderItemViewModel(
 
     public string NameAutomationId => $"Subscriptions.ProviderSelector.{Type}.{Name}.NameText";
 
-    public string VehiclePillTag => IsRemote ? "info" : "warning";
-
     public string VehicleIconType => IsFile ? "FileLine" : "CloudLine";
-
-    // 文件 Provider 使用本地灰色徽标；HTTP Provider 使用默认强调色。
-    public string VehicleBadgeTag => IsFile ? "local" : "remote";
 
     public string VehicleText => Localize(IsFile ? "Subscriptions.Type.Local" : "Subscriptions.Type.Remote");
 
