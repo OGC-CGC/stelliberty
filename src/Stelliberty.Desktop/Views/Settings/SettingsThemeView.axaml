@@ -11,6 +11,11 @@
   <UserControl.Resources>
     <conv:HexToBrushConverter x:Key="HexToBrush" />
   </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="Slider.background-image-transparency:not(:disabled) /template/ Thumb#thumb">
+      <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    </Style>
+  </UserControl.Styles>
 
 <!-- 主题外观 -->
 <StackPanel Spacing="10" IsVisible="{Binding Settings.IsThemeVisible}">
@@ -122,10 +127,10 @@
                          Foreground="{DynamicResource AppDangerBrush}"
                          IsVisible="{Binding Theme.BackgroundImageLoadFailed}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="{Binding Theme.BackgroundImageChooseText}"
+            <Button Grid.Column="1" Classes="soft-action primary" Content="{Binding Theme.BackgroundImageChooseText}"
                     AutomationProperties.AutomationId="Settings.BackgroundImage.Choose"
                     Click="OnChooseBackgroundImageClicked" />
-            <Button Grid.Column="2" Content="{Binding Theme.BackgroundImageClearText}"
+            <Button Grid.Column="2" Classes="soft-action" Content="{Binding Theme.BackgroundImageClearText}"
                     AutomationProperties.AutomationId="Settings.BackgroundImage.Clear"
                     IsEnabled="{Binding Theme.HasBackgroundImage}"
                     Command="{Binding Theme.ClearBackgroundImageCommand}" />
@@ -187,6 +192,7 @@
                          Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" />
             </StackPanel>
             <Slider Grid.Column="1" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                    Classes="background-image-transparency" Foreground="{DynamicResource AppAccentBrush}"
                     VerticalAlignment="Center"
                     AutomationProperties.AutomationId="Settings.BackgroundImage.Transparency"
                     Value="{Binding Theme.BackgroundImageTransparency, Mode=TwoWay}" />

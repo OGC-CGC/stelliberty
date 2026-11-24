@@ -468,6 +468,7 @@
                     Background="Transparent"
                     AutomationProperties.AutomationId="Shell.PageLoadingOverlay">
               <controls:PageLoadingIndicator x:Name="PageLoadingIndicator"
+                                             AccentBrush="{DynamicResource AppAccentBrush}"
                                              HorizontalAlignment="Stretch"
                                              VerticalAlignment="Center"
                                              Height="140"
