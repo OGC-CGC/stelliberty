@@ -380,6 +380,8 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-22.04
     if: ${{ needs.build.result == 'success' }}
+    outputs:
+      published_tag: ${{ steps.publish-release.outcome == 'success' && needs.prepare.outputs.tag || '' }}
 
     steps:
       - name: Check out repository
@@ -401,6 +403,7 @@ jobs:
           cat release_notes.md
 
       - name: Publish stable release
+        id: publish-release
         uses: softprops/action-gh-release@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -443,3 +446,29 @@ jobs:
           fi
           echo "Beta baseline ${baseline_tag} points to ${SOURCE_SHA}."
           echo "- Beta baseline: \`${baseline_tag}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  telegram:
+    name: Send stable release to Telegram
+    needs: release
+    if: ${{ !cancelled() && needs.release.outputs.published_tag != '' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Send release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.published_tag }}
+          TELEGRAM_BOT_API: ${{ secrets.TELEGRAM_BOT_API }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_REPLY_TO_MESSAGE_ID: ${{ secrets.TELEGRAM_REPLY_TO_MESSAGE_ID }}
+        run: bash .github/scripts/send-telegram-release.sh Stable
