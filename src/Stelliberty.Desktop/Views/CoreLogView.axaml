@@ -122,10 +122,7 @@
             <Border Classes="list-empty-halo" />
             <iconPacks:PackIconMingCuteIcons Classes="list-empty-icon" Kind="FileLine" />
           </Panel>
-          <StackPanel Spacing="7">
-            <TextBlock Classes="list-empty-text" AutomationProperties.AutomationId="CoreLogs.EmptyText" Text="{Binding EmptyText}" />
-            <TextBlock Classes="list-empty-hint" Text="{loc:Loc CoreLogs.Empty.Hint}" />
-          </StackPanel>
+          <TextBlock Classes="list-empty-text" AutomationProperties.AutomationId="CoreLogs.EmptyText" Text="{Binding EmptyText}" />
         </StackPanel>
       </Border>
 

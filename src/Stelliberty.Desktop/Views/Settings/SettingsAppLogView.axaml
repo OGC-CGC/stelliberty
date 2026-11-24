@@ -126,9 +126,6 @@
       <TextBlock Classes="settings-row-subtitle" HorizontalAlignment="Center"
                  AutomationProperties.AutomationId="AppLogs.EmptyText"
                  Text="{Binding EmptyText}" />
-      <TextBlock Classes="settings-row-subtitle" HorizontalAlignment="Center"
-                 Opacity="0.7"
-                 Text="{loc:Loc AppLogs.Empty.Hint}" />
     </StackPanel>
   </Border>
 

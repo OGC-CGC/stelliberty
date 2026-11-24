@@ -87,7 +87,7 @@
               <TextBox Classes="settings-input"
                        AutomationProperties.AutomationId="Settings.CustomUpdateRepositoryTextBox"
                        IsEnabled="{Binding !Update.IsChecking}"
-                       Watermark="https://github.com/owner/repository"
+                       PlaceholderText="https://github.com/owner/repository"
                        Text="{Binding Update.CustomRepositoryUrl, Mode=TwoWay}" />
               <Button Grid.Column="1" Classes="soft-action" Content="{loc:Loc Common.Save}"
                       AutomationProperties.AutomationId="Settings.SaveUpdateRepositoryButton"

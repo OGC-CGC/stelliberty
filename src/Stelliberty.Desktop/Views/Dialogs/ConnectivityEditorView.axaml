@@ -29,7 +29,7 @@
                           ToolTip.Tip="{loc:Loc Home.Connectivity.Enabled}"
                           IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
                 <TextBox Grid.Column="1" Classes="dialog-input"
-                         Watermark="{loc:Loc Home.Connectivity.Name}"
+                         PlaceholderText="{loc:Loc Home.Connectivity.Name}"
                          Text="{Binding Name, Mode=TwoWay}" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
                   <Button Classes="soft-action" Padding="8,4"
@@ -64,7 +64,7 @@
                     </ComboBox.ItemTemplate>
                   </ComboBox>
                   <TextBox Grid.Column="1" Classes="dialog-input"
-                           Watermark="{Binding AddressWatermark}" Text="{Binding Url, Mode=TwoWay}" />
+                           PlaceholderText="{Binding AddressWatermark}" Text="{Binding Url, Mode=TwoWay}" />
                 </Grid>
               </Grid>
             </Border>

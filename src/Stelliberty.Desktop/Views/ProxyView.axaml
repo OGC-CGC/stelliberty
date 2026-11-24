@@ -159,17 +159,9 @@
             <Border Classes="list-empty-halo" />
             <iconPacks:PackIconMingCuteIcons Classes="list-empty-icon" Kind="{Binding EmptyIconType}" />
           </Panel>
-          <StackPanel Spacing="7">
-            <TextBlock Classes="list-empty-text"
-                       AutomationProperties.AutomationId="Proxy.EmptyText"
-                       Text="{Binding EmptyText}" />
-            <TextBlock Classes="list-empty-hint"
-                       IsVisible="{Binding EmptySubtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                       Text="{Binding EmptySubtitle}" />
-            <TextBlock Classes="list-empty-hint"
-                       IsVisible="{Binding EmptySubtitle, Converter={x:Static StringConverters.IsNullOrEmpty}}"
-                       Text="{loc:Loc Proxy.Empty.Hint}" />
-          </StackPanel>
+          <TextBlock Classes="list-empty-text"
+                     AutomationProperties.AutomationId="Proxy.EmptyText"
+                     Text="{Binding EmptyText}" />
         </StackPanel>
       </Border>
 
