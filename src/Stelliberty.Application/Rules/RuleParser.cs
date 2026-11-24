@@ -126,8 +126,87 @@ public sealed class RuleParser
             return new RuleItem(type, string.Empty, parts[1].Trim());
         }
 
-        var options = parts.Length > 3 ? string.Join(",", parts.Skip(3).Select(part => part.Trim())) : string.Empty;
-        return new RuleItem(type, parts[1].Trim(), parts.Length >= 3 ? parts[2].Trim() : string.Empty, options);
+        if (parts.Length >= 3 && IsLogicalType(type))
+        {
+            // 逻辑规则的出站在末尾，持久化标识独立于展示字段。
+            return new RuleItem(type, string.Join(',', parts[1..^1].Select(part => part.Trim())), parts[^1].Trim())
+            {
+                BuiltinKey = GetLogicalBuiltinKey(type, parts),
+            };
+        }
+
+        return new RuleItem(type, parts[1].Trim(), parts.Length >= 3 ? parts[2].Trim() : string.Empty, JoinTrimmed(parts, 3));
+    }
+
+    public static bool IsLogicalType(string type) => type.ToUpperInvariant() is "AND" or "OR" or "NOT";
+
+    internal static string GetLogicalBuiltinKey(string type, string[] parts)
+        => RuleKey.Create(type, parts[1], parts[2], JoinTrimmed(parts, 3));
+
+    private static string JoinTrimmed(string[] parts, int start)
+        => string.Join(',', parts.Skip(start).Select(part => part.Trim()));
+
+    public static string FormatPayload(string type, string payload)
+    {
+        var operation = type.ToUpperInvariant();
+        if (operation is not ("AND" or "OR" or "NOT") || payload.Length < 2 ||
+            payload[0] != '(' || payload[^1] != ')')
+        {
+            return payload;
+        }
+
+        var children = new List<string>();
+        var depth = 0;
+        var start = 1;
+        for (var index = 1; index < payload.Length - 1; index++)
+        {
+            switch (payload[index])
+            {
+                case '(':
+                    depth++;
+                    break;
+                case ')':
+                    depth--;
+                    if (depth == 0)
+                    {
+                        var rest = payload.AsSpan(index + 1, payload.Length - index - 2).TrimStart();
+                        if (!rest.IsEmpty && rest[0] != ',')
+                        {
+                            return payload;
+                        }
+                    }
+                    break;
+                case ',' when depth == 0:
+                    children.Add(payload[start..index].Trim());
+                    start = index + 1;
+                    break;
+            }
+        }
+        children.Add(payload[start..^1].Trim());
+        if (depth != 0 || children.Any(child => child.Length < 2 || child[0] != '(' || child[^1] != ')'))
+        {
+            return payload;
+        }
+
+        var formatted = children.Select(FormatLogicalChild);
+        if (operation == "NOT")
+        {
+            return children.Count == 1 ? $"(!{formatted.First()})" : payload;
+        }
+
+        return $"({string.Join(operation == "AND" ? " && " : " || ", formatted)})";
+    }
+
+    private static string FormatLogicalChild(string child)
+    {
+        var separator = child.IndexOf(',');
+        if (separator < 0)
+        {
+            return child;
+        }
+
+        var type = child[1..separator].Trim();
+        return IsLogicalType(type) ? $"({type},{FormatPayload(type, child[(separator + 1)..^1].Trim())})" : child;
     }
 
     private static bool IsValidRule(RuleItem rule)

@@ -17,7 +17,8 @@ public sealed record RuleEditorItem(
     bool IsEnabled,
     int RuleCount = 0)
 {
-    public string Key => RuleKey.Create(Type, Payload, Proxy, Options);
+    public string? BuiltinKey { get; init; }
+    public string Key => BuiltinKey ?? RuleKey.Create(Type, Payload, Proxy, Options);
     public string MatchKey => RuleKey.CreateMatch(Type, Payload, Options);
     public string OrderId => IsBuiltIn ? RuleOrderKey.Builtin(Key) : RuleOrderKey.Custom(Id);
 
@@ -83,7 +84,7 @@ public sealed class RuleOverrideService(
             .GroupBy(rule => RuleKey.CreateMatch(rule.Type, rule.Payload, rule.Options), StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         var baseline = parsedRules
-            .GroupBy(rule => RuleKey.Create(rule.Type, rule.Payload, rule.Proxy, rule.Options), StringComparer.Ordinal)
+            .GroupBy(GetBuiltinKey, StringComparer.Ordinal)
             .Select(group => group.First() with
             {
                 RuleCount = matchCounts[RuleKey.CreateMatch(group.First().Type, group.First().Payload, group.First().Options)]
@@ -100,8 +101,11 @@ public sealed class RuleOverrideService(
                 rule.Options,
                 string.IsNullOrWhiteSpace(rule.Source) ? "subscription" : rule.Source,
                 true,
-                !set.DisabledBuiltinRuleKeys.Contains(RuleKey.Create(rule.Type, rule.Payload, rule.Proxy, rule.Options)),
-                rule.RuleCount))
+                !set.DisabledBuiltinRuleKeys.Contains(GetBuiltinKey(rule)),
+                rule.RuleCount)
+            {
+                BuiltinKey = rule.BuiltinKey,
+            })
             .ToList();
         var customItems = set.CustomRules
                 .Where(rule => seenCustomKeys.Add(rule.Key))
@@ -419,13 +423,13 @@ public sealed class RuleOverrideService(
         var previousSet = overrideStore.Load(subscriptionId);
         var previousRules = previousSet.CustomRules.ToLookup(rule => rule.Id, StringComparer.Ordinal);
         var enabledBuiltinRules = ParseBuiltinRules(content)
-            .Where(rule => !disabledBuiltinRuleKeys.Contains(RuleKey.Create(rule.Type, rule.Payload, rule.Proxy, rule.Options)))
+            .Where(rule => !disabledBuiltinRuleKeys.Contains(GetBuiltinKey(rule)))
             .ToList();
         var builtinKeys = enabledBuiltinRules
             .Select(rule => RuleKey.CreateMatch(rule.Type, rule.Payload, rule.Options))
             .ToHashSet(StringComparer.Ordinal);
         var reenabledBuiltinKeys = enabledBuiltinRules
-            .Where(rule => previousSet.DisabledBuiltinRuleKeys.Contains(RuleKey.Create(rule.Type, rule.Payload, rule.Proxy, rule.Options)))
+            .Where(rule => previousSet.DisabledBuiltinRuleKeys.Contains(GetBuiltinKey(rule)))
             .Select(rule => RuleKey.CreateMatch(rule.Type, rule.Payload, rule.Options))
             .ToHashSet(StringComparer.Ordinal);
         // 订阅更新带来的旧冲突不阻塞无关编辑，只拒绝本次新增或重新启用的冲突。
@@ -445,6 +449,9 @@ public sealed class RuleOverrideService(
         }
     }
 
+    private static string GetBuiltinKey(RuleItem rule)
+        => rule.BuiltinKey ?? RuleKey.Create(rule.Type, rule.Payload, rule.Proxy, rule.Options);
+
     private static string ParseKey(string rule)
     {
         var parts = rule.Split(',', StringSplitOptions.None);
@@ -454,6 +461,11 @@ public sealed class RuleOverrideService(
         }
 
         var type = parts[0].Trim();
+        if (parts.Length >= 3 && RuleParser.IsLogicalType(type))
+        {
+            return RuleParser.GetLogicalBuiltinKey(type, parts);
+        }
+
         if (string.Equals(type, "MATCH", StringComparison.OrdinalIgnoreCase))
         {
             return RuleKey.Create(type, string.Empty, parts[1], parts.Length > 2 ? string.Join(',', parts.Skip(2)) : string.Empty);

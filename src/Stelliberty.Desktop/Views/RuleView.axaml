@@ -136,7 +136,8 @@
                       <Border Classes="list-pill" Tag="{Binding SourceTag}"><TextBlock Text="{Binding Type}" /></Border>
                       <Border Classes="list-pill" Tag="custom" IsVisible="{Binding !IsBuiltIn}"><TextBlock Text="{loc:Loc Rules.Row.Custom}" /></Border>
                     </StackPanel>
-                    <TextBlock Grid.Row="1" Text="{Binding Payload}" Foreground="{DynamicResource AppTextPrimaryBrush}" FontWeight="Normal" FontSize="13.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="1" Text="{Binding Payload}" ToolTip.Tip="{Binding LogicalPayloadTooltip}"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}" FontWeight="Normal" FontSize="13.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="7">
                       <TextBlock Text="{Binding Proxy}" Foreground="{DynamicResource AppAccentBrush}" FontWeight="Normal" FontSize="12.5" TextTrimming="CharacterEllipsis" />
                       <TextBlock Text="{Binding DuplicateText}" FontSize="11.5" FontWeight="Normal" Foreground="{DynamicResource AppWarningBrush}" />

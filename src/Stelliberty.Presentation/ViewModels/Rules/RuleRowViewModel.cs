@@ -22,7 +22,7 @@ public sealed record RuleRowViewModel(int Index, RuleItem Rule, ILocalizationSer
 
     public string Type => Rule.Type;
 
-    public string Payload => string.IsNullOrWhiteSpace(Rule.Payload) ? "-" : Rule.Payload;
+    public string Payload => string.IsNullOrWhiteSpace(Rule.Payload) ? "-" : RuleParser.FormatPayload(Rule.Type, Rule.Payload);
 
     public string Proxy => Rule.Proxy;
 

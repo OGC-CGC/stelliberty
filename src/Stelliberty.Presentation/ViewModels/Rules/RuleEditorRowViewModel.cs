@@ -13,6 +13,7 @@ public sealed class RuleEditorRowViewModel : ViewModelBase
     {
         Item = item;
         _isEnabled = item.IsEnabled;
+        Payload = string.IsNullOrWhiteSpace(item.Payload) ? "-" : RuleParser.FormatPayload(item.Type, item.Payload);
     }
 
     public RuleEditorItem Item { get; }
@@ -22,7 +23,8 @@ public sealed class RuleEditorRowViewModel : ViewModelBase
     public string Id => Item.Id;
     public string OrderId => Item.OrderId;
     public string Type => Item.Type;
-    public string Payload => string.IsNullOrWhiteSpace(Item.Payload) ? "-" : Item.Payload;
+    public string Payload { get; }
+    public string? LogicalPayloadTooltip => RuleParser.IsLogicalType(Type) ? Payload : null;
     public string Proxy => Item.Proxy;
     public string Options => Item.Options;
     public string Source => Item.Source;
