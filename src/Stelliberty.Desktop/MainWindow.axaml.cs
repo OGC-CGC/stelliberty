@@ -939,7 +939,6 @@ public sealed partial class MainWindow : Window
             other.ZIndex = 0;
             other.IsHitTestVisible = false;
             other.Opacity = 0;
-            other.RenderTransform = PageTransition.EnterFromTransform;
             // 非当前页退出布局，避免多棵视觉树持续参与 Measure。
             other.IsVisible = false;
         }
@@ -1036,7 +1035,6 @@ public sealed partial class MainWindow : Window
         nextHost.ZIndex = 1;
         nextHost.IsHitTestVisible = false;
         nextHost.Opacity = 0;
-        nextHost.RenderTransform = PageTransition.EnterFromTransform;
     }
 
     private void CompletePageLoadingThenEnter(
@@ -1088,7 +1086,6 @@ public sealed partial class MainWindow : Window
             previousHost.ZIndex = 0;
             previousHost.IsHitTestVisible = false;
             previousHost.Opacity = 0;
-            previousHost.RenderTransform = PageTransition.LeaveToTransform;
             ScheduleHidePageHost(previousHost);
         }
         else if (previousHost is not null && !ReferenceEquals(previousHost, nextHost))
@@ -1099,7 +1096,6 @@ public sealed partial class MainWindow : Window
         nextHost.Transitions = PageTransition.CreateEnterTransitions();
         nextHost.IsHitTestVisible = true;
         nextHost.Opacity = 1;
-        nextHost.RenderTransform = PageTransition.RestTransform;
     }
 
     private void CancelPendingPageTransition()
@@ -1140,7 +1136,6 @@ public sealed partial class MainWindow : Window
         host.ZIndex = 0;
         host.IsHitTestVisible = false;
         host.Opacity = 0;
-        host.RenderTransform = PageTransition.EnterFromTransform;
         host.IsVisible = false;
     }
 
@@ -1150,7 +1145,6 @@ public sealed partial class MainWindow : Window
         host.ZIndex = 1;
         host.IsHitTestVisible = true;
         host.Opacity = 1;
-        host.RenderTransform = PageTransition.RestTransform;
         host.IsVisible = true;
     }
 

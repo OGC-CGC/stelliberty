@@ -59,7 +59,7 @@ public sealed partial class SettingsView : UserControl
         }
     }
 
-    // 子页路由切换时内容区淡入上浮；仅在已处于设置页时播放，
+    // 子页路由切换时内容区淡入，仅在已处于设置页时播放，
     // 避免与进入设置页的主导航过渡叠加成双重动画。
     private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
@@ -160,10 +160,9 @@ public sealed partial class SettingsView : UserControl
         // 切页会按旧鼠标坐标重算命中，首帧禁止继承 hover。
         _pointeroverSuppressor.Begin();
 
-        // 起始态须先无动画落位，再注入过渡才能触发淡入上浮。
+        // 起始态须先无动画落位，再注入过渡才能触发淡入。
         SettingsContentPanel.Transitions = null;
         SettingsContentPanel.Opacity = 0;
-        SettingsContentPanel.RenderTransform = PageTransition.EnterFromTransform;
 
         RequestSubPageEnterFrame(version);
 
@@ -200,7 +199,6 @@ public sealed partial class SettingsView : UserControl
 
                 SettingsContentPanel.Transitions = PageTransition.CreateEnterTransitions();
                 SettingsContentPanel.Opacity = 1;
-                SettingsContentPanel.RenderTransform = PageTransition.RestTransform;
                 _pointeroverSuppressor.Apply();
             });
     }
@@ -209,7 +207,6 @@ public sealed partial class SettingsView : UserControl
     {
         SettingsContentPanel.Transitions = null;
         SettingsContentPanel.Opacity = 1;
-        SettingsContentPanel.RenderTransform = PageTransition.RestTransform;
         _pointeroverSuppressor.Reset();
     }
 

@@ -2,12 +2,10 @@ using System;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
-using Avalonia.Media;
-using Avalonia.Media.Transformation;
 
 namespace Stelliberty.Desktop.Controls;
 
-// 页面切换错峰；消除工具栏重影闪烁
+// 旧页较快淡出，缩短两个工具栏同时可见的时间。
 internal static class PageTransition
 {
     private static readonly TimeSpan EnterDuration = TimeSpan.FromMilliseconds(280);
@@ -27,20 +25,13 @@ internal static class PageTransition
         Y2 = 1,
     };
 
-    // 轻微缩放只作用于合成属性，避免触发布局。
-    public static readonly ITransform EnterFromTransform = TransformOperations.Parse("translate(0px,0px) scale(0.985)");
-    public static readonly ITransform RestTransform = TransformOperations.Parse("translate(0px,0px) scale(1)");
-    public static readonly ITransform LeaveToTransform = TransformOperations.Parse("translate(0px,0px) scale(0.995)");
-
     public static Transitions CreateEnterTransitions() => new()
     {
         new DoubleTransition { Property = Visual.OpacityProperty, Duration = EnterDuration, Easing = EnterEasing },
-        new TransformOperationsTransition { Property = Visual.RenderTransformProperty, Duration = EnterDuration, Easing = EnterEasing },
     };
 
     public static Transitions CreateLeaveTransitions() => new()
     {
         new DoubleTransition { Property = Visual.OpacityProperty, Duration = LeaveDuration, Easing = LeaveEasing },
-        new TransformOperationsTransition { Property = Visual.RenderTransformProperty, Duration = LeaveDuration, Easing = LeaveEasing },
     };
 }
