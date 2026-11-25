@@ -44,6 +44,7 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
     private readonly IBackgroundOperationClient? _operations;
     private IReadOnlyList<string> _backgroundUpdatingIds = [];
     private bool _backgroundSubscriptionBusy;
+    private bool _displayTrafficInBytes;
     internal Func<Task>? RuntimeRefreshCompletion { get; set; }
 
     public void ApplyBackgroundOperations(IReadOnlyList<BackgroundOperationState> operations)
@@ -563,6 +564,23 @@ public sealed partial class SubscriptionPageViewModel : ViewModelBase, IDisposab
         {
             subscription.SetUpdating(UpdatingSubscriptionIds.Contains(subscription.Id, StringComparer.Ordinal));
         }
+    }
+
+    internal void SetTrafficDisplayUnit(bool displayInBytes)
+    {
+        if (_displayTrafficInBytes == displayInBytes)
+        {
+            return;
+        }
+
+        _displayTrafficInBytes = displayInBytes;
+        foreach (var subscription in _subscriptions)
+        {
+            subscription.SetTrafficDisplayUnit(displayInBytes);
+        }
+
+        Provider.SetTrafficDisplayUnit(displayInBytes);
+        OnPropertyChanged(nameof(HomeCardTrafficText));
     }
 
     private void RaiseSubscriptionStateChanged()

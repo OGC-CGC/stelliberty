@@ -30,6 +30,7 @@ public sealed class SubscriptionProviderViewModel : ViewModelBase, IDisposable
     private bool _hasSyncedAllHttpProviders;
     private bool _hasRefreshedAfterSync;
     private bool _hasRefreshedAfterUpload;
+    private bool _displayTrafficInBytes;
 
     public SubscriptionProviderViewModel(
         SelectedSubscriptionProviderCatalogLoader? catalogLoader,
@@ -657,6 +658,17 @@ public sealed class SubscriptionProviderViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasRefreshedProvidersAfterUpload));
     }
 
+    internal void SetTrafficDisplayUnit(bool displayInBytes)
+    {
+        _displayTrafficInBytes = displayInBytes;
+        for (var i = 0; i < _providers.Count; i++)
+        {
+            _providers[i] = _providers[i] with { DisplayTrafficInBytes = displayInBytes };
+        }
+
+        RaiseProviderStateChanged();
+    }
+
     private SubscriptionProviderItemViewModel ToProviderItem(SubscriptionProvider provider)
     {
         return new SubscriptionProviderItemViewModel(
@@ -670,7 +682,10 @@ public sealed class SubscriptionProviderViewModel : ViewModelBase, IDisposable
             Localization: _localization,
             TrafficInfo: provider.TrafficInfo,
             CanManage: _catalog?.Snapshot?.IsCurrent ?? true,
-            IsCached: _catalog?.Snapshot?.IsCached == true);
+            IsCached: _catalog?.Snapshot?.IsCached == true)
+        {
+            DisplayTrafficInBytes = _displayTrafficInBytes
+        };
     }
 
     private void ShowErrorToast(string message)

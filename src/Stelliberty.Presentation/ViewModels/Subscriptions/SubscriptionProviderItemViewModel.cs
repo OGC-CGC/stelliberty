@@ -20,6 +20,8 @@ public sealed record SubscriptionProviderItemViewModel(
     bool CanManage = true,
     bool IsCached = false)
 {
+    public bool DisplayTrafficInBytes { get; init; }
+
     public bool IsRemote => string.Equals(VehicleType, "HTTP", StringComparison.OrdinalIgnoreCase);
 
     public bool IsFile => string.Equals(VehicleType, "File", StringComparison.OrdinalIgnoreCase);
@@ -42,7 +44,7 @@ public sealed record SubscriptionProviderItemViewModel(
     public bool IsTrafficWarning => TrafficUsageRatio >= 0.9;
 
     public string TrafficText => TrafficInfo is { } info
-        ? $"{ByteSize.Format(info.Used)} / {(HasTrafficTotal ? ByteSize.Format(info.Total) : Localize("Subscriptions.Traffic.TotalUnknown"))}"
+        ? $"{TrafficSize.Format(info.Used, DisplayTrafficInBytes)} / {(HasTrafficTotal ? TrafficSize.Format(info.Total, DisplayTrafficInBytes) : Localize("Subscriptions.Traffic.TotalUnknown"))}"
         : Localize("Subscriptions.Traffic.Unavailable");
 
     public string ExpireText => TrafficInfo is { Expire: > 0 } info

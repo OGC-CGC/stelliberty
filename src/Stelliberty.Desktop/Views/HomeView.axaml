@@ -289,33 +289,22 @@
           </Grid>
 
           <Grid MinHeight="148" ColumnDefinitions="*,*" ColumnSpacing="20">
-            <Grid Grid.Column="0">
-              <Grid RowDefinitions="*,*,*,*">
-                <Border Grid.Row="0" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-                <Border Grid.Row="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-                <Border Grid.Row="2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-                <Border Grid.Row="3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-              </Grid>
-              <controls:Sparkline StrokeThickness="2.2"
-                                  Stroke="{DynamicResource HomeUploadSeriesBrush}"
-                                  Fill="{DynamicResource HomeUploadSeriesFillBrush}"
-                                  Values="{Binding UploadSamples}">
-              </controls:Sparkline>
-            </Grid>
-
-            <Grid Grid.Column="1">
-              <Grid RowDefinitions="*,*,*,*">
-                <Border Grid.Row="0" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-                <Border Grid.Row="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-                <Border Grid.Row="2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-                <Border Grid.Row="3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Opacity="0.5" />
-              </Grid>
-              <controls:Sparkline StrokeThickness="2.2"
-                                  Stroke="{DynamicResource HomeDownloadSeriesBrush}"
-                                  Fill="{DynamicResource HomeDownloadSeriesFillBrush}"
-                                  Values="{Binding DownloadSamples}">
-              </controls:Sparkline>
-            </Grid>
+            <controls:Sparkline Grid.Column="0" StrokeThickness="2.2"
+                                Stroke="{DynamicResource HomeUploadSeriesBrush}"
+                                Fill="{DynamicResource HomeUploadSeriesFillBrush}"
+                                AxisLabelBrush="{DynamicResource AppTextTertiaryBrush}"
+                                GridLineBrush="{DynamicResource AppBorderBrush}"
+                                AxisMaximum="{Binding SpeedAxisMaximum}"
+                                DisplayTrafficInBytes="{Binding DisplayTrafficInBytes}"
+                                Values="{Binding UploadSamples}" />
+            <controls:Sparkline Grid.Column="1" StrokeThickness="2.2"
+                                Stroke="{DynamicResource HomeDownloadSeriesBrush}"
+                                Fill="{DynamicResource HomeDownloadSeriesFillBrush}"
+                                AxisLabelBrush="{DynamicResource AppTextTertiaryBrush}"
+                                GridLineBrush="{DynamicResource AppBorderBrush}"
+                                AxisMaximum="{Binding SpeedAxisMaximum}"
+                                DisplayTrafficInBytes="{Binding DisplayTrafficInBytes}"
+                                Values="{Binding DownloadSamples}" />
           </Grid>
 
           <!-- 指标格：去掉圆形底，图标放大并直接上色 -->

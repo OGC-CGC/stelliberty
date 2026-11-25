@@ -37,7 +37,8 @@ public sealed partial class SubscriptionPageViewModel
             providerSnapshot: _providerSnapshots.GetValueOrDefault(subscription.Id),
             getLocalLastModifiedAt: subscription.IsLocalFile && _subscriptionStore is not null
                 ? () => _subscriptionStore.GetContentLastModifiedAt(subscription.Id)
-                : null);
+                : null,
+            displayTrafficInBytes: _displayTrafficInBytes);
     }
 
     private static SubscriptionOverrideOptionViewModel ToOverrideOption(OverrideProfile overrideProfile)

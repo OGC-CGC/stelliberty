@@ -10,6 +10,7 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
     private readonly IAppSettingsStore _settingsStore;
     private readonly ILocalizationService _localization;
     private AppLanguage _selectedLanguage;
+    private bool _displayTrafficInBytes;
 
     public SettingsLanguageViewModel(AppSettings settings, IAppSettingsStore settingsStore, ILocalizationService localization)
     {
@@ -17,11 +18,45 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
         _settingsStore = settingsStore;
         _localization = localization;
         _selectedLanguage = ParseEnum(settings.Language, AppLanguage.System);
+        _displayTrafficInBytes = settings.DisplayTrafficInBytes;
         _localization.SetLanguage(_selectedLanguage);
         _localization.LanguageChanged += OnLanguageChanged;
     }
 
     public string FieldLabelText => _localization.GetString("Settings.Field.Language");
+
+    public string TrafficUnitLabelText => _localization.GetString("Settings.Field.TrafficUnit");
+
+    public event Action<bool>? TrafficUnitChanged;
+
+    public IReadOnlyList<SelectionOption<bool>> TrafficUnitOptions { get; } =
+        [new(false, "bit"), new(true, "Byte")];
+
+    public SelectionOption<bool>? SelectedTrafficUnit
+    {
+        get => TrafficUnitOptions[_displayTrafficInBytes ? 1 : 0];
+        set
+        {
+            if (value is null || value.Value == _displayTrafficInBytes)
+            {
+                return;
+            }
+
+            var previous = _settings.DisplayTrafficInBytes;
+            _settings.DisplayTrafficInBytes = value.Value;
+            try
+            {
+                _settingsStore.Save(_settings);
+            }
+            catch
+            {
+                _settings.DisplayTrafficInBytes = previous;
+                throw;
+            }
+
+            ApplyTrafficUnit(_settings.DisplayTrafficInBytes);
+        }
+    }
 
     public IReadOnlyList<SelectionOption<AppLanguage>> Options =>
     [
@@ -56,6 +91,7 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
 
     public void RefreshFromSettings()
     {
+        ApplyTrafficUnit(_settings.DisplayTrafficInBytes);
         var restoredLanguage = ParseEnum(_settings.Language, AppLanguage.System);
         if (restoredLanguage == _selectedLanguage)
         {
@@ -67,6 +103,14 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
         _localization.SetLanguage(restoredLanguage);
     }
 
+    private void ApplyTrafficUnit(bool displayInBytes)
+    {
+        if (SetProperty(ref _displayTrafficInBytes, displayInBytes, nameof(SelectedTrafficUnit)))
+        {
+            TrafficUnitChanged?.Invoke(displayInBytes);
+        }
+    }
+
     public void Dispose()
     {
         _localization.LanguageChanged -= OnLanguageChanged;
@@ -75,6 +119,7 @@ public sealed class SettingsLanguageViewModel : ViewModelBase, IDisposable
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(FieldLabelText));
+        OnPropertyChanged(nameof(TrafficUnitLabelText));
         OnPropertyChanged(nameof(Options));
         OnPropertyChanged(nameof(SelectedOption));
     }

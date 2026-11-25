@@ -64,11 +64,17 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     private long _downloadTotal;
     private int _activeConnectionCount;
 
-    // 30 个采样间隔构成 30 秒可见窗口，故需 31 个点
-    private const int SpeedHistoryCapacity = 31;
+    // 61 个点覆盖每秒采样时的 60 秒窗口。
+    private const int SpeedHistoryCapacity = 61;
+    // 采样按字节存储，首档 256 Kib/s 对应 32 KiB/s。
+    private const double MinimumSpeedAxisMaximum = 32 * 1024d;
+    private const double SpeedAxisStepMultiplier = 8;
+    private const double SpeedAxisShrinkThreshold = 0.55;
     private readonly Queue<double> _uploadSpeedHistory = new();
     private readonly Queue<double> _downloadSpeedHistory = new();
     private bool _isSpeedChartLive = true;
+    private double _speedAxisMaximum = MinimumSpeedAxisMaximum;
+    private bool _displayTrafficInBytes;
     private readonly TrafficRateTracker _directRuntimeTrafficTracker = new();
 
     private bool _isCoreRestarting;
@@ -409,13 +415,13 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     public string ProxyAddressValueText => _proxyAddressValueText ?? Localize("Home.Value.Unavailable");
 
-    public string UploadSpeedValueText => $"{ByteSize.Format(_uploadSpeed)}/s";
+    public string UploadSpeedValueText => TrafficSize.FormatRate(_uploadSpeed, DisplayTrafficInBytes);
 
-    public string DownloadSpeedValueText => $"{ByteSize.Format(_downloadSpeed)}/s";
+    public string DownloadSpeedValueText => TrafficSize.FormatRate(_downloadSpeed, DisplayTrafficInBytes);
 
-    public string UploadTotalValueText => ByteSize.Format(_uploadTotal);
+    public string UploadTotalValueText => TrafficSize.Format(_uploadTotal, DisplayTrafficInBytes);
 
-    public string DownloadTotalValueText => ByteSize.Format(_downloadTotal);
+    public string DownloadTotalValueText => TrafficSize.Format(_downloadTotal, DisplayTrafficInBytes);
 
     public string ActiveConnectionsValueText => _activeConnectionCount.ToString();
 
@@ -423,7 +429,19 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<double> DownloadSamples { get; private set; } = Array.Empty<double>();
 
-    // 曲线离开视野（窗口隐藏、切页）时冻结采样，回来后从离开位置接着走。
+    public double SpeedAxisMaximum => _speedAxisMaximum;
+
+    public bool DisplayTrafficInBytes => _displayTrafficInBytes;
+
+    internal void SetTrafficDisplayUnit(bool displayInBytes)
+    {
+        if (SetProperty(ref _displayTrafficInBytes, displayInBytes, nameof(DisplayTrafficInBytes)))
+        {
+            NotifyTrafficValuesChanged();
+        }
+    }
+
+    // 首页不可见时暂停更新曲线；恢复后使用下一次刷新取得的托盘历史。
     public void SetSpeedChartLive(bool isLive) => _isSpeedChartLive = isLive;
 
     public bool IsCoreRestarting => _isCoreRestarting;
@@ -661,8 +679,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
                     PushSpeedSample(_uploadSpeedHistory, _uploadSpeed);
                     PushSpeedSample(_downloadSpeedHistory, _downloadSpeed);
                 }
-                UploadSamples = _uploadSpeedHistory.ToArray();
-                DownloadSamples = _downloadSpeedHistory.ToArray();
+                PublishSpeedHistory();
             }
         }
 
@@ -1323,13 +1340,8 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(PlatformValueText));
         OnPropertyChanged(nameof(CoreVersionValueText));
         OnPropertyChanged(nameof(ProxyAddressValueText));
-        OnPropertyChanged(nameof(UploadSpeedValueText));
-        OnPropertyChanged(nameof(DownloadSpeedValueText));
-        OnPropertyChanged(nameof(UploadTotalValueText));
-        OnPropertyChanged(nameof(DownloadTotalValueText));
+        NotifyTrafficValuesChanged();
         OnPropertyChanged(nameof(ActiveConnectionsValueText));
-        OnPropertyChanged(nameof(UploadSamples));
-        OnPropertyChanged(nameof(DownloadSamples));
         OnPropertyChanged(nameof(IsCoreRestarting));
         OnPropertyChanged(nameof(CanRestartCore));
         OnPropertyChanged(nameof(IsCoreUpdating));
@@ -1407,8 +1419,35 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
             _downloadSpeedHistory.Enqueue(0);
         }
 
+        PublishSpeedHistory();
+    }
+
+    private void PublishSpeedHistory()
+    {
         UploadSamples = _uploadSpeedHistory.ToArray();
         DownloadSamples = _downloadSpeedHistory.ToArray();
+        var peak = Math.Max(UploadSamples.Max(), DownloadSamples.Max());
+        if (peak > _speedAxisMaximum || peak < _speedAxisMaximum * SpeedAxisShrinkThreshold)
+        {
+            var maximum = MinimumSpeedAxisMaximum;
+            while (maximum < peak)
+            {
+                maximum *= SpeedAxisStepMultiplier;
+            }
+
+            SetProperty(ref _speedAxisMaximum, maximum, nameof(SpeedAxisMaximum));
+        }
+
+        OnPropertyChanged(nameof(UploadSamples));
+        OnPropertyChanged(nameof(DownloadSamples));
+    }
+
+    private void NotifyTrafficValuesChanged()
+    {
+        OnPropertyChanged(nameof(UploadSpeedValueText));
+        OnPropertyChanged(nameof(DownloadSpeedValueText));
+        OnPropertyChanged(nameof(UploadTotalValueText));
+        OnPropertyChanged(nameof(DownloadTotalValueText));
     }
 
     public void Dispose()

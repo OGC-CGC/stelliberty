@@ -17,7 +17,7 @@ internal interface ITrayRuntimeMonitor
 
 internal sealed class RuntimeTrafficMonitor : ITrayRuntimeMonitor, IAsyncDisposable
 {
-    internal const int HistoryCapacity = 60;
+    internal const int HistoryCapacity = 61;
 
     private readonly ITrayCoreRuntime _coreRuntime;
     private readonly IProxyCoreClient _coreClient;

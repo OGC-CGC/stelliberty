@@ -222,6 +222,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         RulePage.ApplyRuleToggleAsync = ApplyRuleToggleRuntimeAsync;
         RulePage.ToastRequested += OnToastRequested;
         SubscriptionPage = subscriptionPage;
+        Language.TrafficUnitChanged += ApplyTrafficDisplayUnit;
+        ApplyTrafficDisplayUnit(_settings.DisplayTrafficInBytes);
         ProxyPage.PropertyChanged += OnProxyPagePropertyChanged;
         SyncHomeSubscriptionRuntimeStats();
         OverridePage = overridePage;
@@ -274,6 +276,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         _isDisposed = true;
         foreach (var loading in PageLoadingStates) loading.PropertyChanged -= OnPageLoadingChanged;
         _localization.LanguageChanged -= OnLocalizationLanguageChanged;
+        Language.TrafficUnitChanged -= ApplyTrafficDisplayUnit;
         Settings.SubPageChanged -= OnSettingsSubPageChanged;
         DataManagement.RestoreCompleted -= OnDataRestoreCompleted;
         DataManagement.ToastRequested -= OnToastRequested;
@@ -771,6 +774,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
         DataManagement.RefreshFromSettings();
         CoreConfig.RefreshFromSettings();
         SystemIntegration.RefreshFromSettings();
+    }
+
+    private void ApplyTrafficDisplayUnit(bool displayInBytes)
+    {
+        HomePage.SetTrafficDisplayUnit(displayInBytes);
+        ConnectionPage.SetTrafficDisplayUnit(displayInBytes);
+        SubscriptionPage.SetTrafficDisplayUnit(displayInBytes);
     }
 
     // 后台命令已完成持久化和运行时应用；此处仅刷新已存在的界面。

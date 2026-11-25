@@ -8,11 +8,13 @@ public sealed class ConnectionRowViewModel : ViewModelBase
 {
     private ConnectionInfo _connection;
     private DateTimeOffset? _now;
+    private bool _displayTrafficInBytes;
 
-    public ConnectionRowViewModel(ConnectionInfo connection, DateTimeOffset? now = null)
+    public ConnectionRowViewModel(ConnectionInfo connection, DateTimeOffset? now = null, bool displayTrafficInBytes = false)
     {
         _connection = connection;
         _now = now;
+        _displayTrafficInBytes = displayTrafficInBytes;
     }
 
     // 同 Id 刷新原地更新，保留行实例和虚拟化状态。
@@ -21,6 +23,17 @@ public sealed class ConnectionRowViewModel : ViewModelBase
         _connection = connection;
         _now = now;
         OnPropertyChanged("");
+    }
+
+    internal void SetTrafficDisplayUnit(bool displayInBytes)
+    {
+        _displayTrafficInBytes = displayInBytes;
+        OnPropertyChanged(nameof(UploadSpeedText));
+        OnPropertyChanged(nameof(DownloadSpeedText));
+        OnPropertyChanged(nameof(SpeedText));
+        OnPropertyChanged(nameof(UploadAmountText));
+        OnPropertyChanged(nameof(DownloadAmountText));
+        OnPropertyChanged(nameof(TrafficText));
     }
 
     public ConnectionInfo Connection => _connection;
@@ -72,17 +85,17 @@ public sealed class ConnectionRowViewModel : ViewModelBase
 
     public bool IsProcessVisible => !string.IsNullOrWhiteSpace(Process);
 
-    public string UploadSpeedText => $"↑ {ByteSize.Format(_connection.UploadSpeed)}/s";
+    public string UploadSpeedText => $"↑ {TrafficSize.FormatRate(_connection.UploadSpeed, _displayTrafficInBytes)}";
 
-    public string DownloadSpeedText => $"↓ {ByteSize.Format(_connection.DownloadSpeed)}/s";
+    public string DownloadSpeedText => $"↓ {TrafficSize.FormatRate(_connection.DownloadSpeed, _displayTrafficInBytes)}";
 
     public string SpeedText => $"{UploadSpeedText}  {DownloadSpeedText}";
 
-    public string UploadAmountText => ByteSize.Format(_connection.Upload);
+    public string UploadAmountText => TrafficSize.Format(_connection.Upload, _displayTrafficInBytes);
 
-    public string DownloadAmountText => ByteSize.Format(_connection.Download);
+    public string DownloadAmountText => TrafficSize.Format(_connection.Download, _displayTrafficInBytes);
 
-    public string TrafficText => $"{ByteSize.Format(_connection.Upload)} / {ByteSize.Format(_connection.Download)}";
+    public string TrafficText => $"{UploadAmountText} / {DownloadAmountText}";
 
     public string ChainSummaryText => string.Join(" → ", _connection.RoutePath);
 

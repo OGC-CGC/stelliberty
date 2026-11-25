@@ -42,6 +42,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
     private int _directConnectionCount;
     private long _totalUploadSpeed;
     private long _totalDownloadSpeed;
+    private bool _displayTrafficInBytes;
     private CoreTrafficRate? _latestTrafficRate;
     private IReadOnlyList<ConnectionDetailGroupViewModel> _detailGroups = [];
     private ConnectionDetailRowViewModel? _detailTrafficRow;
@@ -237,9 +238,27 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
 
     public int ProxyConnectionCount => Connections.Count - _directConnectionCount;
 
-    public string TotalUploadSpeedText => $"{ByteSize.Format(_totalUploadSpeed)}/s";
+    public string TotalUploadSpeedText => TrafficSize.FormatRate(_totalUploadSpeed, _displayTrafficInBytes);
 
-    public string TotalDownloadSpeedText => $"{ByteSize.Format(_totalDownloadSpeed)}/s";
+    public string TotalDownloadSpeedText => TrafficSize.FormatRate(_totalDownloadSpeed, _displayTrafficInBytes);
+
+    internal void SetTrafficDisplayUnit(bool displayInBytes)
+    {
+        if (_displayTrafficInBytes == displayInBytes)
+        {
+            return;
+        }
+
+        _displayTrafficInBytes = displayInBytes;
+        foreach (var row in _visibleConnectionRows)
+        {
+            row.SetTrafficDisplayUnit(displayInBytes);
+        }
+
+        OnPropertyChanged(nameof(TotalUploadSpeedText));
+        OnPropertyChanged(nameof(TotalDownloadSpeedText));
+        RefreshDetailMetrics();
+    }
 
     public bool IsMonitoringPaused => _state.IsMonitoringPaused;
 
@@ -596,7 +615,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         }
 
         var metadata = connection.Metadata;
-        var row = new ConnectionRowViewModel(connection, _displayTime ?? _now());
+        var row = new ConnectionRowViewModel(connection, _displayTime ?? _now(), _displayTrafficInBytes);
         var sourceAddress = FormatEndpoint(metadata.SourceIp, metadata.SourcePort);
         var destinationAddress = FormatEndpoint(
             string.IsNullOrWhiteSpace(metadata.DestinationIp) ? metadata.Host : metadata.DestinationIp,
@@ -741,7 +760,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         }
 
         _visibleConnectionRows = _filteredConnections
-            .Select(connection => new ConnectionRowViewModel(connection, now))
+            .Select(connection => new ConnectionRowViewModel(connection, now, _displayTrafficInBytes))
             .ToList();
         OnPropertyChanged(nameof(FilteredConnectionRows));
     }
@@ -817,7 +836,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var row = new ConnectionRowViewModel(_selectedConnection, _displayTime ?? _now());
+        var row = new ConnectionRowViewModel(_selectedConnection, _displayTime ?? _now(), _displayTrafficInBytes);
         _detailGroups = BuildDetailGroups(_selectedConnection);
         _detailLines = BuildDetailLinesFromGroups(_detailGroups);
         _detailText = BuildDetailTextFromGroups(_detailGroups);
@@ -837,7 +856,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var row = new ConnectionRowViewModel(_selectedConnection, _displayTime ?? _now());
+        var row = new ConnectionRowViewModel(_selectedConnection, _displayTime ?? _now(), _displayTrafficInBytes);
         var changed = SetProperty(ref _detailSummaryUpload, row.UploadSpeedText, nameof(DetailSummaryUpload));
         changed |= SetProperty(ref _detailSummaryDownload, row.DownloadSpeedText, nameof(DetailSummaryDownload));
         changed |= SetProperty(ref _detailSummaryDuration, row.DurationText, nameof(DetailSummaryDuration));
