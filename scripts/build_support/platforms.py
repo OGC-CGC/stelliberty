@@ -8,7 +8,6 @@ PLATFORMS = {
     "win-arm64": PlatformTarget("win-arm64", "aarch64-pc-windows-msvc", "hub.dll", "stelliberty_service.exe"),
     "linux-x64": PlatformTarget("linux-x64", "x86_64-unknown-linux-gnu", "libhub.so", "stelliberty_service"),
     "linux-arm64": PlatformTarget("linux-arm64", "aarch64-unknown-linux-gnu", "libhub.so", "stelliberty_service"),
-    "macos-x64": PlatformTarget("osx-x64", "x86_64-apple-darwin", "libhub.dylib", "stelliberty_service"),
     "macos-arm64": PlatformTarget("osx-arm64", "aarch64-apple-darwin", "libhub.dylib", "stelliberty_service"),
 }
 
@@ -17,7 +16,6 @@ PLATFORM_ALIASES = {
     "linux": "linux-x64",
     "macos": "macos-arm64",
     "osx": "macos-arm64",
-    "osx-x64": "macos-x64",
     "osx-arm64": "macos-arm64",
 }
 

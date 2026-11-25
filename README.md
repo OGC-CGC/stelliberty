@@ -20,11 +20,11 @@ A fork of a fork of [Stelliberty](https://github.com/Kindness-Kismet/stelliberty
 
 <br>
 
-| Home · Light | Home · Dark |
+| Home (Light) | Home (Dark) |
 |---|---|
 | ![Home light](.github/images/home-light.png) | ![Home dark](.github/images/home-dark.png) |
 
-| Settings · Light | Settings · Dark |
+| Settings (Light) | Settings (Dark) |
 |---|---|
 | ![Settings light](.github/images/settings-light.png) | ![Settings dark](.github/images/settings-dark.png) |
 
@@ -80,9 +80,9 @@ Grab the package for your platform from the **[Releases page](https://github.com
 
 | Platform | Recommended | Alternative |
 |---|---|---|
-| Windows · x64 / arm64 | `*-setup.exe` (installer) | `*.zip` (portable) |
-| Linux · x64 / arm64 | `*.AppImage` | |
-| macOS · x64 / arm64 | `*.dmg` | |
+| Windows x64 / arm64 | `*-setup.exe` (installer) | `*.zip` (portable) |
+| Linux x64 / arm64 | `*.AppImage` | |
+| macOS Apple Silicon | `*.dmg` | |
 
 ### System Requirements
 
@@ -90,7 +90,7 @@ Grab the package for your platform from the **[Releases page](https://github.com
 |---|---|
 | Windows | Windows 10 1809 or later |
 | Linux | X11/Wayland-based desktop environment |
-| macOS | macOS 13+ |
+| macOS | macOS 26+ |
 
 <br>
 
@@ -170,7 +170,7 @@ src/Stelliberty.Native          C# wrappers over the native FFI layer
 src/Stelliberty.Cli             CLI program for controlling the app
 native/hub                      Native library: config override, parsing, capabilities
 native/service                  Service mode
-scripts/                        build.py · prebuild.py · test.py
+scripts/                        build.py, prebuild.py, test.py
 ```
 
 Dependency directions: `Desktop → Presentation → Application → Domain` and `Tray → Application → Domain`.
@@ -266,7 +266,7 @@ python scripts/prebuild.py
 | *(default)* | Release service binary |
 | `--dev` | Debug service binary |
 | `--all` | Both Debug and Release |
-| `--platform <rid>` | `current` · `win-x64` · `win-arm64` · `linux-x64` · `linux-arm64` · `macos-x64` · `macos-arm64` |
+| `--platform <rid>` | `current` `win-x64` `win-arm64` `linux-x64` `linux-arm64` `macos-arm64` |
 | `--clean` | Clean `build/` and `bin/obj/` before fetching |
 
 #### 2. Pre-build Tests

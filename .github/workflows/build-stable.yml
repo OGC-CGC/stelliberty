@@ -208,11 +208,6 @@ jobs:
             platform: macos-arm64
             rust_target: aarch64-apple-darwin
             os_family: macos
-          - label: macOS x64
-            runner: macos-26-intel
-            platform: macos-x64
-            rust_target: x86_64-apple-darwin
-            os_family: macos
 
     steps:
       - name: Check out repository

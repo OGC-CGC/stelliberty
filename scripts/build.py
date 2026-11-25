@@ -27,7 +27,6 @@ BUILD_PLATFORM_HELP = format_choice_help(
         ("win-arm64", "Windows ARM64"),
         ("linux-x64", "Linux x64"),
         ("linux-arm64", "Linux ARM64"),
-        ("macos-x64", "macOS x64"),
         ("macos-arm64", "macOS ARM64"),
     ],
 )

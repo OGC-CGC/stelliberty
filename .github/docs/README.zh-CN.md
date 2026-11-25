@@ -20,11 +20,11 @@
 
 <br>
 
-| 主页 · 浅色 | 主页 · 深色 |
+| 主页（浅色） | 主页（深色） |
 |---|---|
 | ![主页浅色](../../.github/images/home-light.png) | ![主页深色](../../.github/images/home-dark.png) |
 
-| 设置 · 浅色 | 设置 · 深色 |
+| 设置（浅色） | 设置（深色） |
 |---|---|
 | ![设置浅色](../../.github/images/settings-light.png) | ![设置深色](../../.github/images/settings-dark.png) |
 
@@ -80,9 +80,9 @@ SBproxy 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS。
 
 | 平台 | 推荐 | 其他可选 |
 |---|---|---|
-| Windows · x64 / arm64 | `*-setup.exe`（安装版） | `*.zip`（便携版） |
-| Linux · x64 / arm64 | `*.AppImage` | |
-| macOS · x64 / arm64 | `*.dmg` | |
+| Windows x64 / arm64 | `*-setup.exe`（安装版） | `*.zip`（便携版） |
+| Linux x64 / arm64 | `*.AppImage` | |
+| macOS arm64 | `*.dmg` | |
 
 ### 系统要求
 
@@ -90,7 +90,7 @@ SBproxy 是跨平台桌面代理客户端，覆盖 Windows、Linux 与 macOS。
 |---|---|
 | Windows | Windows 10 1809 及以上 |
 | Linux | 基于 X11/Wayland 的桌面环境 |
-| macOS | macOS 13+ |
+| macOS | macOS 26+ |
 
 <br>
 
@@ -170,7 +170,7 @@ src/Stelliberty.Native          C# 到原生 FFI 层的包装
 src/Stelliberty.Cli             用于控制软件的 Cli 程序
 native/hub                      原生库：配置覆写、解析、能力模块
 native/service                  服务模式
-scripts/                        build.py · prebuild.py · test.py
+scripts/                        build.py, prebuild.py, test.py
 ```
 
 依赖方向：`Desktop → Presentation → Application → Domain`，以及 `Tray → Application → Domain`。
@@ -266,7 +266,7 @@ python scripts/prebuild.py
 | *（默认）* | Release 服务二进制 |
 | `--dev` | Debug 服务二进制 |
 | `--all` | 同时构建 Debug 与 Release |
-| `--platform <rid>` | 目标平台：`current` · `win-x64` · `win-arm64` · `linux-x64` · `linux-arm64` · `macos-x64` · `macos-arm64` |
+| `--platform <rid>` | 目标平台：`current` `win-x64` `win-arm64` `linux-x64` `linux-arm64` `macos-arm64` |
 | `--clean` | 准备前清理 `build/` 与项目 `bin/obj/` 目录 |
 
 #### 2. 编译前测试

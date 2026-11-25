@@ -15,14 +15,12 @@ internal static class MacDockIconService
         // AppKit 由 Avalonia 初始化，图标设置必须在主线程执行。
         Dispatcher.UIThread.VerifyAccess();
         // 发布包 UI 位于 Contents/MacOS/data/deps。
-        var appBundlePath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", ".."));
         var iconPath = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "Resources", "AppIcon.icns"));
 
         try
         {
-            SetIcon(appBundlePath, iconPath);
+            SetIcon(iconPath);
         }
         catch (Exception exception)
         {
@@ -30,22 +28,12 @@ internal static class MacDockIconService
         }
     }
 
-    private static void SetIcon(string appBundlePath, string fallbackIconPath)
+    private static void SetIcon(string iconPath)
     {
-        nint nsImage = nint.Zero;
-        if (OperatingSystem.IsMacOSVersionAtLeast(26))
-        {
-            nsImage = LoadSystemApplicationIcon(appBundlePath);
-        }
-
+        var nsImage = LoadImage(iconPath);
         if (nsImage == nint.Zero)
         {
-            nsImage = LoadImage(fallbackIconPath);
-        }
-
-        if (nsImage == nint.Zero)
-        {
-            AppLogger.Warning($"macOS Dock icon could not be loaded: {fallbackIconPath}");
+            AppLogger.Warning($"macOS Dock icon could not be loaded: {iconPath}");
             return;
         }
 
@@ -58,21 +46,6 @@ internal static class MacDockIconService
         {
             // 应用持有设置后的图像，此处仅释放本地所有权。
             Release(nsImage, GetSelector("release"));
-        }
-    }
-
-    private static nint LoadSystemApplicationIcon(string appBundlePath)
-    {
-        var nsPath = CreateString(appBundlePath);
-        try
-        {
-            var workspace = Send(GetClass("NSWorkspace"), GetSelector("sharedWorkspace"));
-            var nsImage = Send(workspace, GetSelector("iconForFile:"), nsPath);
-            return nsImage == nint.Zero ? nint.Zero : Send(nsImage, GetSelector("retain"));
-        }
-        finally
-        {
-            Release(nsPath, GetSelector("release"));
         }
     }
 

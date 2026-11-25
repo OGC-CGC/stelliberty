@@ -22,7 +22,7 @@ internal sealed class MacOSGlassEffectService : IDisposable
     private bool _wasTitleBarMaterialHidden;
     private bool _wasTitleBarUnderlineHidden;
 
-    public static bool IsSupported => OperatingSystem.IsMacOSVersionAtLeast(26)
+    public static bool IsSupported => OperatingSystem.IsMacOS()
                                       && GetClass("NSGlassEffectView") != nint.Zero;
 
     public bool Apply(Window window)

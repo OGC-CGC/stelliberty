@@ -25,6 +25,7 @@ INNO_SETUP_CANDIDATES = [
     Path(r"C:\Program Files\Inno Setup 7\ISCC.exe"),
     Path(r"C:\Program Files (x86)\Inno Setup 7\ISCC.exe"),
 ]
+MACOS_MINIMUM_VERSION = "26.0"
 MACOS_BUILD_VERSION_PATTERN = re.compile(
     r"platform\s+MACOS\s+minos\s+(?P<minos>\S+)\s+sdk\s+(?P<sdk>\S+)",
     re.MULTILINE,
@@ -176,7 +177,7 @@ def pack_macos_installers(
     if sys.platform != "darwin":
         raise RuntimeError("macOS installers can only be created on a macOS host")
 
-    if not platform_name.startswith("macos"):
+    if platform_name != "macos-arm64":
         raise RuntimeError(f"macOS installers do not support this platform: {platform_name}")
 
     ensure_command("hdiutil", "Missing hdiutil; cannot create a DMG")
@@ -188,7 +189,7 @@ def pack_macos_installers(
     PACKAGES_DIR.mkdir(parents=True, exist_ok=True)
     base_name = macos_package_base_name(metadata, platform_name, configuration)
     with tempfile.TemporaryDirectory(prefix=f"{linux_app_package(metadata)}-macos-package-") as temp_dir:
-        app_path = build_macos_app_bundle(metadata, platform_name, configuration, target, output_dir, Path(temp_dir))
+        app_path = build_macos_app_bundle(metadata, configuration, target, output_dir, Path(temp_dir))
         return [
             pack_dmg(metadata, configuration, app_path, base_name),
             pack_pkg(metadata, configuration, app_path, base_name),
@@ -205,7 +206,7 @@ def pack_macos_app(
     if sys.platform != "darwin":
         raise RuntimeError("macOS app bundles can only be created on a macOS host")
 
-    if not platform_name.startswith("macos"):
+    if platform_name != "macos-arm64":
         raise RuntimeError(f"macOS app bundles do not support this platform: {platform_name}")
 
     ensure_command("iconutil", "Missing iconutil; cannot create the macOS icon")
@@ -214,7 +215,7 @@ def pack_macos_app(
     app_path = PACKAGES_DIR / f"{display_name(metadata, configuration)}.app"
 
     with tempfile.TemporaryDirectory(prefix="macos-app-", dir=PACKAGES_DIR) as temp_dir:
-        staged_app = build_macos_app_bundle(metadata, platform_name, configuration, target, output_dir, Path(temp_dir))
+        staged_app = build_macos_app_bundle(metadata, configuration, target, output_dir, Path(temp_dir))
         backup_dir = None
         backup_path = None
         if app_path.exists() or app_path.is_symlink():
@@ -241,7 +242,6 @@ def pack_macos_app(
 
 def build_macos_app_bundle(
     metadata: AppMetadata,
-    platform_name: str,
     configuration: str,
     target: PlatformTarget,
     output_dir: Path,
@@ -271,8 +271,8 @@ def build_macos_app_bundle(
     ui_executable_path.rename(named_ui_executable_path)
     hosts = (executable_path, named_ui_executable_path)
     stamp_macos_apphosts(hosts + (cli_path,))
-    write_macos_info_plist(metadata, configuration, platform_name, contents_dir / "Info.plist")
-    build_macos_icon_composer_assets(resources_dir, platform_name)
+    write_macos_info_plist(metadata, configuration, contents_dir / "Info.plist")
+    build_macos_icon_composer_assets(resources_dir)
     build_macos_icns(resources_dir / "AppIcon.icns", configuration)
     return app_path
 
@@ -806,7 +806,6 @@ def write_rendered_template(
 def write_macos_info_plist(
     metadata: AppMetadata,
     configuration: str,
-    platform_name: str,
     output_path: Path,
 ) -> None:
     replacements = {
@@ -815,7 +814,7 @@ def write_macos_info_plist(
         "APP_IDENTIFIER": xml_escape(macos_bundle_identifier(metadata, configuration)),
         "APP_VERSION": xml_escape(metadata.version),
         "APP_BUILD": xml_escape(macos_build_version(metadata.version)),
-        "APP_MIN_SYSTEM": macos_min_system(platform_name),
+        "APP_MIN_SYSTEM": MACOS_MINIMUM_VERSION,
     }
     output_path.write_text(render_macos_template("Info.plist.in", replacements), encoding="utf-8", newline="\n")
 
@@ -830,7 +829,11 @@ def stamp_macos_apphosts(executable_paths: tuple[Path, ...]) -> None:
     parse_macos_version(sdk_version)
 
     for executable_path in executable_paths:
-        minimum_version, existing_sdk_version = read_macos_build_version(executable_path)
+        existing_minimum_version, existing_sdk_version = read_macos_build_version(executable_path)
+        minimum_version = max(
+            (existing_minimum_version, MACOS_MINIMUM_VERSION),
+            key=parse_macos_version,
+        )
         target_sdk_version = max(
             (existing_sdk_version, sdk_version),
             key=parse_macos_version,
@@ -937,7 +940,7 @@ def build_macos_icns(output_path: Path, configuration: str) -> None:
         run_checked(["iconutil", "-c", "icns", str(iconset_dir), "-o", str(output_path)])
 
 
-def build_macos_icon_composer_assets(output_dir: Path, platform_name: str) -> None:
+def build_macos_icon_composer_assets(output_dir: Path) -> None:
     source_path = ROOT / "src" / "Stelliberty.Desktop" / "Assets" / "macos" / "app_icon.icon"
     if not source_path.exists():
         raise FileNotFoundError(f"macOS Icon Composer source does not exist: {source_path}")
@@ -966,7 +969,7 @@ def build_macos_icon_composer_assets(output_dir: Path, platform_name: str) -> No
             "--target-device",
             "mac",
             "--minimum-deployment-target",
-            macos_min_system(platform_name),
+            MACOS_MINIMUM_VERSION,
             str(source_path),
         ])
         if not (output_dir / "Assets.car").exists():
@@ -1000,12 +1003,6 @@ def macos_bundle_identifier(metadata: AppMetadata, configuration: str = "release
 def macos_build_version(version: str) -> str:
     match = re.search(r"\d+(?:\.\d+)*", version)
     return match.group(0) if match else "1"
-
-
-def macos_min_system(platform_name: str) -> str:
-    if platform_name.startswith("macos"):
-        return "13.0"
-    raise RuntimeError(f"Unsupported macOS platform: {platform_name}")
 
 
 def linux_executable_paths(install_dir: Path, metadata: AppMetadata, target: PlatformTarget) -> list[Path]:

@@ -14,14 +14,9 @@ public sealed class WindowEffectCapability : IWindowEffectCapability
             return [WindowEffect.None, WindowEffect.Mica, WindowEffect.Acrylic];
         }
 
-        if (OperatingSystem.IsMacOSVersionAtLeast(26))
-        {
-            return [WindowEffect.None, WindowEffect.Blur, WindowEffect.FrutigerAero];
-        }
-
         if (OperatingSystem.IsMacOS())
         {
-            return [WindowEffect.None, WindowEffect.Blur];
+            return [WindowEffect.None, WindowEffect.Blur, WindowEffect.FrutigerAero];
         }
 
         return [WindowEffect.None];
