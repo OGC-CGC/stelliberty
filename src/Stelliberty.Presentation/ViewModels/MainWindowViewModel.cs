@@ -780,7 +780,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         HomePage.SetTrafficDisplayUnit(displayInBytes);
         ConnectionPage.SetTrafficDisplayUnit(displayInBytes);
-        SubscriptionPage.SetTrafficDisplayUnit(displayInBytes);
     }
 
     // 后台命令已完成持久化和运行时应用；此处仅刷新已存在的界面。

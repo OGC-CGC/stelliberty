@@ -4,11 +4,11 @@ public static class TrafficSize
 {
     private static readonly string[] Prefixes = ["", "K", "M", "G", "T", "P", "E"];
 
-    public static string Format(long bytes, bool displayInBytes) =>
-        Format((decimal)bytes, displayInBytes, compact: false);
+    public static string FormatAmount(long bytes) =>
+        Format(bytes, displayInBytes: true, compact: false);
 
     public static string FormatRate(long bytesPerSecond, bool displayInBytes) =>
-        $"{Format(bytesPerSecond, displayInBytes)}/s";
+        $"{Format(bytesPerSecond, displayInBytes, compact: false)}/s";
 
     public static string FormatAxisRate(double bytesPerSecond, bool displayInBytes) =>
         Format((decimal)bytesPerSecond, displayInBytes, compact: true);

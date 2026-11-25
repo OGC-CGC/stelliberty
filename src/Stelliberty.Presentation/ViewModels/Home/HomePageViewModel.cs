@@ -419,9 +419,9 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
 
     public string DownloadSpeedValueText => TrafficSize.FormatRate(_downloadSpeed, DisplayTrafficInBytes);
 
-    public string UploadTotalValueText => TrafficSize.Format(_uploadTotal, DisplayTrafficInBytes);
+    public string UploadTotalValueText => TrafficSize.FormatAmount(_uploadTotal);
 
-    public string DownloadTotalValueText => TrafficSize.Format(_downloadTotal, DisplayTrafficInBytes);
+    public string DownloadTotalValueText => TrafficSize.FormatAmount(_downloadTotal);
 
     public string ActiveConnectionsValueText => _activeConnectionCount.ToString();
 
@@ -437,7 +437,7 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
     {
         if (SetProperty(ref _displayTrafficInBytes, displayInBytes, nameof(DisplayTrafficInBytes)))
         {
-            NotifyTrafficValuesChanged();
+            NotifyTrafficRatesChanged();
         }
     }
 
@@ -1340,7 +1340,9 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(PlatformValueText));
         OnPropertyChanged(nameof(CoreVersionValueText));
         OnPropertyChanged(nameof(ProxyAddressValueText));
-        NotifyTrafficValuesChanged();
+        NotifyTrafficRatesChanged();
+        OnPropertyChanged(nameof(UploadTotalValueText));
+        OnPropertyChanged(nameof(DownloadTotalValueText));
         OnPropertyChanged(nameof(ActiveConnectionsValueText));
         OnPropertyChanged(nameof(IsCoreRestarting));
         OnPropertyChanged(nameof(CanRestartCore));
@@ -1442,12 +1444,10 @@ public sealed partial class HomePageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DownloadSamples));
     }
 
-    private void NotifyTrafficValuesChanged()
+    private void NotifyTrafficRatesChanged()
     {
         OnPropertyChanged(nameof(UploadSpeedValueText));
         OnPropertyChanged(nameof(DownloadSpeedValueText));
-        OnPropertyChanged(nameof(UploadTotalValueText));
-        OnPropertyChanged(nameof(DownloadTotalValueText));
     }
 
     public void Dispose()

@@ -13,7 +13,6 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
     private readonly Func<DateTimeOffset?>? _getLocalLastModifiedAt;
     private DateTimeOffset? _localLastModifiedAt;
     private readonly bool _hasSubscriptionTrafficInfo;
-    private bool _displayTrafficInBytes;
     private SubscriptionProviderSnapshot? _providerSnapshot;
     private SubscriptionProviderTrafficSummary? _providerSummary;
 
@@ -42,8 +41,7 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         ILocalizationService? localization = null,
         bool hasTrafficInfo = false,
         SubscriptionProviderSnapshot? providerSnapshot = null,
-        Func<DateTimeOffset?>? getLocalLastModifiedAt = null,
-        bool displayTrafficInBytes = false)
+        Func<DateTimeOffset?>? getLocalLastModifiedAt = null)
     {
         Id = id;
         Name = name;
@@ -70,7 +68,6 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         LastErrorAt = lastErrorAt;
         SourceFormat = sourceFormat;
         _localization = localization;
-        _displayTrafficInBytes = displayTrafficInBytes;
         _providerSnapshot = providerSnapshot;
         _providerSummary = providerSnapshot?.GetTrafficSummary();
     }
@@ -213,7 +210,7 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         : Localize("Subscriptions.Traffic.Expire");
 
     public string TrafficText => DisplayedTraffic is { } info
-        ? $"{TrafficSize.Format(info.Used, _displayTrafficInBytes)} / {(HasTrafficTotal ? TrafficSize.Format(info.Total, _displayTrafficInBytes) : Localize("Subscriptions.Traffic.TotalUnknown"))}"
+        ? $"{TrafficSize.FormatAmount(info.Used)} / {(HasTrafficTotal ? TrafficSize.FormatAmount(info.Total) : Localize("Subscriptions.Traffic.TotalUnknown"))}"
         : Localize("Subscriptions.Traffic.Unavailable");
 
     public bool HasTrafficInfo => DisplayedTraffic is not null;
@@ -279,12 +276,6 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
         IsUpdating = isUpdating;
     }
 
-    internal void SetTrafficDisplayUnit(bool displayInBytes)
-    {
-        _displayTrafficInBytes = displayInBytes;
-        OnPropertyChanged(nameof(TrafficText));
-    }
-
     public SubscriptionItemViewModel WithConfiguration(
         string name,
         string sourceLocation,
@@ -320,8 +311,7 @@ public sealed class SubscriptionItemViewModel : ViewModelBase
             _localization,
             _hasSubscriptionTrafficInfo,
             _providerSnapshot,
-            _getLocalLastModifiedAt,
-            _displayTrafficInBytes);
+            _getLocalLastModifiedAt);
     }
 
     public void ApplyProviderSnapshot(SubscriptionProviderSnapshot snapshot)

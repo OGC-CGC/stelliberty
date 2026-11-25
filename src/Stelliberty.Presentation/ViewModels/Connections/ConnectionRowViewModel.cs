@@ -31,9 +31,6 @@ public sealed class ConnectionRowViewModel : ViewModelBase
         OnPropertyChanged(nameof(UploadSpeedText));
         OnPropertyChanged(nameof(DownloadSpeedText));
         OnPropertyChanged(nameof(SpeedText));
-        OnPropertyChanged(nameof(UploadAmountText));
-        OnPropertyChanged(nameof(DownloadAmountText));
-        OnPropertyChanged(nameof(TrafficText));
     }
 
     public ConnectionInfo Connection => _connection;
@@ -91,9 +88,9 @@ public sealed class ConnectionRowViewModel : ViewModelBase
 
     public string SpeedText => $"{UploadSpeedText}  {DownloadSpeedText}";
 
-    public string UploadAmountText => TrafficSize.Format(_connection.Upload, _displayTrafficInBytes);
+    public string UploadAmountText => TrafficSize.FormatAmount(_connection.Upload);
 
-    public string DownloadAmountText => TrafficSize.Format(_connection.Download, _displayTrafficInBytes);
+    public string DownloadAmountText => TrafficSize.FormatAmount(_connection.Download);
 
     public string TrafficText => $"{UploadAmountText} / {DownloadAmountText}";
 
