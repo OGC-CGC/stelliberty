@@ -33,5 +33,9 @@
     <semi:DataGridSemiTheme />
     <semi:ColorPickerSemiTheme />
     <semi:AvaloniaEditSemiTheme />
+
+    <Style Selector="ScrollBar:horizontal, ScrollBar:vertical">
+      <Setter Property="ContextFlyout" Value="{x:Null}" />
+    </Style>
   </Application.Styles>
 </Application>
