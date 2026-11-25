@@ -14,7 +14,6 @@ internal sealed class SettingsSubPageIconConverter : IValueConverter
     {
         SettingsSubPage.Theme => PackIconMingCuteIconsKind.Palette3Line,
         SettingsSubPage.Language => PackIconMingCuteIconsKind.Translate2Line,
-        SettingsSubPage.ClashFeatures => PackIconMingCuteIconsKind.SendPlaneLine,
         SettingsSubPage.AppBehavior => PackIconMingCuteIconsKind.ToggleLeftLine,
         SettingsSubPage.DataManagement => PackIconMingCuteIconsKind.StorageLine,
         SettingsSubPage.Update => PackIconMingCuteIconsKind.Refresh1Line,

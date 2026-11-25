@@ -17,7 +17,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
         _localization = localization;
         ShowThemeCommand = new RelayCommand(() => SubPage = SettingsSubPage.Theme);
         ShowLanguageCommand = new RelayCommand(() => SubPage = SettingsSubPage.Language);
-        ShowClashFeaturesCommand = new RelayCommand(() => SubPage = SettingsSubPage.ClashFeatures);
         ShowAppBehaviorCommand = new RelayCommand(() => SubPage = SettingsSubPage.AppBehavior);
         ShowDataManagementCommand = new RelayCommand(() => SubPage = SettingsSubPage.DataManagement);
         ShowUpdateCommand = new RelayCommand(GoToUpdate);
@@ -54,7 +53,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
     public bool IsRootVisible => SubPage == SettingsSubPage.Root;
     public bool IsThemeVisible => SubPage == SettingsSubPage.Theme;
     public bool IsLanguageVisible => SubPage == SettingsSubPage.Language;
-    public bool IsClashFeaturesVisible => SubPage == SettingsSubPage.ClashFeatures;
     public bool IsAppBehaviorVisible => SubPage == SettingsSubPage.AppBehavior;
     public bool IsDataManagementVisible => SubPage == SettingsSubPage.DataManagement;
     public bool IsUpdateVisible => SubPage == SettingsSubPage.Update;
@@ -80,7 +78,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
     {
         SettingsSubPage.Theme => Localize("Settings.Header.Theme"),
         SettingsSubPage.Language => Localize("Settings.Header.Language"),
-        SettingsSubPage.ClashFeatures => Localize("Settings.Header.ClashFeatures"),
         SettingsSubPage.AppBehavior => Localize("Settings.Header.AppBehavior"),
         SettingsSubPage.DataManagement => Localize("Settings.Header.DataManagement"),
         SettingsSubPage.Update => Localize("Settings.Header.Update"),
@@ -99,8 +96,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
     public string ThemeEntryDescription => Localize("Settings.Entry.Theme.Description");
     public string LanguageEntryTitle => Localize("Settings.Entry.Language.Title");
     public string LanguageEntryDescription => Localize("Settings.Entry.Language.Description");
-    public string ClashFeaturesEntryTitle => Localize("Settings.Entry.ClashFeatures.Title");
-    public string ClashFeaturesEntryDescription => Localize("Settings.Entry.ClashFeatures.Description");
     public string AppBehaviorEntryTitle => Localize("Settings.Entry.AppBehavior.Title");
     public string AppBehaviorEntryDescription => Localize("Settings.Entry.AppBehavior.Description");
     public string DataManagementEntryTitle => Localize("Settings.Entry.DataManagement.Title");
@@ -130,7 +125,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
 
     public ICommand ShowThemeCommand { get; }
     public ICommand ShowLanguageCommand { get; }
-    public ICommand ShowClashFeaturesCommand { get; }
     public ICommand ShowAppBehaviorCommand { get; }
     public ICommand ShowDataManagementCommand { get; }
     public ICommand ShowUpdateCommand { get; }
@@ -158,8 +152,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(ThemeEntryDescription));
         OnPropertyChanged(nameof(LanguageEntryTitle));
         OnPropertyChanged(nameof(LanguageEntryDescription));
-        OnPropertyChanged(nameof(ClashFeaturesEntryTitle));
-        OnPropertyChanged(nameof(ClashFeaturesEntryDescription));
         OnPropertyChanged(nameof(AppBehaviorEntryTitle));
         OnPropertyChanged(nameof(AppBehaviorEntryDescription));
         OnPropertyChanged(nameof(DataManagementEntryTitle));
@@ -202,7 +194,6 @@ public sealed class SettingsPageViewModel : ViewModelBase
     {
         var target = SubPage switch
         {
-            _ when IsClashFeatureSubPage(SubPage) => SettingsSubPage.ClashFeatures,
             SettingsSubPage.Update when _backTarget == SettingsSubPage.About => SettingsSubPage.About,
             SettingsSubPage.AppLog when _backTarget == SettingsSubPage.About => SettingsSubPage.About,
             _ => SettingsSubPage.Root
@@ -211,19 +202,11 @@ public sealed class SettingsPageViewModel : ViewModelBase
         SubPage = target;
     }
 
-    private static bool IsClashFeatureSubPage(SettingsSubPage page) => page is SettingsSubPage.Network
-        or SettingsSubPage.PortControl
-        or SettingsSubPage.SystemIntegration
-        or SettingsSubPage.Dns
-        or SettingsSubPage.Performance
-        or SettingsSubPage.CoreLog;
-
     private void RaiseSubPageChanges()
     {
         OnPropertyChanged(nameof(IsRootVisible));
         OnPropertyChanged(nameof(IsThemeVisible));
         OnPropertyChanged(nameof(IsLanguageVisible));
-        OnPropertyChanged(nameof(IsClashFeaturesVisible));
         OnPropertyChanged(nameof(IsAppBehaviorVisible));
         OnPropertyChanged(nameof(IsDataManagementVisible));
         OnPropertyChanged(nameof(IsUpdateVisible));
@@ -254,29 +237,15 @@ public sealed class SettingsPageViewModel : ViewModelBase
             new(HeaderTextFor(SettingsSubPage.Root), ShowRootCommand, true, SettingsSubPage.Root)
         };
 
-        if (ResolveBreadcrumbParent() is { } parent)
+        if ((_subPage is SettingsSubPage.Update or SettingsSubPage.AppLog)
+            && _backTarget == SettingsSubPage.About)
         {
-            items.Add(new SettingsBreadcrumbItem(HeaderTextFor(parent.Page), parent.Command, true, parent.Page));
+            items.Add(new SettingsBreadcrumbItem(
+                HeaderTextFor(SettingsSubPage.About), ShowAboutCommand, true, SettingsSubPage.About));
         }
 
         items.Add(new SettingsBreadcrumbItem(HeaderTextFor(_subPage), null, false, _subPage));
         Breadcrumbs = items;
-    }
-
-    private (SettingsSubPage Page, ICommand Command)? ResolveBreadcrumbParent()
-    {
-        if (IsClashFeatureSubPage(_subPage))
-        {
-            return (SettingsSubPage.ClashFeatures, ShowClashFeaturesCommand);
-        }
-
-        if ((_subPage is SettingsSubPage.Update or SettingsSubPage.AppLog)
-            && _backTarget == SettingsSubPage.About)
-        {
-            return (SettingsSubPage.About, ShowAboutCommand);
-        }
-
-        return null;
     }
 
     private string Localize(string key) => _localization.GetString(key);

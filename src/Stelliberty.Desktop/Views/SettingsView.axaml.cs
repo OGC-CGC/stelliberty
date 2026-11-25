@@ -139,7 +139,6 @@ public sealed partial class SettingsView : UserControl
         SettingsSubPage.Root => new SettingsRootView(),
         SettingsSubPage.Theme => new SettingsThemeView(),
         SettingsSubPage.Language => new SettingsLanguageView(),
-        SettingsSubPage.ClashFeatures => new SettingsClashFeaturesView(),
         SettingsSubPage.AppBehavior => new SettingsAppBehaviorView(),
         SettingsSubPage.DataManagement => new SettingsDataManagementView(),
         SettingsSubPage.Update => new SettingsUpdateView(),

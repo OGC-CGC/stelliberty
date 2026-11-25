@@ -67,10 +67,9 @@ internal static partial class DebugCommands
     {
         viewModel.Settings.SubPage = spec.ToLowerInvariant() switch
         {
-            "settings" or "settings/root" => SettingsSubPage.Root,
+            "settings" or "settings/root" or "settings/clash-features" => SettingsSubPage.Root,
             "settings/theme" => SettingsSubPage.Theme,
             "settings/language" => SettingsSubPage.Language,
-            "settings/clash-features" => SettingsSubPage.ClashFeatures,
             "settings/app-behavior" => SettingsSubPage.AppBehavior,
             "settings/data-management" => SettingsSubPage.DataManagement,
             "settings/update" => SettingsSubPage.Update,

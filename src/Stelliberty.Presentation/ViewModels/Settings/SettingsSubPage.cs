@@ -5,7 +5,6 @@ public enum SettingsSubPage
     Root,
     Theme,
     Language,
-    ClashFeatures,
     AppBehavior,
     DataManagement,
     Update,
