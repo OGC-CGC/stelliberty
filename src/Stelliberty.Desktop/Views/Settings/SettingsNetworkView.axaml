@@ -22,7 +22,7 @@
                           IsChecked="{Binding CoreConfig.IsUnifiedDelayEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row" IsVisible="{Binding CoreConfig.IsUnifiedDelayEnabled}">
           <Grid ColumnDefinitions="220,*" ColumnSpacing="20">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.NetworkDelayUrlText}" />
             <TextBox Grid.Column="1" Classes="settings-input"
@@ -46,7 +46,7 @@
                           IsChecked="{Binding CoreConfig.IsAllowLanEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row" IsVisible="{Binding CoreConfig.IsAllowLanEnabled}">
           <Grid ColumnDefinitions="220,*" ColumnSpacing="20">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanAuthUserNameText}" />
             <TextBox Grid.Column="1" Classes="settings-input"
@@ -54,7 +54,7 @@
                      Text="{Binding CoreConfig.LanAuthenticationUserName, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row" IsVisible="{Binding CoreConfig.IsAllowLanEnabled}">
           <Grid ColumnDefinitions="220,*" ColumnSpacing="20">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanAuthPasswordText}" />
             <TextBox Grid.Column="1" Classes="settings-input"
@@ -62,33 +62,27 @@
                      Text="{Binding CoreConfig.LanAuthenticationPassword, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
-          <StackPanel Spacing="8">
+        <Expander Classes="settings-list" IsVisible="{Binding CoreConfig.IsAllowLanEnabled}">
+          <Expander.Header>
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanAllowedIpsText}" />
-            <TextBox Classes="settings-input multiline"
-                     AutomationProperties.AutomationId="Settings.LanAllowedIpsBox"
-                     AcceptsReturn="True"
-                     Text="{Binding CoreConfig.LanAllowedIpsText, Mode=TwoWay}" />
-          </StackPanel>
-        </Border>
-        <Border Classes="settings-inline-row">
-          <StackPanel Spacing="8">
+          </Expander.Header>
+          <controls:TextListEditor InputAutomationId="Settings.LanAllowedIpsBox"
+                                   Text="{Binding CoreConfig.LanAllowedIpsText, Mode=TwoWay}" />
+        </Expander>
+        <Expander Classes="settings-list" IsVisible="{Binding CoreConfig.IsAllowLanEnabled}">
+          <Expander.Header>
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.NetworkLanDisallowedIpsText}" />
-            <TextBox Classes="settings-input multiline"
-                     AutomationProperties.AutomationId="Settings.LanDisallowedIpsBox"
-                     AcceptsReturn="True"
-                     Text="{Binding CoreConfig.LanDisallowedIpsText, Mode=TwoWay}" />
-          </StackPanel>
-        </Border>
-        <Border Classes="settings-inline-row">
-          <StackPanel Spacing="8">
+          </Expander.Header>
+          <controls:TextListEditor InputAutomationId="Settings.LanDisallowedIpsBox"
+                                   Text="{Binding CoreConfig.LanDisallowedIpsText, Mode=TwoWay}" />
+        </Expander>
+        <Expander Classes="settings-list" IsVisible="{Binding CoreConfig.IsAllowLanEnabled}">
+          <Expander.Header>
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.NetworkSkipAuthPrefixesText}" />
-            <TextBox Classes="settings-input multiline"
-                     AutomationProperties.AutomationId="Settings.SkipAuthPrefixesBox"
-                     AcceptsReturn="True"
-                     Text="{Binding CoreConfig.SkipAuthPrefixesText, Mode=TwoWay}" />
-          </StackPanel>
-        </Border>
+          </Expander.Header>
+          <controls:TextListEditor InputAutomationId="Settings.SkipAuthPrefixesBox"
+                                   Text="{Binding CoreConfig.SkipAuthPrefixesText, Mode=TwoWay}" />
+        </Expander>
       </StackPanel>
     </Border>
   </StackPanel>
@@ -112,7 +106,7 @@
             </controls:AppComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row" IsVisible="{Binding CoreConfig.HasOutboundInterfaceList}">
+        <Border Classes="settings-inline-row auto-height" IsVisible="{Binding CoreConfig.HasOutboundInterfaceList}">
           <Grid ColumnDefinitions="*,220">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.OutboundInterfaceListText}" />
             <ItemsControl Grid.Column="1" ItemsSource="{Binding CoreConfig.OutboundInterfaceChoices}">

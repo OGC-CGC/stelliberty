@@ -13,7 +13,7 @@
     <TextBlock Classes="surface-group-title" Text="{Binding Settings.HeaderText}" />
     <Border Classes="surface-group">
       <StackPanel>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row auto-height">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Spacing="4">
               <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.CliText}" />
@@ -25,7 +25,7 @@
                           IsChecked="{Binding AppBehavior.IsCliEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row auto-height">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="3">
               <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.SilentStartText}" />
@@ -47,7 +47,7 @@
                           IsChecked="{Binding AppBehavior.IsMinimizeToTrayEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row auto-height">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="3">
               <TextBlock Classes="settings-row-title"
@@ -63,7 +63,7 @@
                           IsChecked="{Binding AppBehavior.IsLightweightModeEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row auto-height" IsVisible="{Binding AppBehavior.IsLightweightModeEnabled}">
           <Grid ColumnDefinitions="*,160" ColumnSpacing="10">
             <StackPanel Grid.Column="0" Spacing="3">
               <TextBlock Grid.Column="0" Classes="settings-row-title"
@@ -79,7 +79,7 @@
                      Text="{Binding AppBehavior.LightweightModeShutdownDelaySecondsText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row auto-height">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="3">
               <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.TrayDoubleClickText}" />
@@ -93,7 +93,7 @@
                           IsChecked="{Binding AppBehavior.IsTrayDoubleClickEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row auto-height">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="3">
               <TextBlock Classes="settings-row-title" Text="{Binding AppBehavior.RememberProxyStateText}" />

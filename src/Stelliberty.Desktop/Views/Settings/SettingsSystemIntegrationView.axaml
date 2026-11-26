@@ -34,34 +34,26 @@
                           IsChecked="{Binding SystemIntegration.IsPacModeEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row" IsVisible="{Binding SystemIntegration.IsSystemProxyBypassVisible}">
+        <Expander Classes="settings-list" IsVisible="{Binding SystemIntegration.IsSystemProxyBypassVisible}">
+          <Expander.Header>
+            <TextBlock Classes="settings-row-title" Text="{Binding SystemIntegration.SystemBypassText}" />
+          </Expander.Header>
           <StackPanel Spacing="8">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-              <StackPanel Grid.Column="0" Spacing="3">
-                <TextBlock Classes="settings-row-title" Text="{Binding SystemIntegration.SystemBypassText}" />
-                <TextBlock Classes="settings-row-subtitle"
-                           Text="{Binding SystemIntegration.SystemBypassDescriptionText}"
-                           TextWrapping="Wrap" />
+            <Button Classes="settings-reset"
+                    HorizontalAlignment="Right"
+                    AutomationProperties.AutomationId="Settings.RestoreDefaultSystemProxyBypassButton"
+                    Command="{Binding SystemIntegration.RestoreDefaultSystemProxyBypassCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="Refresh2Line" />
+                <TextBlock Text="{Binding SystemIntegration.RestoreDefaultBypassText}" />
               </StackPanel>
-              <Button Grid.Column="1"
-                      Classes="settings-reset"
-                      VerticalAlignment="Top"
-                      AutomationProperties.AutomationId="Settings.RestoreDefaultSystemProxyBypassButton"
-                      Command="{Binding SystemIntegration.RestoreDefaultSystemProxyBypassCommand}">
-                <StackPanel Orientation="Horizontal" Spacing="7">
-                  <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="Refresh2Line" />
-                  <TextBlock Text="{Binding SystemIntegration.RestoreDefaultBypassText}" />
-                </StackPanel>
-              </Button>
-            </Grid>
-            <TextBox Classes="settings-input multiline"
-                     AutomationProperties.AutomationId="Settings.SystemProxyBypassBox"
-                     AcceptsReturn="True"
-                     MinLines="3"
-                     Text="{Binding SystemIntegration.SystemProxyBypass, Mode=TwoWay}" />
+            </Button>
+            <controls:TextListEditor InputAutomationId="Settings.SystemProxyBypassBox"
+                                     StorageSeparator="{Binding SystemIntegration.SystemProxyBypassSeparator}"
+                                     Text="{Binding SystemIntegration.SystemProxyBypass, Mode=TwoWay}" />
           </StackPanel>
-        </Border>
-        <Border Classes="settings-inline-row" IsVisible="{Binding SystemIntegration.IsPacScriptVisible}">
+        </Expander>
+        <Border Classes="settings-inline-row auto-height" IsVisible="{Binding SystemIntegration.IsPacScriptVisible}">
           <StackPanel Spacing="8">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <TextBlock Grid.Column="0"
@@ -145,24 +137,20 @@
                           IsChecked="{Binding CoreConfig.IsTunStrictRouteEnabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
-          <StackPanel Spacing="8">
+        <Expander Classes="settings-list">
+          <Expander.Header>
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunDnsHijackText}" />
-            <TextBox Classes="settings-input multiline"
-                     AutomationProperties.AutomationId="Settings.TunDnsHijackBox"
-                     AcceptsReturn="True"
-                     Text="{Binding CoreConfig.TunDnsHijackText, Mode=TwoWay}" />
-          </StackPanel>
-        </Border>
-        <Border Classes="settings-inline-row">
-          <StackPanel Spacing="8">
+          </Expander.Header>
+          <controls:TextListEditor InputAutomationId="Settings.TunDnsHijackBox"
+                                   Text="{Binding CoreConfig.TunDnsHijackText, Mode=TwoWay}" />
+        </Expander>
+        <Expander Classes="settings-list">
+          <Expander.Header>
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunRouteExcludeText}" />
-            <TextBox Classes="settings-input multiline"
-                     AutomationProperties.AutomationId="Settings.TunRouteExcludeAddressesBox"
-                     AcceptsReturn="True"
-                     Text="{Binding CoreConfig.TunRouteExcludeAddressesText, Mode=TwoWay}" />
-          </StackPanel>
-        </Border>
+          </Expander.Header>
+          <controls:TextListEditor InputAutomationId="Settings.TunRouteExcludeAddressesBox"
+                                   Text="{Binding CoreConfig.TunRouteExcludeAddressesText, Mode=TwoWay}" />
+        </Expander>
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunDisableIcmpForwardingText}" />
@@ -171,7 +159,7 @@
                           IsChecked="{Binding CoreConfig.IsTunIcmpForwardingDisabled, Mode=TwoWay}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row with-description">
           <Grid ColumnDefinitions="*,160">
             <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
               <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.SystemTunMtuText}" />
@@ -186,7 +174,7 @@
     </Border>
   </StackPanel>
 
-  <StackPanel Spacing="0">
+  <StackPanel Spacing="0" IsVisible="{Binding SystemIntegration.IsUwpLoopbackSupported}">
     <TextBlock Classes="surface-group-title" Text="{Binding SystemIntegration.SystemUwpText}" />
     <Border Classes="surface-group">
       <StackPanel>

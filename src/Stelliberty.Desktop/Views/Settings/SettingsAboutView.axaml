@@ -56,7 +56,7 @@
     <TextBlock Classes="surface-group-title" Text="{loc:Loc Settings.About.ManageTitle}" />
     <Border Classes="surface-group">
       <StackPanel>
-        <Button Classes="settings-row first"
+        <Button Classes="settings-row first with-description"
                 AutomationProperties.AutomationId="Settings.About.UpdateEntry"
                 Command="{Binding Settings.ShowUpdateCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -73,7 +73,7 @@
                                               Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row last"
+        <Button Classes="settings-row last with-description"
                 AutomationProperties.AutomationId="Settings.About.AppLogEntry"
                 Command="{Binding Settings.ShowAppLogCommand}">
           <Grid ColumnDefinitions="40,*,Auto">

@@ -73,8 +73,16 @@ public sealed partial class SettingsCoreConfigViewModel
     public string DnsEnhancedMode
     {
         get => _settings.DnsEnhancedMode;
-        set => SetWithArea(_settings.DnsEnhancedMode, value, next => _settings.DnsEnhancedMode = next, "Dns");
+        set
+        {
+            if (SetWithArea(_settings.DnsEnhancedMode, value, next => _settings.DnsEnhancedMode = next, "Dns"))
+            {
+                OnPropertyChanged(nameof(IsFakeIpMode));
+            }
+        }
     }
+
+    public bool IsFakeIpMode => string.Equals(DnsEnhancedMode.Trim(), "fake-ip", StringComparison.Ordinal);
 
     public IReadOnlyList<SelectionOption<string>> DnsEnhancedModeOptions =>
     [
@@ -112,8 +120,16 @@ public sealed partial class SettingsCoreConfigViewModel
     public string FallbackNameServersText
     {
         get => string.Join(Environment.NewLine, _settings.FallbackNameServers);
-        set => SetStringListWithArea(_settings.FallbackNameServers, value, next => _settings.FallbackNameServers = next, "Dns");
+        set
+        {
+            if (SetStringListWithArea(_settings.FallbackNameServers, value, next => _settings.FallbackNameServers = next, "Dns"))
+            {
+                OnPropertyChanged(nameof(HasFallbackNameServers));
+            }
+        }
     }
+
+    public bool HasFallbackNameServers => _settings.FallbackNameServers.Any(value => !string.IsNullOrWhiteSpace(value));
 
     public string ProxyServerNameServersText
     {
@@ -166,8 +182,16 @@ public sealed partial class SettingsCoreConfigViewModel
     public string DirectNameServersText
     {
         get => string.Join(Environment.NewLine, _settings.DirectNameServers);
-        set => SetStringListWithArea(_settings.DirectNameServers, value, next => _settings.DirectNameServers = next, "Dns");
+        set
+        {
+            if (SetStringListWithArea(_settings.DirectNameServers, value, next => _settings.DirectNameServers = next, "Dns"))
+            {
+                OnPropertyChanged(nameof(HasDirectNameServers));
+            }
+        }
     }
+
+    public bool HasDirectNameServers => _settings.DirectNameServers.Any(value => !string.IsNullOrWhiteSpace(value));
 
     public string NameServerPolicyText
     {

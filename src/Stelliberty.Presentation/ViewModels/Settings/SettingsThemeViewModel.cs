@@ -34,7 +34,8 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         NormalizePersistedWindowEffect();
         NormalizePersistedWindowDecorationStyle();
         _localization.LanguageChanged += OnLanguageChanged;
-        ClearBackgroundImageCommand = new RelayCommand(() => SetBackgroundImagePath(string.Empty));
+        ToggleBuiltInBackgroundImageCommand = new RelayCommand(() =>
+            SetBackgroundImagePath(IsBuiltInBackgroundImage ? string.Empty : AppSettings.DefaultBackgroundImagePath));
         EditCustomAccentColorCommand = new RelayCommand(() => CustomAccentRequested?.Invoke(this, EventArgs.Empty));
     }
 
@@ -54,7 +55,9 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
 
     public string BackgroundImageSectionTitle => _localization.GetString("Settings.Background.Title");
     public string BackgroundImageChooseText => _localization.GetString("Settings.Background.Choose");
-    public string BackgroundImageClearText => _localization.GetString("Settings.Background.Clear");
+    public string BackgroundImageActionText => _localization.GetString(IsBuiltInBackgroundImage
+        ? "Settings.Background.Clear"
+        : "Settings.Background.UseBuiltIn");
     public string BackgroundImageStretchText => _localization.GetString("Settings.Background.Stretch");
     public string BackgroundImageHorizontalText => _localization.GetString("Settings.Background.Horizontal");
     public string BackgroundImageVerticalText => _localization.GetString("Settings.Background.Vertical");
@@ -62,11 +65,12 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     public string BackgroundImageTransparencyHint => _localization.GetString("Settings.Background.TransparencyHint");
     public string BackgroundImagePath => _settings.BackgroundImagePath;
     public bool HasBackgroundImage => !string.IsNullOrWhiteSpace(BackgroundImagePath);
+    private bool IsBuiltInBackgroundImage => BackgroundImagePath == AppSettings.DefaultBackgroundImagePath;
     public string BackgroundImageErrorText => _localization.GetString("Settings.Background.LoadFailed");
-    public string BackgroundImagePathText => BackgroundImagePath == AppSettings.DefaultBackgroundImagePath
+    public string BackgroundImagePathText => IsBuiltInBackgroundImage
         ? _localization.GetString("Settings.Background.BuiltIn")
         : HasBackgroundImage ? BackgroundImagePath : string.Empty;
-    public string BackgroundImageFileName => BackgroundImagePath == AppSettings.DefaultBackgroundImagePath
+    public string BackgroundImageFileName => IsBuiltInBackgroundImage
         ? BackgroundImagePathText
         : Path.GetFileName(BackgroundImagePathText);
 
@@ -148,7 +152,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public ICommand ClearBackgroundImageCommand { get; }
+    public ICommand ToggleBuiltInBackgroundImageCommand { get; }
 
     public void SetBackgroundImagePath(string path)
     {
@@ -165,6 +169,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(BackgroundImagePathText));
             OnPropertyChanged(nameof(BackgroundImageFileName));
             OnPropertyChanged(nameof(HasBackgroundImage));
+            OnPropertyChanged(nameof(BackgroundImageActionText));
         }
         BackgroundImageChanged?.Invoke(this, reloadImage);
     }
@@ -173,7 +178,7 @@ public sealed class SettingsThemeViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(BackgroundImageSectionTitle));
         OnPropertyChanged(nameof(BackgroundImageChooseText));
-        OnPropertyChanged(nameof(BackgroundImageClearText));
+        OnPropertyChanged(nameof(BackgroundImageActionText));
         OnPropertyChanged(nameof(BackgroundImageStretchText));
         OnPropertyChanged(nameof(BackgroundImageHorizontalText));
         OnPropertyChanged(nameof(BackgroundImageVerticalText));

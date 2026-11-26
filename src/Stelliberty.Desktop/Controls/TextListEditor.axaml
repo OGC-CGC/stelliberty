@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Stelliberty.Desktop.Controls"
+             xmlns:loc="using:Stelliberty.Desktop.Localization"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             x:Class="Stelliberty.Desktop.Controls.TextListEditor"
+             x:CompileBindings="True">
+  <StackPanel Spacing="4">
+    <ItemsControl x:Name="ItemRows">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Spacing="4" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="controls:TextListEntry">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+            <TextBox Classes="settings-input" Text="{Binding Text, Mode=OneWay}"
+                     KeyDown="OnItemKeyDown" LostFocus="OnItemLostFocus" />
+            <Button Grid.Column="1" Classes="toolbar-icon" VerticalAlignment="Center"
+                    AutomationProperties.Name="{loc:Loc Common.Delete}"
+                    ToolTip.Tip="{loc:Loc Common.Delete}" Click="OnRemoveClicked">
+              <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="DeleteLine" />
+            </Button>
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+      <TextBox x:Name="AddInput" Classes="settings-input"
+               AutomationProperties.AutomationId="{Binding InputAutomationId, RelativeSource={RelativeSource AncestorType=controls:TextListEditor}}"
+               PlaceholderText="{loc:Loc Common.Add}" KeyDown="OnAddKeyDown" />
+      <Button Grid.Column="1" Classes="toolbar-icon" VerticalAlignment="Center"
+              AutomationProperties.Name="{loc:Loc Common.Add}"
+              ToolTip.Tip="{loc:Loc Common.Add}" Click="OnAddClicked">
+        <iconPacks:PackIconMingCuteIcons Width="15" Height="15" Kind="AddLine" />
+      </Button>
+    </Grid>
+  </StackPanel>
+</UserControl>

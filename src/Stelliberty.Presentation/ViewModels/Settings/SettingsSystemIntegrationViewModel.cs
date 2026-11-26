@@ -54,7 +54,7 @@ public sealed class SettingsSystemIntegrationViewModel : ViewModelBase, IDisposa
         _systemProxyBypassText = CurrentSystemProxyBypass();
         _pacScriptText = CurrentPacScript();
         _localization.LanguageChanged += OnLanguageChanged;
-        ShowUwpLoopbackDialogCommand = new RelayCommand(ShowUwpLoopbackDialog);
+        ShowUwpLoopbackDialogCommand = new RelayCommand(ShowUwpLoopbackDialog, () => IsUwpLoopbackSupported);
         CloseUwpLoopbackDialogCommand = new RelayCommand(CloseUwpLoopbackDialog);
         SelectAllUwpCommand = new RelayCommand(SelectAllUwp);
         InvertUwpSelectionCommand = new RelayCommand(InvertUwpSelection);
@@ -68,6 +68,8 @@ public sealed class SettingsSystemIntegrationViewModel : ViewModelBase, IDisposa
     public event EventHandler<(string Message, ToastType Type)>? ToastRequested;
 
     public IReadOnlyList<string> ChangeAreas => _changeAreas;
+
+    public bool IsUwpLoopbackSupported => _systemPlatform == SystemProxyPlatform.Windows && _uwpLoopbackService is not null;
 
     public string SystemProxyHostText => _localization.GetString("Settings.System.ProxyHost");
 
@@ -86,13 +88,6 @@ public sealed class SettingsSystemIntegrationViewModel : ViewModelBase, IDisposa
     public string RestoreDefaultPacScriptText => _localization.GetString("Settings.System.RestoreDefaultPac");
 
     public string SystemBypassText => _localization.GetString("Settings.System.Bypass");
-
-    public string SystemBypassDescriptionText => _systemPlatform switch
-    {
-        SystemProxyPlatform.Windows => _localization.GetString("Settings.System.BypassDescription.Windows"),
-        SystemProxyPlatform.MacOS => _localization.GetString("Settings.System.BypassDescription.MacOS"),
-        _ => _localization.GetString("Settings.System.BypassDescription.Unix")
-    };
 
     public string RestoreDefaultBypassText => _localization.GetString("Settings.System.RestoreDefaultBypass");
 
@@ -140,6 +135,8 @@ public sealed class SettingsSystemIntegrationViewModel : ViewModelBase, IDisposa
     }
 
     public bool IsSystemProxyBypassVisible => !IsPacModeEnabled;
+
+    public char SystemProxyBypassSeparator => _systemPlatform == SystemProxyPlatform.Windows ? ';' : ',';
 
     public bool IsPacScriptVisible => IsPacModeEnabled;
 
@@ -341,6 +338,11 @@ public sealed class SettingsSystemIntegrationViewModel : ViewModelBase, IDisposa
 
     private void ShowUwpLoopbackDialog()
     {
+        if (!IsUwpLoopbackSupported)
+        {
+            return;
+        }
+
         // 先打开对话框，避免后台枚举阻塞入场帧。
         _allUwpItems.Clear();
         UwpSearchText = string.Empty;
@@ -484,7 +486,6 @@ public sealed class SettingsSystemIntegrationViewModel : ViewModelBase, IDisposa
         OnPropertyChanged(nameof(RestoreDefaultPacScriptText));
         OnPropertyChanged(nameof(RestoreDefaultBypassText));
         OnPropertyChanged(nameof(SystemBypassText));
-        OnPropertyChanged(nameof(SystemBypassDescriptionText));
         OnPropertyChanged(nameof(SystemUwpText));
         OnPropertyChanged(nameof(UwpSearchWatermarkText));
         OnPropertyChanged(nameof(UwpSelectAllText));

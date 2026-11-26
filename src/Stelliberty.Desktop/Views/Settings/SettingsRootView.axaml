@@ -13,7 +13,7 @@
     <TextBlock Classes="surface-group-title" Text="{Binding Settings.GroupPersonalizationText}" />
     <Border Classes="surface-group">
       <StackPanel>
-        <Button Classes="settings-row first"
+        <Button Classes="settings-row first with-description"
                 AutomationProperties.AutomationId="Settings.ThemeEntry"
                 Command="{Binding Settings.ShowThemeCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -30,7 +30,7 @@
                                               Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row last"
+        <Button Classes="settings-row last with-description"
                 AutomationProperties.AutomationId="Settings.LanguageEntry"
                 Command="{Binding Settings.ShowLanguageCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -55,7 +55,7 @@
     <TextBlock Classes="surface-group-title" Text="{Binding Settings.GroupClashText}" />
     <Border Classes="surface-group">
       <StackPanel>
-        <Button Classes="settings-row first"
+        <Button Classes="settings-row first with-description"
                 AutomationProperties.AutomationId="Settings.NetworkEntry"
                 Command="{Binding Settings.ShowNetworkCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -63,11 +63,14 @@
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="RouteLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashNetworkText}" />
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
+              <TextBlock Classes="settings-row-title" Text="{Binding Settings.ClashNetworkText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{loc:Loc Settings.ClashFeature.Network.Description}" />
+            </StackPanel>
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row"
+        <Button Classes="settings-row with-description"
                 AutomationProperties.AutomationId="Settings.PortControlEntry"
                 Command="{Binding Settings.ShowPortControlCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -75,11 +78,14 @@
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="Settings6Line" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashPortControlText}" />
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
+              <TextBlock Classes="settings-row-title" Text="{Binding Settings.ClashPortControlText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{loc:Loc Settings.ClashFeature.PortControl.Description}" />
+            </StackPanel>
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row"
+        <Button Classes="settings-row with-description"
                 AutomationProperties.AutomationId="Settings.SystemIntegrationEntry"
                 Command="{Binding Settings.ShowSystemIntegrationCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -87,11 +93,14 @@
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="ComputerLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashSystemIntegrationText}" />
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
+              <TextBlock Classes="settings-row-title" Text="{Binding Settings.ClashSystemIntegrationText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{loc:Loc Settings.ClashFeature.SystemIntegration.Description}" />
+            </StackPanel>
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row"
+        <Button Classes="settings-row with-description"
                 AutomationProperties.AutomationId="Settings.DnsEntry"
                 Command="{Binding Settings.ShowDnsCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -99,11 +108,14 @@
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="EarthLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashDnsText}" />
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
+              <TextBlock Classes="settings-row-title" Text="{Binding Settings.ClashDnsText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{loc:Loc Settings.ClashFeature.Dns.Description}" />
+            </StackPanel>
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row"
+        <Button Classes="settings-row with-description"
                 AutomationProperties.AutomationId="Settings.PerformanceEntry"
                 Command="{Binding Settings.ShowPerformanceCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -111,11 +123,14 @@
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="PerformanceLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashPerformanceText}" />
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
+              <TextBlock Classes="settings-row-title" Text="{Binding Settings.ClashPerformanceText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{loc:Loc Settings.ClashFeature.Performance.Description}" />
+            </StackPanel>
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row last"
+        <Button Classes="settings-row last with-description"
                 AutomationProperties.AutomationId="Settings.CoreLogEntry"
                 Command="{Binding Settings.ShowCoreLogCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -123,7 +138,10 @@
               <iconPacks:PackIconMingCuteIcons Classes="settings-entry-icon"
                                                 Kind="TerminalBoxLine" />
             </Border>
-            <TextBlock Grid.Column="1" Classes="settings-row-title" VerticalAlignment="Center" Margin="10,0,0,0" Text="{Binding Settings.ClashCoreLogText}" />
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center" Margin="10,0,0,0">
+              <TextBlock Classes="settings-row-title" Text="{Binding Settings.ClashCoreLogText}" />
+              <TextBlock Classes="settings-row-subtitle" Text="{loc:Loc Settings.ClashFeature.CoreLog.Description}" />
+            </StackPanel>
             <iconPacks:PackIconMingCuteIcons Grid.Column="2" Classes="settings-chevron" Kind="RightSmallLine" />
           </Grid>
         </Button>
@@ -135,7 +153,7 @@
     <TextBlock Classes="surface-group-title" Text="{Binding Settings.GroupApplicationText}" />
     <Border Classes="surface-group">
       <StackPanel>
-        <Button Classes="settings-row first"
+        <Button Classes="settings-row first with-description"
                 AutomationProperties.AutomationId="Settings.AppBehaviorEntry"
                 Command="{Binding Settings.ShowAppBehaviorCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -152,7 +170,7 @@
                                               Kind="RightSmallLine" />
           </Grid>
         </Button>
-        <Button Classes="settings-row last"
+        <Button Classes="settings-row last with-description"
                 AutomationProperties.AutomationId="Settings.AboutEntry"
                 Command="{Binding Settings.ShowAboutCommand}">
           <Grid ColumnDefinitions="40,*,Auto">
@@ -176,7 +194,7 @@
   <StackPanel Spacing="0">
     <TextBlock Classes="surface-group-title" Text="{Binding Settings.GroupMaintenanceText}" />
     <Border Classes="surface-group">
-      <Button Classes="settings-row only"
+      <Button Classes="settings-row only with-description"
               AutomationProperties.AutomationId="Settings.DataEntry"
               Command="{Binding Settings.ShowDataManagementCommand}">
         <Grid ColumnDefinitions="40,*,Auto">

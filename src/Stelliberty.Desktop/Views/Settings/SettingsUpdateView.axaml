@@ -60,7 +60,7 @@
             </controls:AppComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row with-description">
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <StackPanel Spacing="4" VerticalAlignment="Center">
               <TextBlock Classes="settings-row-title" Text="{loc:Loc Settings.Update.Source}" />
@@ -81,7 +81,7 @@
             </controls:AppComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row" IsVisible="{Binding Update.IsCustomUpdateSource}">
+        <Border Classes="settings-inline-row auto-height" IsVisible="{Binding Update.IsCustomUpdateSource}">
           <StackPanel Spacing="8">
             <TextBlock Classes="settings-row-title" Text="{loc:Loc Settings.Update.Source.RepositoryUrl}" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">

@@ -1,6 +1,46 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia">
+  <Styles.Resources>
+    <x:Double x:Key="SettingsRowHeight">60</x:Double>
+    <x:Double x:Key="SettingsCompactRowHeight">52</x:Double>
+    <Thickness x:Key="SettingsRowPadding">20,10</Thickness>
+    <Thickness x:Key="SettingsCompactRowPadding">20,7</Thickness>
+    <ControlTheme x:Key="SettingsListToggleTheme" TargetType="ToggleButton">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}" CornerRadius="8">
+            <Border x:Name="SettingsListChevron"
+                    Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    RenderTransformOrigin="50%,50%" IsHitTestVisible="False">
+              <Border.Transitions>
+                <Transitions>
+                  <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+                </Transitions>
+              </Border.Transitions>
+              <Path Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Data="M 4,6 L 8,10 L 12,6" Stroke="{DynamicResource AppTextTertiaryBrush}"
+                    StrokeThickness="1.2" StrokeLineCap="Round" StrokeJoin="Round" />
+            </Border>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:focus-visible">
+        <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
+      </Style>
+      <Style Selector="^ /template/ Border#SettingsListChevron">
+        <Setter Property="RenderTransform" Value="rotate(0deg)" />
+      </Style>
+      <Style Selector="^:checked /template/ Border#SettingsListChevron">
+        <Setter Property="RenderTransform" Value="rotate(180deg)" />
+      </Style>
+    </ControlTheme>
+  </Styles.Resources>
 
   <Style Selector="Button.accent-swatch">
     <Setter Property="Width" Value="32" />
@@ -37,13 +77,38 @@
     <Setter Property="Margin" Value="14,8,0,6" />
   </Style>
 
+  <Style Selector="Button.settings-row, Border.settings-inline-row">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.settings-row:not(.with-description):not(.auto-height), Border.settings-inline-row:not(.with-description):not(.auto-height)">
+    <Setter Property="Height" Value="{StaticResource SettingsCompactRowHeight}" />
+  </Style>
+  <Style Selector="Button.settings-row.with-description:not(.auto-height), Border.settings-inline-row.with-description:not(.auto-height)">
+    <Setter Property="Height" Value="{StaticResource SettingsRowHeight}" />
+  </Style>
+  <Style Selector="Button.settings-row.auto-height, Border.settings-inline-row.auto-height">
+    <Setter Property="MinHeight" Value="{StaticResource SettingsRowHeight}" />
+  </Style>
+  <Style Selector="Border.settings-inline-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="{StaticResource SettingsCompactRowPadding}" />
+  </Style>
+  <Style Selector="Border.settings-inline-row.with-description, Border.settings-inline-row.auto-height">
+    <Setter Property="Padding" Value="{StaticResource SettingsRowPadding}" />
+  </Style>
+  <Style Selector="Border.settings-inline-row:not(.auto-height) > Grid">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
   <Style Selector="Button.settings-row">
     <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="{StaticResource SettingsCompactRowPadding}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
-    <Setter Property="Padding" Value="20,12" />
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.settings-row.with-description, Button.settings-row.auto-height">
+    <Setter Property="Padding" Value="{StaticResource SettingsRowPadding}" />
   </Style>
   <Style Selector="Button.settings-row:pointerover">
     <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
@@ -66,6 +131,40 @@
   </Style>
   <Style Selector="Button.settings-row.only">
     <Setter Property="CornerRadius" Value="15" />
+  </Style>
+
+  <Style Selector="Expander.settings-list">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel>
+          <Border x:Name="SettingsListHeader"
+                  Padding="{StaticResource SettingsCompactRowPadding}"
+                  MinHeight="{StaticResource SettingsCompactRowHeight}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <ContentPresenter x:Name="PART_HeaderPresenter"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Header}"
+                                ContentTemplate="{TemplateBinding HeaderTemplate}" />
+              <ToggleButton Grid.Column="1"
+                            Theme="{StaticResource SettingsListToggleTheme}"
+                            AutomationProperties.LabeledBy="{Binding #PART_HeaderPresenter}"
+                            IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}" />
+            </Grid>
+          </Border>
+          <Border IsVisible="{TemplateBinding IsExpanded}" Padding="20,0,20,10">
+            <ContentPresenter x:Name="PART_ContentPresenter"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Expander.settings-list.with-description /template/ Border#SettingsListHeader">
+    <Setter Property="MinHeight" Value="{StaticResource SettingsRowHeight}" />
+    <Setter Property="Padding" Value="{StaticResource SettingsRowPadding}" />
   </Style>
 
   <Style Selector="Border.settings-icon-badge">
@@ -95,11 +194,6 @@
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextTertiaryBrush}" />
   </Style>
-  <Style Selector="Border.settings-inline-row">
-    <Setter Property="Padding" Value="20,10" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-
   <Style Selector="Button.settings-toggle-command">
     <Setter Property="Padding" Value="0" />
     <Setter Property="MinWidth" Value="0" />

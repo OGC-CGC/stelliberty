@@ -129,13 +129,12 @@
             <Button Grid.Column="2" Classes="soft-action primary" Content="{Binding Theme.BackgroundImageChooseText}"
                     AutomationProperties.AutomationId="Settings.BackgroundImage.Choose"
                     Click="OnChooseBackgroundImageClicked" />
-            <Button Grid.Column="3" Classes="soft-action" Content="{Binding Theme.BackgroundImageClearText}"
+            <Button Grid.Column="3" Classes="soft-action" Content="{Binding Theme.BackgroundImageActionText}"
                     AutomationProperties.AutomationId="Settings.BackgroundImage.Clear"
-                    IsEnabled="{Binding Theme.HasBackgroundImage}"
-                    Command="{Binding Theme.ClearBackgroundImageCommand}" />
+                    Command="{Binding Theme.ToggleBuiltInBackgroundImageCommand}" />
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row" IsVisible="{Binding Theme.HasBackgroundImage}">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
                        Text="{Binding Theme.BackgroundImageStretchText}" />
@@ -151,7 +150,7 @@
             </controls:AppComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row" IsVisible="{Binding Theme.HasBackgroundImage}">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
                        Text="{Binding Theme.BackgroundImageHorizontalText}" />
@@ -167,7 +166,7 @@
             </controls:AppComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row" IsVisible="{Binding Theme.HasBackgroundImage}">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
                        Text="{Binding Theme.BackgroundImageVerticalText}" />
@@ -183,7 +182,7 @@
             </controls:AppComboBox>
           </Grid>
         </Border>
-        <Border Classes="settings-inline-row">
+        <Border Classes="settings-inline-row auto-height" IsVisible="{Binding Theme.HasBackgroundImage}">
           <Grid ColumnDefinitions="*,200,48" ColumnSpacing="10">
             <StackPanel Spacing="4" VerticalAlignment="Center">
               <TextBlock Classes="settings-row-title" Text="{Binding Theme.BackgroundImageTransparencyText}" />
