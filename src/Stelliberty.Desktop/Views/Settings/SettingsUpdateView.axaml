@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Stelliberty.Desktop.Controls"
              xmlns:loc="using:Stelliberty.Desktop.Localization"
              xmlns:vm="using:Stelliberty.Presentation.ViewModels"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
@@ -46,17 +47,17 @@
             <TextBlock Classes="settings-row-title"
                        Text="{Binding Update.FixedIntervalText}"
                        VerticalAlignment="Center" />
-            <ComboBox Grid.Column="1"
+            <controls:AppComboBox Grid.Column="1"
                       AutomationProperties.AutomationId="Settings.UpdateIntervalComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding Update.CheckIntervalOptions}"
                       SelectedItem="{Binding Update.SelectedCheckIntervalOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">
@@ -67,17 +68,17 @@
                          ToolTip.Tip="{Binding Update.ActiveRepositoryUrl}" TextTrimming="CharacterEllipsis"
                          MaxWidth="400" HorizontalAlignment="Left" />
             </StackPanel>
-            <ComboBox Grid.Column="1" MinWidth="160"
+            <controls:AppComboBox Grid.Column="1" MinWidth="160"
                       AutomationProperties.AutomationId="Settings.UpdateSourceComboBox"
                       IsEnabled="{Binding !Update.IsChecking}"
                       ItemsSource="{Binding Update.UpdateSourceOptions}"
                       SelectedItem="{Binding Update.SelectedUpdateSourceOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row" IsVisible="{Binding Update.IsCustomUpdateSource}">
@@ -103,17 +104,17 @@
             <TextBlock Classes="settings-row-title"
                        Text="{Binding Update.ChannelText}"
                        VerticalAlignment="Center" />
-            <ComboBox Grid.Column="1"
+            <controls:AppComboBox Grid.Column="1"
                       AutomationProperties.AutomationId="Settings.UpdateChannelComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding Update.ChannelOptions}"
                       SelectedItem="{Binding Update.SelectedChannelOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
       </StackPanel>

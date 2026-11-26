@@ -189,11 +189,11 @@
                       <Grid ColumnDefinitions="*,260" ColumnSpacing="10">
                         <StackPanel Spacing="6">
                           <TextBlock Classes="dialog-label" Text="{loc:Loc Rules.Field.Type}" />
-                          <ComboBox Classes="dialog-input" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" AutomationProperties.AutomationId="Rules.EditorDialog.TypeBox" ItemsSource="{Binding RuleTypes}" SelectedItem="{Binding SelectedRuleType, Mode=TwoWay}" DisplayMemberBinding="{Binding Name}" />
+                          <controls:AppComboBox Classes="dialog-input" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" AutomationProperties.AutomationId="Rules.EditorDialog.TypeBox" ItemsSource="{Binding RuleTypes}" SelectedItem="{Binding SelectedRuleType, Mode=TwoWay}" DisplayMemberBinding="{Binding Name}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Spacing="6">
                           <TextBlock Classes="dialog-label" Text="{loc:Loc Rules.Field.Proxy}" />
-                          <ComboBox Classes="dialog-input" Width="260" HorizontalContentAlignment="Left" AutomationProperties.AutomationId="Rules.EditorDialog.OutboundBox" ItemsSource="{Binding OutboundTargets}" SelectedItem="{Binding SelectedOutboundTarget, Mode=TwoWay}" DisplayMemberBinding="{Binding Name}" />
+                          <controls:AppComboBox Classes="dialog-input" Width="260" HorizontalContentAlignment="Left" AutomationProperties.AutomationId="Rules.EditorDialog.OutboundBox" ItemsSource="{Binding OutboundTargets}" SelectedItem="{Binding SelectedOutboundTarget, Mode=TwoWay}" DisplayMemberBinding="{Binding Name}" />
                         </StackPanel>
                       </Grid>
                       <StackPanel Spacing="6">

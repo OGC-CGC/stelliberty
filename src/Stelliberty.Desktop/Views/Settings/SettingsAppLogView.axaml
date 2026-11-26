@@ -44,28 +44,28 @@
       </Grid>
 
       <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
-        <ComboBox Grid.Column="0"
+        <controls:AppComboBox Grid.Column="0"
                   MinWidth="130"
                   AutomationProperties.AutomationId="AppLogs.LevelFilterComboBox"
                   ItemsSource="{Binding LevelOptions}"
                   SelectedItem="{Binding SelectedLevelOption, Mode=TwoWay}">
-          <ComboBox.ItemTemplate>
+          <controls:AppComboBox.ItemTemplate>
             <DataTemplate x:DataType="vm:ISelectionOption">
               <TextBlock Text="{Binding DisplayName}" />
             </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-        <ComboBox Grid.Column="1"
+          </controls:AppComboBox.ItemTemplate>
+        </controls:AppComboBox>
+        <controls:AppComboBox Grid.Column="1"
                   MinWidth="130"
                   AutomationProperties.AutomationId="AppLogs.DateFilterComboBox"
                   ItemsSource="{Binding DateRangeOptions}"
                   SelectedItem="{Binding SelectedDateRangeOption, Mode=TwoWay}">
-          <ComboBox.ItemTemplate>
+          <controls:AppComboBox.ItemTemplate>
             <DataTemplate x:DataType="vm:ISelectionOption">
               <TextBlock Text="{Binding DisplayName}" />
             </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
+          </controls:AppComboBox.ItemTemplate>
+        </controls:AppComboBox>
         <StackPanel Grid.Column="2"
                     Orientation="Horizontal" Spacing="16"
                     HorizontalAlignment="Right" VerticalAlignment="Center">

@@ -100,16 +100,16 @@
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,220">
             <TextBlock Classes="settings-row-title" Text="{Binding CoreConfig.OutboundInterfaceText}" />
-            <ComboBox Grid.Column="1" AutomationProperties.AutomationId="Settings.OutboundInterfaceMode"
+            <controls:AppComboBox Grid.Column="1" AutomationProperties.AutomationId="Settings.OutboundInterfaceMode"
                       ItemsSource="{Binding CoreConfig.OutboundInterfaceModes}"
                       SelectedItem="{Binding CoreConfig.SelectedOutboundInterfaceMode, Mode=TwoWay}"
                       HorizontalAlignment="Stretch">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row" IsVisible="{Binding CoreConfig.HasOutboundInterfaceList}">

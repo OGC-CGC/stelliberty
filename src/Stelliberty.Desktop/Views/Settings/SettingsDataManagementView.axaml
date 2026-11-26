@@ -96,17 +96,17 @@
                        Classes="settings-row-title"
                        Text="{Binding DataManagement.WebDavIntervalText}"
                        VerticalAlignment="Center" />
-            <ComboBox Grid.Column="1"
+            <controls:AppComboBox Grid.Column="1"
                       AutomationProperties.AutomationId="Settings.WebDavIntervalHoursComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding DataManagement.WebDavBackupIntervalOptions}"
                       SelectedItem="{Binding DataManagement.SelectedWebDavBackupIntervalOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">
@@ -115,17 +115,17 @@
                        Classes="settings-row-title"
                        Text="{Binding DataManagement.WebDavRetentionText}"
                        VerticalAlignment="Center" />
-            <ComboBox Grid.Column="1"
+            <controls:AppComboBox Grid.Column="1"
                       AutomationProperties.AutomationId="Settings.WebDavRetentionCountComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding DataManagement.WebDavBackupRetentionOptions}"
                       SelectedItem="{Binding DataManagement.SelectedWebDavBackupRetentionOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Grid>

@@ -459,17 +459,17 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="6">
                               <TextBlock Classes="dialog-label" Text="{loc:Loc Subscriptions.Field.AutoUpdateMode}" />
-                              <ComboBox Classes="dialog-input"
+                              <controls:AppComboBox Classes="dialog-input"
                                         HorizontalAlignment="Stretch"
                                         AutomationProperties.AutomationId="Subscriptions.AddDialog.AutoUpdateModeBox"
                                         ItemsSource="{Binding AddDialog.AutoUpdateModeOptions}"
                                         SelectedItem="{Binding AddDialog.SelectedAutoUpdateModeOption, Mode=TwoWay}">
-                                <ComboBox.ItemTemplate>
+                                <controls:AppComboBox.ItemTemplate>
                                   <DataTemplate x:DataType="vm:ISelectionOption">
                                     <TextBlock Text="{Binding DisplayName}" />
                                   </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                              </ComboBox>
+                                </controls:AppComboBox.ItemTemplate>
+                              </controls:AppComboBox>
                             </StackPanel>
                           </Grid>
                         </StackPanel>
@@ -693,17 +693,17 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="6">
                               <TextBlock Classes="dialog-label" Text="{loc:Loc Subscriptions.Field.AutoUpdateMode}" />
-                              <ComboBox Classes="dialog-input"
+                              <controls:AppComboBox Classes="dialog-input"
                                         HorizontalAlignment="Stretch"
                                         AutomationProperties.AutomationId="Subscriptions.EditDialog.AutoUpdateModeBox"
                                         ItemsSource="{Binding EditDialog.AutoUpdateModeOptions}"
                                         SelectedItem="{Binding EditDialog.SelectedAutoUpdateModeOption, Mode=TwoWay}">
-                                <ComboBox.ItemTemplate>
+                                <controls:AppComboBox.ItemTemplate>
                                   <DataTemplate x:DataType="vm:ISelectionOption">
                                     <TextBlock Text="{Binding DisplayName}" />
                                   </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                              </ComboBox>
+                                </controls:AppComboBox.ItemTemplate>
+                              </controls:AppComboBox>
                             </StackPanel>
                           </Grid>
                         </StackPanel>
@@ -1006,7 +1006,7 @@
                           </StackPanel>
                           <StackPanel Grid.Column="1" Spacing="6">
                             <TextBlock Classes="dialog-label" Text="{loc:Loc Subscriptions.ChainProxy.ProxyGroup}" />
-                            <ComboBox Classes="dialog-input platform-popup"
+                            <controls:AppComboBox Classes="dialog-input platform-popup"
                                       AutomationProperties.AutomationId="Subscriptions.ChainProxy.ProxyGroupBox"
                                       ItemsSource="{Binding ChainProxy.ProxyGroups}"
                                       SelectedItem="{Binding ChainProxy.DraftProxyGroup, Mode=TwoWay}"

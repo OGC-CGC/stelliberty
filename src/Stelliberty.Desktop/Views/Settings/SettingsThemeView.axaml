@@ -28,17 +28,17 @@
             <TextBlock Grid.Column="0" Classes="settings-row-title"
                        VerticalAlignment="Center"
                        Text="{Binding Theme.FieldLabelText}" />
-            <ComboBox Grid.Column="1"
+            <controls:AppComboBox Grid.Column="1"
                       AutomationProperties.AutomationId="Settings.ThemeComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding Theme.Options}"
                       SelectedItem="{Binding Theme.SelectedOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">
@@ -51,17 +51,17 @@
                     IsVisible="{Binding Theme.IsCustomAccentMode}"
                     Command="{Binding Theme.EditCustomAccentColorCommand}"
                     Background="{Binding Theme.CustomAccentColor, Converter={StaticResource HexToBrush}}" />
-            <ComboBox Grid.Column="2"
+            <controls:AppComboBox Grid.Column="2"
                       AutomationProperties.AutomationId="Settings.AccentModeComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding Theme.AccentModeOptions}"
                       SelectedItem="{Binding Theme.SelectedAccentModeOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row"
@@ -70,17 +70,17 @@
             <TextBlock Grid.Column="0" Classes="settings-row-title"
                        VerticalAlignment="Center"
                        Text="{Binding Theme.WindowEffectSectionTitle}" />
-            <ComboBox Grid.Column="1"
+            <controls:AppComboBox Grid.Column="1"
                       AutomationProperties.AutomationId="Settings.WindowEffectComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding Theme.WindowEffectOptions}"
                       SelectedItem="{Binding Theme.SelectedWindowEffectOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">
@@ -88,17 +88,17 @@
             <TextBlock Grid.Column="0" Classes="settings-row-title"
                        VerticalAlignment="Center"
                        Text="{Binding Theme.WindowDecorationSectionTitle}" />
-            <ComboBox Grid.Column="1"
+            <controls:AppComboBox Grid.Column="1"
                       AutomationProperties.AutomationId="Settings.WindowDecorationComboBox"
                       MinWidth="160"
                       ItemsSource="{Binding Theme.WindowDecorationOptions}"
                       SelectedItem="{Binding Theme.SelectedWindowDecorationOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">
@@ -139,48 +139,48 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
                        Text="{Binding Theme.BackgroundImageStretchText}" />
-            <ComboBox Grid.Column="1" MinWidth="160"
+            <controls:AppComboBox Grid.Column="1" MinWidth="160"
                       AutomationProperties.AutomationId="Settings.BackgroundImage.Stretch"
                       ItemsSource="{Binding Theme.BackgroundStretchOptions}"
                       SelectedItem="{Binding Theme.SelectedBackgroundStretchOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
                        Text="{Binding Theme.BackgroundImageHorizontalText}" />
-            <ComboBox Grid.Column="1" MinWidth="160"
+            <controls:AppComboBox Grid.Column="1" MinWidth="160"
                       AutomationProperties.AutomationId="Settings.BackgroundImage.Horizontal"
                       ItemsSource="{Binding Theme.BackgroundHorizontalOptions}"
                       SelectedItem="{Binding Theme.SelectedBackgroundHorizontalOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="settings-row-title" VerticalAlignment="Center"
                        Text="{Binding Theme.BackgroundImageVerticalText}" />
-            <ComboBox Grid.Column="1" MinWidth="160"
+            <controls:AppComboBox Grid.Column="1" MinWidth="160"
                       AutomationProperties.AutomationId="Settings.BackgroundImage.Vertical"
                       ItemsSource="{Binding Theme.BackgroundVerticalOptions}"
                       SelectedItem="{Binding Theme.SelectedBackgroundVerticalOption, Mode=TwoWay}">
-              <ComboBox.ItemTemplate>
+              <controls:AppComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ISelectionOption">
                   <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+              </controls:AppComboBox.ItemTemplate>
+            </controls:AppComboBox>
           </Grid>
         </Border>
         <Border Classes="settings-inline-row">

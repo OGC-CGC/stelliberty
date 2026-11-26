@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Stelliberty.Desktop.Controls"
              xmlns:loc="using:Stelliberty.Desktop.Localization"
              xmlns:vm="using:Stelliberty.Presentation.ViewModels"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
@@ -53,16 +54,16 @@
                 </StackPanel>
                 <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
                       ColumnDefinitions="110,*" ColumnSpacing="8">
-                  <ComboBox Classes="dialog-input platform-popup" HorizontalAlignment="Stretch"
+                  <controls:AppComboBox Classes="dialog-input platform-popup" HorizontalAlignment="Stretch"
                             ToolTip.Tip="{loc:Loc Home.Connectivity.TestType}"
                             ItemsSource="{Binding TestTypeOptions}"
                             SelectedItem="{Binding SelectedTestTypeOption, Mode=TwoWay}">
-                    <ComboBox.ItemTemplate>
+                    <controls:AppComboBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:ISelectionOption">
                         <TextBlock Text="{Binding DisplayName}" />
                       </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
+                    </controls:AppComboBox.ItemTemplate>
+                  </controls:AppComboBox>
                   <TextBox Grid.Column="1" Classes="dialog-input"
                            PlaceholderText="{Binding AddressWatermark}" Text="{Binding Url, Mode=TwoWay}" />
                 </Grid>
