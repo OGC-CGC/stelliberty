@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-release_channel="$1"
 for name in TELEGRAM_BOT_API TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
   if [[ -z "${!name:-}" ]]; then
     echo "::error::Missing GitHub Actions secret ${name}."
@@ -26,17 +25,18 @@ if [[ -n "$reply_to" ]]; then
   form+=(--form-string "reply_parameters=${reply_parameters}")
 fi
 
-release="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json name,body,url,isDraft)"
-if ! jq -e '.isDraft == false' >/dev/null <<< "$release"; then
+release="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+if ! jq -e '.draft == false' >/dev/null <<< "$release"; then
   echo "::error::Release ${RELEASE_TAG} is not published."
   exit 1
 fi
 
-caption="$(jq -r --arg channel "$release_channel" '
-  "\(.name) (\($channel))\n\(.url)" as $header
+caption="$(jq -r '
+  "🚀 New release \(.name // .tag_name) (\(.html_url))\nby @\(.author.login) (\(.author.html_url))" as $header
   | ((.body // "")
       | gsub(" \\[\u0060[0-9a-f]+\u0060\\]\\(https?://[^)]+/commit/[0-9a-f]+\\)"; "")
-      | sub("^## Changes\\r?\\n\\r?\\n"; "")) as $notes
+      | sub("^## Changes\\r?\\n\\r?\\n"; "")
+      | split("\n") | map(sub("^[-*+] +"; "• ")) | join("\n")) as $notes
   | (1000 - ($header | length) - 2) as $budget
   | if $notes == "" then $header
     elif ($notes | length) <= $budget then "\($header)\n\n\($notes)"
@@ -66,7 +66,7 @@ else
   done
   media="$(jq -cn --argjson count "$asset_count" --arg caption "$caption" '
     [range($count) | {type: "document", media: "attach://file\(.)"}
-      + if . == 0 then {caption: $caption} else {} end]
+      + if . == ($count - 1) then {caption: $caption} else {} end]
   ')"
   form+=(--form-string "media=${media}")
 fi
