@@ -234,6 +234,10 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
 
     public int FilteredConnectionCount => _filteredConnections.Count;
 
+    public int HeaderConnectionCount => IsAllConnectionsSelected
+        ? _filteredConnections.Count(connection => connection.IsActive)
+        : FilteredConnectionCount;
+
     public int DirectConnectionCount => _directConnectionCount;
 
     public int ProxyConnectionCount => Connections.Count - _directConnectionCount;
@@ -798,6 +802,7 @@ public sealed class ConnectionPageViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(FilteredConnections));
         OnPropertyChanged(nameof(TotalConnectionCount));
         OnPropertyChanged(nameof(FilteredConnectionCount));
+        OnPropertyChanged(nameof(HeaderConnectionCount));
         OnPropertyChanged(nameof(DirectConnectionCount));
         OnPropertyChanged(nameof(ProxyConnectionCount));
         OnPropertyChanged(nameof(TotalUploadSpeedText));

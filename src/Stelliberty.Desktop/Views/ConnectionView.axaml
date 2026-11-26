@@ -32,46 +32,11 @@
             Margin="0,6,9,0"
             AutomationProperties.AutomationId="Connections.Toolbar">
       <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
-          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-            <TextBlock Classes="list-count"
-                       Text="{Binding FilteredConnectionCount}" />
-            <TextBlock Classes="list-count-unit" Text="{loc:Loc Connections.Count.Unit}" />
-          </StackPanel>
-
-          <StackPanel Grid.Column="1"
-                      Orientation="Horizontal" Spacing="8"
-                      VerticalAlignment="Center">
-            <Border Classes="list-stat">
-              <StackPanel Spacing="3">
-                <TextBlock Classes="list-stat-label" Text="{loc:Loc Connections.Stat.Direct}" />
-                <TextBlock Classes="list-stat-value" Text="{Binding DirectConnectionCount}" />
-              </StackPanel>
-            </Border>
-            <Border Classes="list-stat">
-              <StackPanel Spacing="3">
-                <TextBlock Classes="list-stat-label" Text="{loc:Loc Connections.Stat.Proxy}" />
-                <TextBlock Classes="list-stat-value" Text="{Binding ProxyConnectionCount}" />
-              </StackPanel>
-            </Border>
-            <Border Classes="list-stat" MinWidth="112">
-              <StackPanel Spacing="3">
-                <TextBlock Classes="list-stat-label" Text="{loc:Loc Common.Upload}" />
-                <TextBlock Classes="list-stat-value small"
-                           AutomationProperties.AutomationId="Connections.TotalUploadSpeedText"
-                           Text="{Binding TotalUploadSpeedText}" />
-              </StackPanel>
-            </Border>
-            <Border Classes="list-stat" MinWidth="112">
-              <StackPanel Spacing="3">
-                <TextBlock Classes="list-stat-label" Text="{loc:Loc Common.Download}" />
-                <TextBlock Classes="list-stat-value small"
-                           AutomationProperties.AutomationId="Connections.TotalDownloadSpeedText"
-                           Text="{Binding TotalDownloadSpeedText}" />
-              </StackPanel>
-            </Border>
-          </StackPanel>
-        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+          <TextBlock Classes="list-count"
+                     Text="{Binding HeaderConnectionCount}" />
+          <TextBlock Classes="list-count-unit" Text="{loc:Loc Connections.Count.Unit}" />
+        </StackPanel>
 
         <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
           <StackPanel Orientation="Horizontal" Spacing="4">
@@ -237,10 +202,19 @@
                   <controls:ConnectionCardGrid Margin="16"
                                                IsListLayout="{Binding #ConnectionPageRoot.((vm:ConnectionPageViewModel)DataContext).IsListLayout}">
                     <Grid Classes="connection-card-header" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                      <Border Classes="list-pill" Tag="{Binding NetworkPillTag}" VerticalAlignment="Center" IsHitTestVisible="False">
-                        <TextBlock AutomationProperties.AutomationId="{Binding NetworkAutomationId}"
-                                   Text="{Binding NetworkLabel}" />
-                      </Border>
+                      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <Grid Width="36" Height="36">
+                          <controls:ProcessIcon x:Name="CardProcessIcon" ProcessPath="{Binding ProcessPath}" Stretch="Uniform" />
+                          <iconPacks:PackIconMingCuteIcons Kind="ComputerLine" Width="36" Height="36"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                           IsVisible="{Binding !#CardProcessIcon.HasIcon}" />
+                        </Grid>
+                        <Border Classes="list-pill" Tag="{Binding NetworkPillTag}" VerticalAlignment="Center">
+                          <TextBlock AutomationProperties.AutomationId="{Binding NetworkAutomationId}"
+                                     Text="{Binding NetworkLabel}" />
+                        </Border>
+                      </StackPanel>
                       <TextBlock Grid.Column="1"
                                  IsHitTestVisible="False"
                                  Text="{Binding DisplayAddress}"

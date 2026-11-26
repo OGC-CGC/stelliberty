@@ -30,6 +30,6 @@ public sealed class ConnectionCardGrid : Grid
         ColumnDefinitions = new ColumnDefinitions(IsListLayout ? "*,300" : "*");
         RowDefinitions = new RowDefinitions(IsListLayout ? "Auto,*" : "Auto,*,Auto");
         ColumnSpacing = IsListLayout ? 16 : 0;
-        RowSpacing = IsListLayout ? 10 : 12;
+        RowSpacing = 10;
     }
 }

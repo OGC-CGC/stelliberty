@@ -80,6 +80,8 @@ public sealed class ConnectionRowViewModel : ViewModelBase
 
     public string Process => _connection.Metadata.Process;
 
+    public string ProcessPath => _connection.Metadata.ProcessPath;
+
     public bool IsProcessVisible => !string.IsNullOrWhiteSpace(Process);
 
     public string UploadSpeedText => $"↑ {TrafficSize.FormatRate(_connection.UploadSpeed, _displayTrafficInBytes)}";
