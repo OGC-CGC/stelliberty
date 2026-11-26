@@ -47,7 +47,7 @@ public sealed class AppSettings
 
     public string WindowDecorationStyle { get; set; } = WindowDecorationStyleRules.DefaultValue;
 
-    public bool IsSidebarDividerVisible { get; set; } = true;
+    public bool IsSidebarDividerVisible { get; set; }
 
     public bool IsSidebarCollapsed { get; set; } = true;
 
