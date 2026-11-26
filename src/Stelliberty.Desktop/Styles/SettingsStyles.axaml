@@ -333,25 +333,10 @@
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
     <Setter Property="Background" Value="{DynamicResource AppCardBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="18" />
   </Style>
-  <Style Selector="Button.about-link /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Transitions">
-      <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.16" />
-        <BrushTransition Property="BorderBrush" Duration="0:0:0.16" />
-      </Transitions>
-    </Setter>
-  </Style>
-  <Style Selector="Button.about-link:pointerover">
-    <Setter Property="Background" Value="{DynamicResource AppOverlaySubtleBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="15,14" />
-  </Style>
-  <Style Selector="Button.about-link:pressed">
+  <Style Selector="Button.about-link:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.about-link:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppOverlayBrush}" />
   </Style>
   <Style Selector="Border.about-link-icon-badge">

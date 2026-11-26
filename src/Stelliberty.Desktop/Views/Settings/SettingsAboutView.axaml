@@ -132,7 +132,7 @@
       <Button Grid.Column="2"
               Classes="about-link"
               AutomationProperties.AutomationId="Settings.About.TelegramLink"
-              Tag="https://t.me/MaterialDesign3"
+              Tag="tg://resolve?domain=SBproxyRev"
               Click="OnOpenExternalLinkClicked">
         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
           <Border Classes="about-link-icon-badge">
